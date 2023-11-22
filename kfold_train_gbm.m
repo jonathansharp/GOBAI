@@ -34,7 +34,7 @@ clear glodap_idx vars v
 %% create directory and file names
 gbm_dir = ['Models/GBM/GBM_c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/tr' num2str(numstumps)];
-gbm_fnames = cell(5,10);
+gbm_fnames = cell(numFolds,num_clusters);
 for f = 1:numFolds
     for c = 1:num_clusters
         gbm_fnames(f,c) = ...

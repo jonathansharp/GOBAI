@@ -1,9 +1,9 @@
-% train_ffnn
+% train_rfr
 %
 % DESCRIPTION:
 % This function uses the combined dataset to train
-% neural networks in GMM clusters and predict
-% on a grid.
+% random forest regressions in GMM clusters and 
+% predict on a grid.
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
@@ -29,27 +29,24 @@ end
 clear glodap_only glodap_idx vars v
 
 %% create directory and file names
-ffnn_dir = ['Models/FFNN/FFNN_c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/train' num2str(100*train_ratio) '_val' ...
-    num2str(100*val_ratio) '_test' num2str(100*val_ratio)];
-ffnn_fnames = cell(num_clusters,1);
+rfr_dir = ['Models/RFR/RFR_c' num2str(num_clusters) '_' file_date ...
+    float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
+rfr_fnames = cell(num_clusters,1);
 for c = 1:num_clusters
-    ffnn_fnames(c) = ...
-        {['FFNN_oxygen_C' num2str(c)]};
+    rfr_fnames(c) = ...
+        {['RFR_oxygen_C' num2str(c)]};
 end
-gobai_ffnn_dir = ...
-    ['Data/GOBAI/FFNN_c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/train' num2str(100*train_ratio) '_val' ...
-    num2str(100*val_ratio) '_test' num2str(100*val_ratio) '/'];
+gobai_rfr_dir = ...
+    ['Data/GOBAI/RFR_c' num2str(num_clusters) '_' file_date ...
+    float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize) '/'];
 
-%% fit FFNNs using all data
+%% fit RFRs using all data
 
 % start timing training
 tic
 
 % define model parameters
-nodes1 = [5 10 15];
-nodes2 = [15 10 5];
+NumPredictors = ceil(sqrt(length(variables)));
 
 % fit models for each cluster
 for c = 1:num_clusters
@@ -58,21 +55,21 @@ for c = 1:num_clusters
     tic
 
     % fit model for each cluster
-    FFNN = ...
-        fit_FFNN('oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
-        true(size(all_data.platform)),variables,nodes1,nodes2,...
-        train_ratio,val_ratio,test_ratio,thresh);
+    RFR = ...
+        fit_RFR('oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
+        true(size(all_data.platform)),variables,numtrees,minLeafSize,...
+            NumPredictors,0,thresh);
 
     % stop timing fit
-    fprintf(['Train FFNN - Cluster #' num2str(c) ': ']);
+    fprintf(['Train RFR - Cluster #' num2str(c) ': ']);
     toc
 
     % save model for each cluster
-    if ~isfolder([pwd '/' ffnn_dir]); mkdir(ffnn_dir);end
-    save([ffnn_dir '/' ffnn_fnames{c}],'FFNN','-v7.3');
+    if ~isfolder([pwd '/' rfr_dir]); mkdir(rfr_dir);end
+    save([rfr_dir '/' rfr_fnames{c}],'RFR','-v7.3');
 
     % clean up
-    clear FFNN
+    clear RFR
 
 end
 
@@ -80,7 +77,7 @@ end
 clear all_data all_data_clusters
 
 % stop timing training
-fprintf('FFNN Training: ');
+fprintf('RFR Training: ');
 toc
 
 %% process time
@@ -177,7 +174,7 @@ for v = 1:length(variables)
     variables_TS{v} = [variables{v} '_array'];
 end
 
-% apply FFNNs to gridded data
+% apply RFRs to gridded data
 
 % pre-allocate
 gobai_matrix = single(nan(length(TS.temp_array),num_clusters));
@@ -194,21 +191,13 @@ for c = 1:num_clusters
     GMM_probs = rmfield(GMM_probs,{'GMM_monthly_probs' 'monthly_probabilities'});
     probs_matrix(:,c) = GMM_probs.probabilities_array;
 
-    % start timing predictions
-    tic
-
     % load model for this cluster
-    alg = load([ffnn_dir '/' ffnn_fnames{c}],'FFNN');
+    alg = load([rfr_dir '/' rfr_fnames{c}],'RFR');
 
     % predict data for each cluster
     gobai_matrix(:,c) = ...
-        run_FFNN(alg.FFNN,TS,GMM_probs.probabilities_array,...
+        run_RFR(alg.RFR,TS,GMM_probs.probabilities_array,...
         true(size(TS.temp_array)),variables_TS,thresh);
-
-    % stop timing predictions
-    fprintf(['Run FFNN - Cluster #' num2str(c) ', ' num2str(months(m)) ...
-        '/' num2str(years(m))  ': ']);
-    toc
 
 end
 
@@ -224,13 +213,13 @@ gobai_3d = nan(length(TS.lon),length(TS.lat),length(TS.pres));
 gobai_3d(TS_index) = gobai_array;
 
 % save monthly output
-if ~isfolder([pwd '/' gobai_ffnn_dir]); mkdir(gobai_ffnn_dir); end
-parsave_v1([gobai_ffnn_dir 'm' num2str(m)],gobai_3d);
+if ~isfolder([pwd '/' gobai_rfr_dir]); mkdir(gobai_rfr_dir); end
+parsave_v1([gobai_rfr_dir 'm' num2str(m)],gobai_3d);
 
 end
 
 % end parallel session
 delete(gcp('nocreate'));
 % stop timing predictions
-fprintf('FFNN Prediction: ');
+fprintf('RFR Prediction: ');
 toc

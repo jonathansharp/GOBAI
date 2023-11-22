@@ -12,22 +12,27 @@
 tic
 
 %% load temperature and salinity data
-% import_RFROM
-TS = netcdfreader('Data/RG_CLIM/RG_Climatology_Temp.nc');
-TS.Salinity = ncread('Data/RG_CLIM/RG_Climatology_Sal.nc','Salinity');
-
-%% compute dimensions
-xdim = length(TS.Longitude);
-ydim = length(TS.Latitude);
-zdim = length(TS.Pressure);
-tdim = length(TS.Time);
-
-%% calculate climatological mean temperature and salinity
-TS.temp_clim = single(nan(xdim,ydim,zdim,12));
-TS.sal_clim = single(nan(xdim,ydim,zdim,12));
-for m = 1:12
-    TS.temp_clim(:,:,:,m) = mean(TS.Temperature(:,:,:,m:12:end),4,'omitnan');
-    TS.sal_clim(:,:,:,m) = mean(TS.Salinity(:,:,:,m:12:end),4,'omitnan');
+if strcmp(base_grid,'RG')
+    % load temperature and salinity
+    TS = netcdfreader('Data/RG_CLIM/RG_Climatology_Temp.nc');
+    TS.Salinity = ncread('Data/RG_CLIM/RG_Climatology_Sal.nc','Salinity');
+    % compute dimensions
+    xdim = length(TS.Longitude);
+    ydim = length(TS.Latitude);
+    zdim = length(TS.Pressure);
+    tdim = length(TS.Time);
+    % calculate climatological mean temperature and salinity
+    TS.temp_clim = single(nan(xdim,ydim,zdim,12));
+    TS.sal_clim = single(nan(xdim,ydim,zdim,12));
+    for m = 1:12
+        TS.temp_clim(:,:,:,m) = mean(TS.Temperature(:,:,:,m:12:end),4,'omitnan');
+        TS.sal_clim(:,:,:,m) = mean(TS.Salinity(:,:,:,m:12:end),4,'omitnan');
+    end
+    % clean up
+    TS = rmfield(TS,{'Temperature' 'Salinity'});
+elseif strcmp(base_grid,'RFROM')
+    % load RFROM climatological temp and salinity
+    
 end
 
 %% expand latitude, longitude, and depth
@@ -53,14 +58,32 @@ save(['Data/GMM_' num2str(num_clusters) '/model'],...
     'gmm','num_clusters','C','S','-v7.3');
 clear gmm C S
 
+%% process time
+start_year = 2004;
+end_year = floor(snap_date/1e2);
+if strcmp(base_grid,'RG')
+    end_month = mod(snap_date,1e2);
+    years = repelem(start_year:end_year,12)';
+    months = repmat(1:12,1,length(years)/12)';
+    years = years(1:end-(12-end_month));
+    months = months(1:end-(12-end_month));
+elseif strcmp(base_grid,'RFROM')
+    end_month = mod(snap_date,1e2);
+    years = repelem(start_year:end_year,12)';
+    months = repmat(1:12,1,length(years)/12)';
+    years = years(1:end-(12-end_month));
+    months = months(1:end-(12-end_month));
+end
+clear start_year end_year end_month
+
 %% assign grid cells and probabilities to clusters
 % load GMM model
 load(['Data/GMM_' num2str(num_clusters) '/model'],'gmm','C','S');
-% for each month
+% for each timestep
 cos_lon = repmat(cosd(TS.Longitude-20),1,length(TS.Latitude),length(TS.Pressure));
 lat = repmat(TS.Latitude',length(TS.Longitude),1,length(TS.Pressure));
 pres = repmat(permute(TS.Pressure,[3 2 1]),length(TS.Longitude),length(TS.Latitude),1);
-for m = 1:1%length(TS.time)
+for m = 1:length(TS.Time)
     % transform to normalized arrays
     temp = TS.Temperature(:,:,:,m);
     sal = TS.Salinity(:,:,:,m);

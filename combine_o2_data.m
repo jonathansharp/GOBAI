@@ -59,6 +59,11 @@ all_data.salinity_abs = [float_data_adjusted.OXY_ABSSAL(float_idx);...
 all_data.oxygen = [float_data_adjusted.OXY(float_idx);...
     glodap_data.OXY(glodap_idx)];
 
+% transform longitude and day of year
+all_data.lon_cos = cosd(all_data.longitude-20);
+all_data.day_sin = sin((2.*pi.*all_data.day)/365.25);
+all_data.day_cos = cos((2.*pi.*all_data.day)/365.25);
+
 %% save combined oxygen data
 if ~exist([pwd '/Data'],'dir'); mkdir('Data'); end
 save(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...

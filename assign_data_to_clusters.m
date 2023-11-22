@@ -13,6 +13,9 @@ file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy
 load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
+%% calculate longitude cosine
+all_data.lon_cos = cosd(all_data.longitude-20);
+
 %% assign data points and probabilities to clusters
 % load GMM model
 load(['Data/GMM_' num2str(num_clusters) '/model']);

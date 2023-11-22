@@ -42,8 +42,8 @@ thresh = 0.05;
 for numFolds = [5 10] % number of folds
     for numClusts = [5 10 15 20 30] % number of clusters
         variables = ... % variables for algorithms
-            {'latitude' 'longitude' 'pressure' 'sigma' 'temperature_cns' ...
-            'salinity_abs'};
+            {'latitude' 'lon_cos' 'pressure' 'sigma' 'temperature_cns' ...
+            'salinity_abs' 'day_sin' 'day_cos' 'year'};
         save(['Config/kFold_config_' num2str(numClusts) '_' ...
             num2str(numFolds) '.mat']);
     end

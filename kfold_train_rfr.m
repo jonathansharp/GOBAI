@@ -34,7 +34,7 @@ clear glodap_only glodap_idx vars v
 %% create directory and file names
 rfr_dir = ['Models/RFR/RFR_c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
-rfr_fnames = cell(5,10);
+rfr_fnames = cell(numFolds,num_clusters);
 for f = 1:numFolds
     for c = 1:num_clusters
         rfr_fnames(f,c) = ...
