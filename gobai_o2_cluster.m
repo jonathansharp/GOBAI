@@ -2,8 +2,9 @@
 
 addpath(genpath(pwd));
 try
-    gmm_clustering_rg;
+    gmm_clustering;
     assign_data_to_clusters;
+    kfold_split_data;
     disp('success!');
 catch ME
     disp(ME);

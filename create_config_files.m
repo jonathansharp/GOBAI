@@ -3,7 +3,7 @@ if ~isfolder('Config'); mkdir('Config'); end
 
 %% create data download configuration file for adjusted and DMQC
 clear
-snap_date = 202309;
+snap_date = 202311;
 glodap_year = 2022;
 data_modes = {'A' 'D'};
 float_file_ext = [];
@@ -16,7 +16,7 @@ clear
 
 %% create data download configuration file for DMQC only
 clear
-snap_date = 202309;
+snap_date = 202311;
 glodap_year = 2022;
 data_modes = {'D'};
 float_file_ext = [];
