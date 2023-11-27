@@ -15,4 +15,4 @@
 
 module load matlab
 cd /work2/noaa/hindcasts/GOBAI-O2-New_JS
-srun matlab -nodisplay -r "create_config_files; load('Config/load_data_config_D.mat'); load('Config/cluster_config_5.mat'); gobai_o2_cluster;"
+srun matlab -nodisplay -r "create_config_files; load('Config/base_config_RG.mat'); load('Config/load_data_config_D.mat'); load('Config/cluster_config_5.mat'); gobai_o2_cluster;"

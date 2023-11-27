@@ -8,8 +8,8 @@
 #SBATCH -n 1
 #SBATCH --cpus-per-task 40
 #SBATCH -t 8:00:00
-#SBATCH -o gobai_o2_train_ffnn.out
-#SBATCH -e gobai_o2_train_ffnn.err
+#SBATCH -o gobai_o2_train_gbm.out
+#SBATCH -e gobai_o2_train_gbm.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jonathan.sharp@noaa.gov
 
