@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -J gobai
+#SBATCH -J gobai-osse
 #SBATCH -A hindcasts
 #SBATCH -q batch
 #SBATCH -p hercules
@@ -8,8 +8,8 @@
 #SBATCH -n 1
 #SBATCH --cpus-per-task 40
 #SBATCH -t 8:00:00
-#SBATCH -o gobai_o2_osse_evaluate.out
-#SBATCH -e gobai_o2_osse_evaluate.err
+#SBATCH -o output/gobai_o2_osse_evaluate.out
+#SBATCH -e errors/gobai_o2_osse_evaluate.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jonathan.sharp@noaa.gov
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -J gobai
+#SBATCH -J gobai-kfold
 #SBATCH -A hindcasts
 #SBATCH -q batch
 #SBATCH -p hercules
@@ -8,8 +8,8 @@
 #SBATCH -n 1
 #SBATCH --cpus-per-task 40
 #SBATCH -t 8:00:00
-#SBATCH -o gobai_o2_kfold_train_gbm.out
-#SBATCH -e gobai_o2_kfold_train_gbm.err
+#SBATCH -o output/gobai_o2_kfold_train_gbm.out
+#SBATCH -e errors/gobai_o2_kfold_train_gbm.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jonathan.sharp@noaa.gov
 
