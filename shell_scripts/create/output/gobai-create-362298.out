@@ -1,0 +1,40 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Train GBM - Cluster #1: Elapsed time is 42.683588 seconds.
+Train GBM - Cluster #2: Elapsed time is 397.465358 seconds.
+Train GBM - Cluster #3: Elapsed time is 143.735077 seconds.
+Train GBM - Cluster #4: Elapsed time is 41.275825 seconds.
+Train GBM - Cluster #5: Elapsed time is 158.523768 seconds.
+Train GBM - Cluster #6: Elapsed time is 266.166552 seconds.
+Train GBM - Cluster #7: Elapsed time is 149.086448 seconds.
+Train GBM - Cluster #8: Elapsed time is 236.956737 seconds.
+Train GBM - Cluster #9: Elapsed time is 170.963831 seconds.
+Train GBM - Cluster #10: Elapsed time is 129.449286 seconds.
+Train GBM - Cluster #11: Elapsed time is 194.251756 seconds.
+Train GBM - Cluster #12: Elapsed time is 72.653374 seconds.
+Train GBM - Cluster #13: Elapsed time is 94.222401 seconds.
+Train GBM - Cluster #14: Elapsed time is 154.898517 seconds.
+Train GBM - Cluster #15: Elapsed time is 68.834323 seconds.
+GBM Training: Elapsed time is 68.900287 seconds.
+  MException with properties:
+
+    identifier: 'MATLAB:UndefinedFunction'
+       message: 'Unrecognized function or variable 'ffnn_dir'.'
+         cause: {}
+         stack: [3x1 struct]
+    Correction: []
+
+Function: gobai_o2_train_gbm
+Line: 5
+Function: train_gbm
+Line: 204
+Function: apply_gbm_model
+Line: 281

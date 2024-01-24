@@ -14,12 +14,13 @@ load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
-load(['Data/all_data_clusters_' num2str(num_clusters) '_' ...
+load(['Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% load data cluster indices
-load(['Data/k_fold_data_indices_'  num2str(num_clusters) '_' num2str(numFolds) '_'...
-    file_date float_file_ext '.mat'],'numFolds','train_idx','test_idx');
+load(['Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
+    '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],...
+    'num_folds','train_idx','test_idx');
 
 %% remove float data for GLODAP only test
 if glodap_only
@@ -32,18 +33,18 @@ end
 clear glodap_idx vars v
 
 %% create directory and file names
-gbm_dir = ['Models/GBM/GBM_c' num2str(num_clusters) '_' file_date ...
+gbm_dir = ['Models/' base_grid '/GBM/GBM_c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/tr' num2str(numstumps)];
-gbm_fnames = cell(numFolds,num_clusters);
-for f = 1:numFolds
+gbm_fnames = cell(num_folds,num_clusters);
+for f = 1:num_folds
     for c = 1:num_clusters
         gbm_fnames(f,c) = ...
             {['GBM_oxygen_C' num2str(c) '_F' num2str(f) '_test']};
     end
 end
-kfold_dir = ['KFold/GBM/c' num2str(num_clusters) '_' file_date float_file_ext];
+kfold_dir = ['KFold/GBM/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 kfold_name = ['GBM_output_tr' num2str(numstumps)];
-fig_dir = ['Figures/KFold/GBM/c' num2str(num_clusters) '_' file_date float_file_ext];
+fig_dir = ['Figures/KFold/GBM/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 fig_name = ['k_fold_comparison_tr' num2str(numstumps) '.png'];
 
 %% fit and evaluate test models (GBM)
@@ -51,11 +52,12 @@ fig_name = ['k_fold_comparison_tr' num2str(numstumps) '.png'];
 
 % fit test models for each fold
 % LSBoost cannot run in parallel
-for f = 1:numFolds
+for f = 1:num_folds
     % fit test models for each cluster
     gbm_output.(['f' num2str(f)]) = ...
         nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
     for c = 1:num_clusters
+      if any(all_data_clusters.clusters == c) % check for data in cluster
         % start timing fit
         tic
         % fit test model for each cluster
@@ -79,6 +81,12 @@ for f = 1:numFolds
         save([gbm_dir '/' gbm_fnames{f,c}],'GBM','-v7.3');
         % clean up
         clear GBM
+      else
+        fprintf(['Train GBM - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+        fprintf('');
+        fprintf(['Run GBM - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+        [~]=toc;
+      end
     end
     % assemble matrix of probabilities greater than the threshold (5%)
     probs_matrix = [];
@@ -97,7 +105,7 @@ end
 clear f c
 % aggregate output from all folds
 gbm_output.k_fold_test_oxygen = nan(size(all_data.oxygen));
-for f = 1:numFolds
+for f = 1:num_folds
     gbm_output.k_fold_test_oxygen(test_idx.(['f' num2str(f)])) = ...
         gbm_output.(['f' num2str(f) '_mean']);
 end

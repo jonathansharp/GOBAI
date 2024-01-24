@@ -14,12 +14,13 @@ load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
-load(['Data/all_data_clusters_' num2str(num_clusters) '_' ...
+load(['Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% load data cluster indices
-load(['Data/k_fold_data_indices_'  num2str(num_clusters) '_' num2str(numFolds) '_'...
-    file_date float_file_ext '.mat'],'numFolds','train_idx','test_idx');
+load(['Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
+    '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],...
+    'num_folds','train_idx','test_idx');
 
 %% remove float data for GLODAP only test
 if glodap_only
@@ -32,20 +33,20 @@ end
 clear glodap_only glodap_idx vars v
 
 %% create directory and file names
-ffnn_dir = ['Models/FFNN/FFNN_c' num2str(num_clusters) '_' file_date ...
+ffnn_dir = ['Models/' base_grid '/FFNN/FFNN_c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/train' num2str(100*train_ratio) '_val' ...
     num2str(100*val_ratio) '_test' num2str(100*val_ratio)];
-ffnn_fnames = cell(numFolds,num_clusters);
-for f = 1:numFolds
+ffnn_fnames = cell(num_folds,num_clusters);
+for f = 1:num_folds
     for c = 1:num_clusters
         ffnn_fnames(f,c) = ...
             {['FFNN_oxygen_C' num2str(c) '_F' num2str(f) '_test']};
     end
 end
-kfold_dir = ['KFold/FFNN/c' num2str(num_clusters) '_' file_date float_file_ext];
+kfold_dir = ['KFold/FFNN/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 kfold_name = ['FFNN_output_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) ...
     '_test' num2str(100*val_ratio)];
-fig_dir = ['Figures/KFold/FFNN/c' num2str(num_clusters) '_' file_date float_file_ext];
+fig_dir = ['Figures/KFold/FFNN/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 fig_name = ['k_fold_comparison_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) ...
     '_test' num2str(100*val_ratio) '.png'];
 
@@ -54,11 +55,12 @@ fig_name = ['k_fold_comparison_train' num2str(100*train_ratio) '_val' num2str(10
 nodes1 = [5 10 15];
 nodes2 = [15 10 5];
 % fit and evaluate test models for each fold
-for f = 1:numFolds
+for f = 1:num_folds
     % fit test models for each cluster
     ffnn_output.(['f' num2str(f)]) = ...
         nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
     for c = 1:num_clusters
+      if any(all_data_clusters.clusters == c) % check for data in cluster
         % start timing fit
         tic
         % fit test model for each cluster
@@ -83,6 +85,12 @@ for f = 1:numFolds
         save([ffnn_dir '/' ffnn_fnames{f,c}],'FFNN','-v7.3');
         % clean up
         clear FFNN
+      else
+        fprintf(['Train FFNN - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+        fprintf('');
+        fprintf(['Run FFNN - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+        [~]=toc;
+      end
     end
     % assemble matrix of probabilities greater than the threshold (5%)
     probs_matrix = [];
@@ -100,7 +108,7 @@ for f = 1:numFolds
 end
 % aggregate output from all folds
 ffnn_output.k_fold_test_oxygen = nan(size(all_data.oxygen));
-for f = 1:numFolds
+for f = 1:num_folds
     ffnn_output.k_fold_test_oxygen(test_idx.(['f' num2str(f)])) = ...
         ffnn_output.(['f' num2str(f) '_mean']);
 end
@@ -146,4 +154,4 @@ close
 %% clean up
 clear ffnn_output ffnn_rmse ffnn_med_err ffnn_mean_err probs_matrix f c
 clear variables f c numtrees minLeafSize NumPredictors ffnn_dir ffnn_fnames
-clear ans all_data all_data_clusters numFolds train_idx test_idx train_sum
+clear ans all_data all_data_clusters num_folds train_idx test_idx train_sum

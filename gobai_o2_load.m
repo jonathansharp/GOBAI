@@ -10,8 +10,6 @@ try
     combine_o2_data;
     disp('success!');
 catch ME
-    disp(ME);
-    disp(['Function: ' ME.stack(1).name]);
-    disp(['Line: ' num2str(ME.stack(1).line)]);
+    display_error_info(ME);
 end
 exit

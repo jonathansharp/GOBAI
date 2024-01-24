@@ -1,0 +1,49 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Starting parallel pool (parpool) using the 'Processes' profile ...
+[Warning: The Cluster reported an error while destroying a job. The error was:
+Could not open file
+"/home/sharp/.matlab/local_cluster_jobs/R2022b/Job73.in.mat", the error
+returned was: Unable to find file or directory
+'/home/sharp/.matlab/local_cluster_jobs/R2022b/Job73.in.mat'...] 
+[> In parallel.internal.cluster.CJSJobMethods.destroyOneJob (line 79)
+In parallel.job.CJSConcurrentJob>@(job)CJSJobMethods.destroyOneJob(job.Parent,job,job.Support,job.SupportID) (line 52)
+In parallel.job/CJSConcurrentJob/destroyJob (line 52)
+In parallel.Job>iDeleteJobs (line 1634)
+In parallel.internal.cluster.hetfun (line 57)
+In parallel/Job/delete (line 1429)
+In parallel/Cluster/hDeleteOneJob (line 1031)
+In parallel.internal.pool.AbstractInteractiveClient>iDeleteJobs (line 491)
+In parallel.internal.pool/AbstractInteractiveClient/pRemoveOldJobs (line 214)
+In parallel.internal.pool/AbstractInteractiveClient/start (line 103)
+In parallel.internal.pool.AbstractClusterPool>iStartClient (line 872)
+In parallel.internal.pool.AbstractClusterPool.hBuildPool (line 630)
+In parallel.internal.pool.doParpool (line 22)
+In parpool (line 127)
+In train_ffnn (line 167)
+In gobai_o2_train_ffnn (line 5)] 
+Connected to the parallel pool (number of workers: 40).
+Analyzing and transferring files to the workers ...done.
+  ParallelException with properties:
+
+     identifier: 'MATLAB:parfor:UndefinedFunctionOnWorker'
+        message: 'An UndefinedFunction error was thrown on the workers for 'gobai_ffnn_dir'.  This might be because the file containing 'gobai_ffnn_dir' is not accessible on the workers. Use addAttachedFiles(pool, files) to specify the required files to be attached.  For more information, see the documentation for 'parallel.Pool/addAttachedFiles'.'
+          cause: {[1x1 MException]}
+    remotecause: {[1x1 MException]}
+          stack: [3x1 struct]
+     Correction: []
+
+Function: gobai_o2_train_ffnn
+Line: 5
+Function: train_ffnn
+Line: 170
+Function: apply_ffnn_model
+Line: 298

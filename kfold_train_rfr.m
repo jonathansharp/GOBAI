@@ -14,12 +14,13 @@ load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
-load(['Data/all_data_clusters_' num2str(num_clusters) '_' ...
+load(['Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% load data cluster indices
-load(['Data/k_fold_data_indices_'  num2str(num_clusters) '_' num2str(numFolds) '_'...
-    file_date float_file_ext '.mat'],'numFolds','train_idx','test_idx');
+load(['Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
+    '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],...
+    'num_folds','train_idx','test_idx');
 
 %% remove float data for GLODAP only test
 if glodap_only
@@ -32,18 +33,18 @@ end
 clear glodap_only glodap_idx vars v
 
 %% create directory and file names
-rfr_dir = ['Models/RFR/RFR_c' num2str(num_clusters) '_' file_date ...
+rfr_dir = ['Models/' base_grid '/RFR/RFR_c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
-rfr_fnames = cell(numFolds,num_clusters);
-for f = 1:numFolds
+rfr_fnames = cell(num_folds,num_clusters);
+for f = 1:num_folds
     for c = 1:num_clusters
         rfr_fnames(f,c) = ...
             {['RFR_oxygen_C' num2str(c) '_F' num2str(f) '_test']};
     end
 end
-kfold_dir = ['KFold/RFR/c' num2str(num_clusters) '_' file_date float_file_ext];
+kfold_dir = ['KFold/RFR/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 kfold_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
-fig_dir = ['Figures/KFold/RFR/c' num2str(num_clusters) '_' file_date float_file_ext];
+fig_dir = ['Figures/KFold/RFR/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 fig_name = ['k_fold_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];
 
 %% fit and evaluate test models (RFR)
@@ -52,11 +53,12 @@ NumPredictors = ceil(sqrt(length(variables)));
 % set up parallel pool
 parpool;
 % evaluate test models for each fold
-for f = 1:numFolds
+for f = 1:num_folds
     % pre-allocate output for each fold
     rfr_output.(['f' num2str(f)]) = ...
         nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
     for c = 1:num_clusters
+      if any(all_data_clusters.clusters == c) % check for data in cluster
         % start timing fit
         tic
         % fit test model for each cluster
@@ -81,6 +83,12 @@ for f = 1:numFolds
         save([rfr_dir '/' rfr_fnames{f,c}],'RFR','-v7.3');
         % clean up
         clear RFR
+      else
+        fprintf(['Train RFR - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+        fprintf('');
+        fprintf(['Run RFR - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+        [~]=toc;
+      end
     end
     % assemble matrix of probabilities greater than the threshold (5%)
     probs_matrix = [];
@@ -100,7 +108,7 @@ end
 delete(gcp('nocreate'))
 % aggregate output from all folds
 rfr_output.k_fold_test_oxygen = nan(size(all_data.oxygen));
-for f = 1:numFolds
+for f = 1:num_folds
     rfr_output.k_fold_test_oxygen(test_idx.(['f' num2str(f)])) = ...
         rfr_output.(['f' num2str(f) '_mean']);
 end
@@ -144,4 +152,4 @@ close
 %% clean up
 clear rfr_output rfr_rmse rfr_med_err rfr_mean_err probs_matrix f c
 clear num_clusters f c numtrees minLeafSize NumPredictors rfr_dir rfr_fnames
-clear ans all_data all_data_clusters numFolds train_idx test_idx train_sum
+clear ans all_data all_data_clusters num_folds train_idx test_idx train_sum

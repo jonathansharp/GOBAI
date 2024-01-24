@@ -4,11 +4,9 @@ addpath(genpath(pwd));
 try
     plot_data_by_cluster;
     plot_cluster_animation
-    plot_probability_animation;
+    %plot_probability_animation;
     disp('success!');
-catch ME
-    disp(ME);
-    disp(['Function: ' ME.stack(1).name]);
-    disp(['Line: ' num2str(ME.stack(1).line)]);
+catch ME % if you can
+    display_error_info(ME);
 end
 exit

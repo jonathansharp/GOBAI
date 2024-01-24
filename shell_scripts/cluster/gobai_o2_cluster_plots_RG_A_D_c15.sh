@@ -8,12 +8,11 @@
 #SBATCH -n 1
 #SBATCH --cpus-per-task 40
 #SBATCH -t 8:00:00
-#SBATCH -o output/gobai_o2_cluster.out
-#SBATCH -e errors/gobai_o2_cluster.err
+#SBATCH -o output/%x-%j.out
+#SBATCH -e errors/%x-%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=jonathan.sharp@noaa.gov
 
 module load matlab
 cd /work2/noaa/hindcasts/GOBAI-O2-New_JS
-srun matlab -nodisplay -r "create_config_files; load('Config/base_config_RG.mat'); load('Config/load_data_config_A_D.mat'); load('Config/cluster_config_15.mat'); gobai_o2_cluster_plots;"
-
+srun matlab -nodisplay -r "gobai_o2_initiate; load('Config/base_config_RG.mat'); load('Config/load_data_config_A_D.mat'); load('Config/cluster_config_15.mat'); gobai_o2_cluster_plots;"

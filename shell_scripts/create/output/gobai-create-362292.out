@@ -1,0 +1,67 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Starting parallel pool (parpool) using the 'Processes' profile ...
+[Warning: The system time zone setting, 'US/Central', does not specify a single
+time zone unambiguously. It will be treated as 'America/Chicago'. See the <a
+href="matlab:doc('datetime.TimeZone')">datetime.TimeZone property</a> for
+details about specifying time zones.] 
+[> In verifyTimeZone (line 38)
+In datetime (line 559)
+In parallel.internal.pool.JavaBackedSessionNotifier>iLongToDatetime (line 128)
+In parallel.internal.pool.JavaBackedSessionNotifier>iJavaDateToDatetime (line
+148)
+In parallel.internal.pool.JavaBackedSessionNotifier.sessionInfoFromJava (line
+102)
+In parallel.internal.pool/JavaBackedSessionNotifier/wrapNotificationMethod
+(line 17)
+In parallel.internal.pool/JavaBackedSessionNotifier/notifyAboutToStart (line
+36)
+In parallel.internal.pool.ISessionNotifier.buildAboutToStartInfo (line 34)
+In parallel.internal.pool.argumentsParser>iPoolStartingMessage (line 188)
+In parallel.internal.pool.argumentsParser>iGetClusterAndNumWorkers (line 108)
+In parallel.internal.pool.argumentsParser (line 45)
+In parallel.internal.pool.doParpool (line 17)
+In parpool (line 127)
+In train_rfr (line 52)
+In gobai_o2_train_rfr (line 5)
+] 
+Connected to the parallel pool (number of workers: 40).
+Train RFR - Cluster #1: Elapsed time is 269.027569 seconds.
+Train RFR - Cluster #2: Elapsed time is 327.579233 seconds.
+Train RFR - Cluster #3: Elapsed time is 475.623565 seconds.
+Train RFR - Cluster #4: Elapsed time is 309.800869 seconds.
+Train RFR - Cluster #5: Elapsed time is 196.437482 seconds.
+Train RFR - Cluster #6: Elapsed time is 269.569050 seconds.
+Train RFR - Cluster #7: Elapsed time is 198.824797 seconds.
+Train RFR - Cluster #8: Elapsed time is 12.905753 seconds.
+Train RFR - Cluster #9: Elapsed time is 207.222666 seconds.
+Train RFR - Cluster #10: Elapsed time is 263.114418 seconds.
+Train RFR - Cluster #11: Elapsed time is 76.946422 seconds.
+Train RFR - Cluster #12: Elapsed time is 147.735166 seconds.
+Train RFR - Cluster #13: N/AElapsed time is 147.739916 seconds.
+Train RFR - Cluster #14: Elapsed time is 112.318122 seconds.
+Train RFR - Cluster #15: Elapsed time is 252.317514 seconds.
+Parallel pool using the 'Processes' profile is shutting down.
+RFR Training: Elapsed time is 261.478465 seconds.
+  MException with properties:
+
+    identifier: 'MATLAB:UndefinedFunction'
+       message: 'Unrecognized function or variable 'ffnn_dir'.'
+         cause: {}
+         stack: [3x1 struct]
+    Correction: []
+
+Function: gobai_o2_train_rfr
+Line: 5
+Function: train_rfr
+Line: 230
+Function: apply_rfr_model
+Line: 285

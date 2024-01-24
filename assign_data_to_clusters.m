@@ -13,15 +13,15 @@ file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy
 load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
-%% calculate longitude cosine
-all_data.lon_cos = cosd(all_data.longitude-20);
-
 %% assign data points and probabilities to clusters
 % load GMM model
-load(['Data/GMM_' num2str(num_clusters) '/model']);
+load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model']);
 % transform to normalized arrays
-X_norm = normalize([all_data.temperature all_data.salinity all_data.lon_cos ...
-    all_data.latitude all_data.pressure], 'Center',C,'Scale',S);
+predictor_matrix = [];
+for v = 1:length(clust_vars_data)
+    predictor_matrix = [predictor_matrix all_data.(clust_vars_data{v})];
+end
+X_norm = normalize(predictor_matrix,'Center',C,'Scale',S);
 % assign to clusters and obtain probabilities
 [all_data_clusters.clusters,~,p] = cluster(gmm,X_norm);
 all_data_clusters.clusters = uint8(all_data_clusters.clusters);
@@ -31,6 +31,6 @@ for c = 1:size(p,2)
 end
 % save data clusters
 if ~isfolder([pwd '/Data']); mkdir('Data'); end
-save(['Data/all_data_clusters_'  num2str(num_clusters) '_' ...
+save(['Data/all_data_clusters_'  base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters','-v7.3');
-clear lon_cos X_norm c C S gmm num_clusters p
+clear lon_cos X_norm c C S gmm p

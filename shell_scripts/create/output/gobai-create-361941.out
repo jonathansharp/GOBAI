@@ -1,0 +1,26 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Train GBM - Cluster #1: Elapsed time is 42.759033 seconds.
+Train GBM - Cluster #2: Elapsed time is 398.031230 seconds.
+Train GBM - Cluster #3: Elapsed time is 138.511146 seconds.
+Train GBM - Cluster #4: Elapsed time is 40.365308 seconds.
+Train GBM - Cluster #5: Elapsed time is 158.632179 seconds.
+Train GBM - Cluster #6: Elapsed time is 268.678336 seconds.
+Train GBM - Cluster #7: Elapsed time is 151.671937 seconds.
+Train GBM - Cluster #8: Elapsed time is 238.851962 seconds.
+Train GBM - Cluster #9: Elapsed time is 168.864551 seconds.
+Train GBM - Cluster #10: Elapsed time is 129.971064 seconds.
+Train GBM - Cluster #11: Elapsed time is 198.906337 seconds.
+Train GBM - Cluster #12: Elapsed time is 73.795673 seconds.
+Train GBM - Cluster #13: Elapsed time is 95.525438 seconds.
+Train GBM - Cluster #14: Elapsed time is 159.355037 seconds.
+Train GBM - Cluster #15: Elapsed time is 68.516713 seconds.
+GBM Training: Elapsed time is 68.585634 seconds.

@@ -6,7 +6,7 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 09/12/2023
+% DATE: 12/1/2023
 
 %% load data after implementing float data adjustment
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
@@ -60,13 +60,19 @@ all_data.oxygen = [float_data_adjusted.OXY(float_idx);...
     glodap_data.OXY(glodap_idx)];
 
 % transform longitude and day of year
-all_data.lon_cos = cosd(all_data.longitude-20);
+all_data.lon_cos_1 = cosd(all_data.longitude-20);
+all_data.lon_cos_2 = cosd(all_data.longitude-110);
+date = datevec(all_data.time);
+date0 = date;
+date0(:,2:3) = 0;
+all_data.day = datenum(date) - datenum(date0);
 all_data.day_sin = sin((2.*pi.*all_data.day)/365.25);
 all_data.day_cos = cos((2.*pi.*all_data.day)/365.25);
+all_data.year = date(:,1);
 
 %% save combined oxygen data
 if ~exist([pwd '/Data'],'dir'); mkdir('Data'); end
 save(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
     'all_data','file_date','-v7.3');
-clear all_data v float_vars glodap_vars
-clear float_data_adjusted float_idx glodap_data glodap_idx
+
+clear

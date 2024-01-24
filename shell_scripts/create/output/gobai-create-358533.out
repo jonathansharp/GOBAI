@@ -1,0 +1,27 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Starting parallel pool (parpool) using the 'Processes' profile ...
+Connected to the parallel pool (number of workers: 40).
+  ParallelException with properties:
+
+     identifier: 'MATLAB:minrhs'
+        message: 'Not enough input arguments.'
+          cause: {}
+    remotecause: {[1x1 MException]}
+          stack: [3x1 struct]
+     Correction: []
+
+Function: gobai_o2_train_ffnn
+Line: 5
+Function: train_ffnn
+Line: 170
+Function: apply_ffnn_model
+Line: 284

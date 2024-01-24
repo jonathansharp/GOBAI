@@ -1,4 +1,4 @@
-% k_fold_evaluate_test_models
+% k_fold_ensemble
 %
 % DESCRIPTION:
 % This function uses validation versions of machine learning models to
@@ -6,40 +6,54 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 09/14/2023
+% DATE: 1/2/2024
 
 %% load combined data
-load_interpolated_combined_data_to_workspace
+file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
+load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
+     'all_data','file_date');
 
-%% load data clusters
-load_gmm_data_clusters
+%% create directory names
+% FFNN
+kfold_ffnn_dir = ...
+    ['KFold/FFNN/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+kfold_ffnn_name = ['FFNN_output_train' num2str(100*train_ratio) '_val' ...
+    num2str(100*val_ratio) '_test' num2str(100*val_ratio)];
+% GBM
+kfold_gbm_dir = ...
+    ['KFold/GBM/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+kfold_gbm_name = ['GBM_output_tr' num2str(numstumps)];
+% RFR
+kfold_rfr_dir = ...
+    ['KFold/RFR/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+kfold_rfr_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
+% FFNN
+kfold_ens_dir = ...
+    ['KFold/ENS/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+kfold_ens_name = ['ENS_output' ...
+    'FFNN_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) ...
+    'GBM_tr' num2str(numstumps) 'RFR_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
+% Figures
+fig_dir = ['Figures/KFold/ENS/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+fig_name = ['k_fold_comparison.png'];
 
-%% load k-fold evaluation indices
-load_k_fold_data_indices
+%% load k-fold data
+% FFNN
+load([kfold_ffnn_dir '/' kfold_ffnn_name],'ffnn_output','ffnn_rmse',...
+    'ffnn_med_err','ffnn_mean_err');
+% GBM
+load([kfold_gbm_dir '/' kfold_gbm_name],'gbm_output','gbm_rmse',...
+    'gbm_med_err','gbm_mean_err');
+% RFR
+load([kfold_rfr_dir '/' kfold_rfr_name],'rfr_output','rfr_rmse',...
+    'rfr_med_err','rfr_mean_err');
 
-%% set up variables and clusters
-% define variables to use
-variables = define_variables_for_model();
-% process cluster names
-clusters = fieldnames(all_data_clusters); % obtain list of clusters
-clusters(1) = []; % remove cluster identifiers from list
-numClusts = length(clusters); % define number of clusters
-% define cluster probability threshold
-thresh = 0.05;
-
-%% average across RFR, FFNN, SVM
-% load RFR results
-load(['KFold/RFR_output_'  datestr(date) '.mat'],'rfr_output');
-% load FFNN results
-load(['KFold/FFNN_output_'  datestr(date) '.mat'],'ffnn_output');
-% load SVM results
-load(['KFold/SVM_output_'  datestr(date) '.mat'],'svm_output');
-% average across models
+%% average across models
 ens_output.k_fold_test_oxygen = ...
     mean([rfr_output.k_fold_test_oxygen ffnn_output.k_fold_test_oxygen ...
-    svm_output.k_fold_test_oxygen],2);
+    gbm_output.k_fold_test_oxygen],2);
 % clean up
-clear rfr_output ffnn_output svm_output
+clear rfr_output ffnn_output gbm_output
 % compare k-fold output to data
 ens_output.k_fold_delta = ens_output.k_fold_test_oxygen - all_data.oxygen;
 % calculate error stats
@@ -47,8 +61,8 @@ ens_mean_err = mean(ens_output.k_fold_delta);
 ens_med_err = median(ens_output.k_fold_delta);
 ens_rmse = sqrt(mean(ens_output.k_fold_delta.^2));
 % save predicted data
-if ~isfolder([pwd '/KFold/ENS_output']); mkdir('KFold/ENS_output'); end
-save(['KFold/ENS_output_'  datestr(date) '.mat'],...
+if ~isfolder([pwd '/' kfold_ens_dir]); mkdir(kfold_ens_dir); end
+save([kfold_ens_dir '/' kfold_ens_name],...
     'ens_output','ens_rmse','ens_med_err','ens_mean_err');
 
 %% plot histogram of errors
@@ -62,7 +76,7 @@ plot([0 500],[0 500],'k--');
 set(h,'EdgeColor','none');
 xlim([0 500]); ylim([0 500]);
 xlabel('Measured Oxygen (\mumol kg^{-1})');
-ylabel('Ensemble Model Oxygen (\mumol kg^{-1})');
+ylabel('ENS Oxygen (\mumol kg^{-1})');
 myColorMap = flipud(hot(256.*32));
 myColorMap(1,:) = 1;
 colormap(myColorMap);
@@ -70,9 +84,12 @@ set(gca,'ColorScale','log');
 caxis([1e0 1e5]);
 c=colorbar;
 c.Label.String = 'log_{10}(Bin Counts)';
-text(300,50,['RMSE = ' num2str(round(rmse,1)) '\mumol kg^{-1}'],'fontsize',12);
-if ~isfolder([pwd '/Figures/KFold']); mkdir('KFold/KFold'); end
-exportgraphics(gcf,'Figures/KFold/ENS_k_fold_comparison.png');
+text(300,50,['RMSE = ' num2str(round(ens_rmse,1)) '\mumol kg^{-1}'],'fontsize',12);
+if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
+exportgraphics(gcf,[fig_dir '/' fig_name]);
+% clean up
+clear counts bin_centers h p myColorMap
+close
 
 %% clean up
 clear

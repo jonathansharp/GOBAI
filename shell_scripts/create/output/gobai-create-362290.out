@@ -1,0 +1,65 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Starting parallel pool (parpool) using the 'Processes' profile ...
+[Warning: The system time zone setting, 'US/Central', does not specify a single
+time zone unambiguously. It will be treated as 'America/Chicago'. See the <a
+href="matlab:doc('datetime.TimeZone')">datetime.TimeZone property</a> for
+details about specifying time zones.] 
+[> In verifyTimeZone (line 38)
+In datetime (line 559)
+In parallel.internal.pool.JavaBackedSessionNotifier>iLongToDatetime (line 128)
+In parallel.internal.pool.JavaBackedSessionNotifier>iJavaDateToDatetime (line
+148)
+In parallel.internal.pool.JavaBackedSessionNotifier.sessionInfoFromJava (line
+102)
+In parallel.internal.pool/JavaBackedSessionNotifier/wrapNotificationMethod
+(line 17)
+In parallel.internal.pool/JavaBackedSessionNotifier/notifyAboutToStart (line
+36)
+In parallel.internal.pool.ISessionNotifier.buildAboutToStartInfo (line 34)
+In parallel.internal.pool.argumentsParser>iPoolStartingMessage (line 188)
+In parallel.internal.pool.argumentsParser>iGetClusterAndNumWorkers (line 108)
+In parallel.internal.pool.argumentsParser (line 45)
+In parallel.internal.pool.doParpool (line 17)
+In parpool (line 127)
+In parallel.internal.parpool.getOrCreateCurrentPool (line 17)
+In gcp (line 45)
+In nncalc.setup1>setupImpl (line 95)
+In nncalc.setup1 (line 16)
+In nncalc.setup (line 7)
+In network/train (line 368)
+In fit_FFNN (line 33)
+In train_ffnn (line 65)
+In gobai_o2_train_ffnn (line 5)
+] 
+Connected to the parallel pool (number of workers: 40).
+Train FFNN - Cluster #1: Elapsed time is 92.659747 seconds.
+Train FFNN - Cluster #2: Elapsed time is 330.192785 seconds.
+Train FFNN - Cluster #3: Elapsed time is 176.147268 seconds.
+Train FFNN - Cluster #4: Elapsed time is 65.854298 seconds.
+Train FFNN - Cluster #5: Elapsed time is 89.327461 seconds.
+Train FFNN - Cluster #6: Elapsed time is 250.060839 seconds.
+Train FFNN - Cluster #7: Elapsed time is 66.798921 seconds.
+Train FFNN - Cluster #8: Elapsed time is 278.838858 seconds.
+Train FFNN - Cluster #9: Elapsed time is 128.349508 seconds.
+Train FFNN - Cluster #10: Elapsed time is 92.964764 seconds.
+Train FFNN - Cluster #11: Elapsed time is 275.057632 seconds.
+Train FFNN - Cluster #12: Elapsed time is 69.554647 seconds.
+Train FFNN - Cluster #13: Elapsed time is 77.856869 seconds.
+Train FFNN - Cluster #14: Elapsed time is 216.438997 seconds.
+Train FFNN - Cluster #15: Elapsed time is 65.142704 seconds.
+Parallel pool using the 'Processes' profile is shutting down.
+FFNN Training: Elapsed time is 79.474183 seconds.
+Starting parallel pool (parpool) using the 'Processes' profile ...
+Connected to the parallel pool (number of workers: 40).
+Parallel pool using the 'Processes' profile is shutting down.
+FFNN Prediction: Elapsed time is 103.183281 seconds.
+success!

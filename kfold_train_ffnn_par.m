@@ -18,8 +18,8 @@ load(['Data/all_data_clusters_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% load data cluster indices
-load(['Data/k_fold_data_indices_'  num2str(num_clusters) '_' num2str(numFolds) '_'...
-    file_date float_file_ext '.mat'],'numFolds','train_idx','test_idx');
+load(['Data/k_fold_data_indices_'  num2str(num_clusters) '_' num2str(num_folds) '_'...
+    file_date float_file_ext '.mat'],'num_folds','train_idx','test_idx');
 
 %% remove float data for GLODAP only test
 if glodap_only
@@ -37,7 +37,7 @@ ffnn_dir = ['Models/FFNN/FFNN_c' num2str(num_clusters) '_' file_date ...
     num2str(100*val_ratio) '_test' num2str(100*val_ratio)];
 ffnn_fnames = cell(5,10); % for models
 ffnn_onames = cell(5,10); % for output
-for f = 1:numFolds
+for f = 1:num_folds
     for c = 1:num_clusters
         ffnn_fnames(f,c) = ...
             {['FFNN_oxygen_C' num2str(c) '_F' num2str(f) '_test']};
@@ -59,7 +59,7 @@ nodes2 = [15 10 5];
 % set up parallel pool
 parpool;
 % fit and evaluate test models for each fold
-parfor fc = 1:numFolds*num_clusters
+parfor fc = 1:num_folds*num_clusters
     % fit test models for each cluster
     %ffnn_output.(['f' num2str(f)]) = ...
     output = ...
@@ -95,7 +95,7 @@ parfor fc = 1:numFolds*num_clusters
 end
 % end parallel session
 delete(gcp('nocreate'));
-for f = 1:numFolds
+for f = 1:num_folds
     % assemble matrix of probabilities greater than the threshold (5%)
     probs_matrix = nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
     output_matrix = nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
@@ -120,7 +120,7 @@ for f = 1:numFolds
 end
 % aggregate output from all folds
 ffnn_output.k_fold_test_oxygen = nan(size(all_data.oxygen));
-for f = 1:numFolds
+for f = 1:num_folds
     load([ffnn_dir '/FFNN_oxygen_F' num2str(f) '_test_output_mean'],'output_mean');
     ffnn_output.k_fold_test_oxygen(test_idx.(['f' num2str(f)])) = output_mean;
     clear output_mean

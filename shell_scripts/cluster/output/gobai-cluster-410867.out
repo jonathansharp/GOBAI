@@ -1,0 +1,72 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+[Warning: Name is nonexistent or not a directory: /raid/sharp/matlab] 
+[> In path (line 109)
+In addpath (line 86)
+In startup (line 3)] 
+[Warning: Failed to converge in 100 iterations during replicate 1 for
+gmdistribution with 15 components] 
+[> In gmcluster (line 204)
+In gmdistribution.fit (line 102)
+In fitgmdist (line 135)
+In gmm_clustering (line 84)
+In gobai_o2_form_clusters (line 5)] 
+[Warning: Failed to converge in 100 iterations during replicate 5 for
+gmdistribution with 15 components] 
+[> In gmcluster (line 204)
+In gmdistribution.fit (line 102)
+In fitgmdist (line 135)
+In gmm_clustering (line 84)
+In gobai_o2_form_clusters (line 5)] 
+Elapsed time is 19643.475491 seconds.
+Starting parallel pool (parpool) using the 'Processes' profile ...
+[Warning: The system time zone setting, 'US/Central', does not specify a single
+time zone unambiguously. It will be treated as 'America/Chicago'. See the <a
+href="matlab:doc('datetime.TimeZone')">datetime.TimeZone property</a> for
+details about specifying time zones.] 
+[> In verifyTimeZone (line 38)
+In datetime (line 559)
+In parallel.internal.pool.JavaBackedSessionNotifier>iLongToDatetime (line 128)
+In parallel.internal.pool.JavaBackedSessionNotifier>iJavaDateToDatetime (line
+148)
+In parallel.internal.pool.JavaBackedSessionNotifier.sessionInfoFromJava (line
+102)
+In parallel.internal.pool/JavaBackedSessionNotifier/wrapNotificationMethod
+(line 17)
+In parallel.internal.pool/JavaBackedSessionNotifier/notifyAboutToStart (line
+36)
+In parallel.internal.pool.ISessionNotifier.buildAboutToStartInfo (line 34)
+In parallel.internal.pool.argumentsParser>iPoolStartingMessage (line 188)
+In parallel.internal.pool.argumentsParser>iGetClusterAndNumWorkers (line 108)
+In parallel.internal.pool.argumentsParser (line 45)
+In parallel.internal.pool.doParpool (line 17)
+In parpool (line 127)
+In gmm_clustering (line 131)
+In gobai_o2_form_clusters (line 5)
+] 
+Connected to the parallel pool (number of workers: 1).
+  ParallelException with properties:
+
+     identifier: 'MATLAB:sizeDimensionsMustMatch'
+        message: 'Arrays have incompatible sizes for this operation.'
+          cause: {}
+    remotecause: {[1x1 MException]}
+          stack: [4x1 struct]
+     Correction: []
+
+Function: gobai_o2_form_clusters
+Line: 5
+Function: gmm_clustering
+Line: 133
+Function: normalize
+Line: 131
+Function: normalizeArray
+Line: 20

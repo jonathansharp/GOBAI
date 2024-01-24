@@ -1,6 +1,6 @@
 function  output = run_FFNN(FFNN,data,probabilities,index,variables,thresh)
 
-% index for prediction based on input index and cluster probabilities
+% index for prediction based on input index anzid cluster probabilities
 idx_test = index & probabilities > thresh;
 test_sum = sum(idx_test);
 
