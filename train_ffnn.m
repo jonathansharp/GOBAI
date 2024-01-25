@@ -175,10 +175,10 @@ end
 tic
 
 % set up parallel pool
-%parpool;
+parpool;
 
 % compute estimates for each month
-for m = 1:timesteps
+parfor m = 1:timesteps
     % populate structure
     TS = struct();
     TS.longitude = longitude;
@@ -213,9 +213,11 @@ for m = 1:timesteps
             num2str(years(m)) '_' sprintf('%02d',months(m)) '.nc']);
         for w = 1:nc_atts.Dimensions(3).Length
             % get RFROM T and S
-            TS.temp = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],...
+            TS.temp = ncread([fpath 'RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
+            num2str(years(m)) '_' sprintf('%02d',months(m)) '.nc'],...
                 'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
-            TS.sal = ncread([fpath 'RFROM_SAL_STABLE_CLIM.nc'],...
+            TS.sal = ncread([fpath 'RFROM_SAL_v0.1/RFROM_SAL_STABLE_' ...
+            num2str(years(m)) '_' sprintf('%02d',months(m)) '.nc'],...
                 'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
             % get RFROM time variables
             date_temp = datevec(datenum(years(m),months(m),15));

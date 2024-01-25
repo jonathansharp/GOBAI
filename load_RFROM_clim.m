@@ -12,5 +12,7 @@
 function TS = load_RFROM_clim(TS,fpath)
 
 % load RFROM climatological temp and salinity
-TS.temp_clim = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'ocean_temperature');
-TS.sal_clim = ncread([fpath 'RFROM_SAL_STABLE_CLIM.nc'],'ocean_salinity');
+TS.temperature = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'ocean_temperature');
+TS.salinity = ncread([fpath 'RFROM_SAL_STABLE_CLIM.nc'],'ocean_salinity');
+TS.temperature = mean(TS.temperature,4,'omitnan');
+TS.salinity = mean(TS.salinity,4,'omitnan');

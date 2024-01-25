@@ -1,6 +1,6 @@
 %% Plot clusters over time
 pressures = [2.5 100 500 1000 1975];
-parfor d = 1:length(pressures)
+for d = 1:length(pressures)
     % establish figure
     h=figure('visible','off','Position',[100 100 800 400]);
     axis tight manual
@@ -35,7 +35,7 @@ parfor d = 1:length(pressures)
         if strcmp(base_grid,'RG')
             % load monthly clusters
             GMM_clusters = load(['Data/GMM_' base_grid '_' num2str(num_clusters) ...
-                '/t' num2str(m)],'GMM_clusters');
+                '/m' num2str(m) '_w1'],'GMM_clusters');
             % make plot
             worldmap([-90 90],[20 380]);
             title(extractAfter(datestr(datenum(2004,m,1)),'-'));

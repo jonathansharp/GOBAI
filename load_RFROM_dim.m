@@ -9,7 +9,7 @@
 %
 % DATE: 1/23/2024
 
-function TS = load_RFROM_dim(fpath)
+function [TS,timesteps] = load_RFROM_dim(fpath)
 
 % load RFROM climatological temp and salinity
 TS.Longitude = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'longitude');
@@ -20,4 +20,16 @@ TS.xdim = length(TS.Longitude);
 TS.ydim = length(TS.Latitude);
 TS.zdim = length(TS.Pressure);
 % determine number of monthly timesteps
-TS.timesteps = length(dir([fpath 'RFROM_TEMP_v0.1/*.nc']));
+files = dir([fpath 'RFROM_TEMP_v0.1/*.nc']);
+timesteps = length(files);
+% process time
+TS.years = nan(length(files),1);
+TS.months = nan(length(files),1);
+for n = 1:length(files)
+    date = cell2mat(extractBetween(files(n).name,'STABLE_','.nc'));
+    TS.years(n) = str2double(date(1:4));
+    TS.months(n) = str2double(date(6:7));
+end
+idx = TS.years < 2004;
+TS.years(idx) = [];
+TS.months(idx) = [];

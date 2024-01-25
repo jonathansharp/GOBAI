@@ -30,10 +30,9 @@ clear
 
 %% create cluster configuration files
 clear
-clust_vars_grid = {'temp_clim' 'sal_clim' 'pressure_3D' 'lon_cos_1_3D' 'lon_cos_2_3D' 'latitude_3D'};
-clust_vars_data = {'temperature' 'salinity' 'pressure' 'lon_cos_1' 'lon_cos_2' 'latitude'};
+clust_vars = {'temperature' 'salinity' 'pressure'};
+% clust_vars = {'temperature' 'salinity' 'pressure' 'lon_cos_1' 'lon_cos_2' 'latitude'};
 for num_clusters = 2:1:30
-
     save(['Config/cluster_config_' num2str(num_clusters) '.mat']);
 end
 clear

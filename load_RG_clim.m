@@ -15,11 +15,11 @@ function TS = load_RG_clim(TS,fpath)
 TS.Temperature = ncread([fpath 'RG_Climatology_Temp.nc'],'Temperature');
 TS.Salinity = ncread([fpath 'RG_Climatology_Sal.nc'],'Salinity');
 % calculate climatological mean temperature and salinity
-TS.temp_clim = single(nan(TS.xdim,TS.ydim,TS.zdim,12));
-TS.sal_clim = single(nan(TS.xdim,TS.ydim,TS.zdim,12));
+TS.temperature = single(nan(TS.xdim,TS.ydim,TS.zdim,12));
+TS.salinity = single(nan(TS.xdim,TS.ydim,TS.zdim,12));
 for m = 1:12
-    TS.temp_clim(:,:,:,m) = mean(TS.Temperature(:,:,:,m:12:end),4,'omitnan');
-    TS.sal_clim(:,:,:,m) = mean(TS.Salinity(:,:,:,m:12:end),4,'omitnan');
+    TS.temperature(:,:,:,m) = mean(TS.Temperature(:,:,:,m:12:end),4,'omitnan');
+    TS.salinity(:,:,:,m) = mean(TS.Salinity(:,:,:,m:12:end),4,'omitnan');
 end
 % clean up
 TS = rmfield(TS,{'Temperature' 'Salinity'});

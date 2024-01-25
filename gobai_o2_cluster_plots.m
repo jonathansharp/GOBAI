@@ -3,6 +3,7 @@
 addpath(genpath(pwd));
 try
     plot_data_by_cluster;
+    %plot_clusters;
     plot_cluster_animation
     %plot_probability_animation;
     disp('success!');

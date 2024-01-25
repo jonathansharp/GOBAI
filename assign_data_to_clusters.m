@@ -18,8 +18,8 @@ load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
 load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model']);
 % transform to normalized arrays
 predictor_matrix = [];
-for v = 1:length(clust_vars_data)
-    predictor_matrix = [predictor_matrix all_data.(clust_vars_data{v})];
+for v = 1:length(clust_vars)
+    predictor_matrix = [predictor_matrix all_data.(clust_vars{v})];
 end
 X_norm = normalize(predictor_matrix,'Center',C,'Scale',S);
 % assign to clusters and obtain probabilities
