@@ -15,4 +15,4 @@
 
 module load matlab
 cd /work2/noaa/hindcasts/GOBAI-O2-New_JS
-srun matlab -nodisplay -r "gobai_o2_initiate; load_standard_config_files; gobai_o2_kfold_ensemble;"
+matlab -nodisplay -r "gobai_o2_initiate; load_standard_config_files; gobai_o2_kfold_ensemble;"

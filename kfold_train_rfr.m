@@ -9,7 +9,6 @@
 % DATE: 09/14/2023
 
 %% load combined data
-file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
@@ -33,8 +32,7 @@ end
 clear glodap_only glodap_idx vars v
 
 %% create directory and file names
-rfr_dir = ['Models/' base_grid '/RFR/RFR_c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
+rfr_dir = ['Models/' dir_base];
 rfr_fnames = cell(num_folds,num_clusters);
 for f = 1:num_folds
     for c = 1:num_clusters
@@ -45,7 +43,8 @@ end
 kfold_dir = ['KFold/RFR/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 kfold_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
 fig_dir = ['Figures/KFold/RFR/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
-fig_name = ['k_fold_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];
+fig_name_1 = ['k_fold_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];
+fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];
 
 %% fit and evaluate test models (RFR)
 % define model parameters
@@ -85,8 +84,9 @@ for f = 1:num_folds
         clear RFR
       else
         fprintf(['Train RFR - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
-        fprintf('');
+        fprintf('\n');
         fprintf(['Run RFR - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+        fprintf('\n');
         [~]=toc;
       end
     end
@@ -144,9 +144,46 @@ c=colorbar;
 c.Label.String = 'log_{10}(Bin Counts)';
 text(300,50,['RMSE = ' num2str(round(rfr_rmse,1)) '\mumol kg^{-1}'],'fontsize',12);
 if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
-exportgraphics(gcf,[fig_dir '/' fig_name]);
+exportgraphics(gcf,[fig_dir '/' fig_name_1]);
 % clean up
 clear counts bin_centers h p myColorMap
+close
+
+%% plot gridded errors
+% determine bin number of each test data point on 1 degree grid
+lon_edges = -180:180; lon = -179.5:179.5;
+lat_edges = -90:90; lat = -89.5:89.5;
+[~,~,Xnum] = histcounts(all_data.longitude,lon_edges);
+[~,~,Ynum] = histcounts(all_data.latitude,lat_edges);
+% accumulate 3D grid of test data point errors
+subs = [Xnum, Ynum];
+idx_subs = any(subs==0,2);
+sz = [length(lon),length(lat)];
+rfr_output.k_fold_delta_spatial = accumarray(subs(~idx_subs,:),...
+    abs(rfr_output.k_fold_delta(~idx_subs)),sz,@nanmean);
+clear subs sz
+% plot map
+figure; hold on
+worldmap([-90 90],[20 380]);
+setm(gca,'mapprojection','robinson');
+set(gcf,'units','inches','position',[0 5 20 10]);
+setm(gca,'ffacecolor','w');
+setm(gca,'fontsize',12);
+pcolorm(lat,[lon lon(end)+1],[rfr_output.k_fold_delta_spatial ...
+    rfr_output.k_fold_delta_spatial(:,end)]');
+land = shaperead('landareas', 'UseGeoCoords', true);
+geoshow(land,'FaceColor',rgb('grey'));
+cmap = cmocean('amp'); cmap(1,:) = 1; colormap(cmap);
+caxis([0 20]);
+c=colorbar('location','southoutside');
+c.Label.String = ['Average Absolute \Delta[O_{2}]'];
+c.FontSize = 22;
+c.TickLength = 0;
+mlabel off; plabel off;
+if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
+exportgraphics(gcf,[fig_dir '/' fig_name_2]);
+% clean up
+clear land cmap c
 close
 
 %% clean up

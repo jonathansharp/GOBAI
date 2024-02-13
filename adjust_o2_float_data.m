@@ -204,6 +204,7 @@ clear slp int
 
 %% plot uncorrected float vs. glodap residuals
 load(['Data/matched_data_' file_date float_file_ext],'matched_data');
+% scatter
 figure; hold on;
 scatter(matched_data.oxy_glodap,matched_data.oxy_float,20,'.');
 plot([0,450],[0 450],'k--');
@@ -218,8 +219,27 @@ matched_data.slope = matched_data.slope(1);
 text(300,120,['Med. Err. = ' num2str(round(matched_data.err_md,2))],'fontsize',12);
 text(300,90,['RMSE = ' num2str(round(matched_data.rmse,1))],'fontsize',12);
 text(300,60,['R^{2} = ' num2str(round(matched_data.r2,2))],'fontsize',12);
-% save figure
-exportgraphics(gcf,['Figures/delta_vs_float_300_uncorr' file_date float_file_ext '.png']);
+exportgraphics(gcf,['Figures/delta_vs_float_300_uncorr_' file_date float_file_ext '.png']);
+close
+% histogram
+figure; hold on
+histogram(matched_data.oxy_delta,'Normalization','pdf');
+ylim('manual');
+xlim([-30 30]);
+set(gca,'fontsize',16);
+sig2_min = double(mean(matched_data.oxy_delta)-2*std(matched_data.oxy_delta));
+sig2_max = double(mean(matched_data.oxy_delta)+2*std(matched_data.oxy_delta));
+plot([sig2_min sig2_min],[0 1],'r','linewidth',1);
+plot([sig2_max sig2_max],[0 1],'r','linewidth',1);
+xlabel('GLODAP [O_{2}] - Float [O_{2}]');
+xL = xlim; yL = ylim;
+text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
+    num2str(round(mean(matched_data.oxy_delta),2))],...
+    'HorizontalAlignment','left','VerticalAlignment','top');
+text(0.9*xL(1),0.8*yL(2),['Std. \Delta[O_{2}] = ' ...
+    num2str(round(std(matched_data.oxy_delta),2))],...
+    'HorizontalAlignment','left','VerticalAlignment','top');
+exportgraphics(gcf,[pwd '/Figures/GLODAP_comp_histogram_uncorr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear matched_data
@@ -240,8 +260,27 @@ matched_data.slope_corr = matched_data.slope_corr(1);
 text(300,120,['Med. Err. = ' num2str(round(matched_data.err_md_corr,2))],'fontsize',12);
 text(300,90,['RMSE = ' num2str(round(matched_data.rmse_corr,1))],'fontsize',12);
 text(300,60,['R^{2} = ' num2str(round(matched_data.r2_corr,2))],'fontsize',12);
-% save figure
 exportgraphics(gcf,['Figures/delta_vs_float_300_corr_' file_date float_file_ext '.png']);
+close
+% histogram
+figure; hold on
+histogram(matched_data.oxy_delta_corr,'Normalization','pdf');
+ylim('manual');
+xlim([-30 30]);
+set(gca,'fontsize',16);
+sig2_min = double(mean(matched_data.oxy_delta_corr)-2*std(matched_data.oxy_delta_corr));
+sig2_max = double(mean(matched_data.oxy_delta_corr)+2*std(matched_data.oxy_delta_corr));
+plot([sig2_min sig2_min],[0 1],'r','linewidth',1);
+plot([sig2_max sig2_max],[0 1],'r','linewidth',1);
+xlabel('GLODAP [O_{2}] - Float [O_{2}]');
+xL = xlim; yL = ylim;
+text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
+    num2str(round(mean(matched_data.oxy_delta_corr),2))],...
+    'HorizontalAlignment','left','VerticalAlignment','top');
+text(0.9*xL(1),0.8*yL(2),['Std. \Delta[O_{2}] = ' ...
+    num2str(round(std(matched_data.oxy_delta_corr),2))],...
+    'HorizontalAlignment','left','VerticalAlignment','top');
+exportgraphics(gcf,[pwd '/Figures/GLODAP_comp_histogram_corr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear matched_data

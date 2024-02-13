@@ -9,7 +9,7 @@ load(['Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
 % define pressure axis
 pressures = sort(unique(all_data.pressure));
 % open parallel pool
-parpool
+parpool;
 % make plots
 parfor p = 1:length(pressures)
     h=figure('visible','off','Position',[100 100 800 400]);

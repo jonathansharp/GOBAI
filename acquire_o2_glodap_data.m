@@ -1,4 +1,4 @@
-% acquire_glodap_data
+% acquire_o2_glodap_data
 %
 % DESCRIPTION:
 % This function is used to import an annually updated GLODAP data file,
@@ -9,13 +9,12 @@
 %
 % DATE: 09/12/2023
 
-
 %% Only do all this if downloaded glodap matlab file does not exist
 if exist(['Data/processed_glodap_o2_data_' num2str(glodap_year) '.mat'],'file') ~= 2
 
 %% load GLODAP data
 year = num2str(glodap_year);
-glodap_data = load(['GLODAPv2.' year '/GLODAPv2.' year '_Merged_Master_File.mat']);
+glodap_data = load(['GLODAP/GLODAPv2.' year '/GLODAPv2.' year '_Merged_Master_File.mat']);
 glodap_data.time = datenum([glodap_data.G2year glodap_data.G2month ...
                        glodap_data.G2day]);
 glodap_data.date = datevec(glodap_data.time);

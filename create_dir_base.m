@@ -1,0 +1,16 @@
+% creates base directory name for particular model and properties
+
+function dir_base = create_dir_base(model,properties)
+
+if strcmp(model,'FFNN')
+    dir_base = [properties{1} '/FFNN/c' num2str(properties{2}) ...
+        '_' properties{3} properties{4} '/train' num2str(100*properties{5}) ...
+        '_val' num2str(100*properties{6}) '_test' num2str(100*properties{7})];
+elseif strcmp(model,'RFR')
+    dir_base = [properties{1} '/RFR/c' num2str(properties{2}) ...
+        '_' properties{3} properties{4} '/tr' ...
+        num2str(properties{5}) '_lf' num2str(properties{6})];
+elseif strcmp(model,'GBM')
+    dir_base = [properties{1} '/GBM/c' num2str(properties{2}) '_' properties{3} ...
+        properties{4} '/tr' num2str(properties{5})];
+end

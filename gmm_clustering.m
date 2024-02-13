@@ -52,7 +52,8 @@ tic
 load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model'],'gmm','C','S');
 
 % set up parallel pool
-parpool;
+tic; parpool(12); fprintf('Pool initiation:'); toc;
+
 % for each month
 parfor m = 1:timesteps
     % load T/S grid

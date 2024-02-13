@@ -1,4 +1,4 @@
-% acquire_snapshot_data
+% acquire_o2_snapshot_data
 %
 % DESCRIPTION:
 % This function is used to import a monthly BGC Argo snapshot file, then

@@ -70,6 +70,46 @@ all_data.day_sin = sin((2.*pi.*all_data.day)/365.25);
 all_data.day_cos = cos((2.*pi.*all_data.day)/365.25);
 all_data.year = date(:,1);
 
+%% plot gridded observations
+% determine bin number of each test data point on 1 degree grid
+lon_edges = -180:180; lon = -179.5:179.5;
+lat_edges = -90:90; lat = -89.5:89.5;
+pres_edges = ([0 5:10:175 190:20:450 475:50:1375 1450:100:1950 2000])';
+pres = ([2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
+[~,~,Xnum] = histcounts(all_data.longitude,lon_edges);
+[~,~,Ynum] = histcounts(all_data.latitude,lat_edges);
+[~,~,Znum] = histcounts(all_data.pressure,pres_edges);
+% accumulate 3D grid of test data point errors
+subs = [Xnum, Ynum, Znum];
+idx_subs = any(subs==0,2);
+sz = [length(lon),length(lat),length(pres)];
+all_data.gridded_oxygen = accumarray(subs(~idx_subs,:),...
+    abs(all_data.oxygen(~idx_subs)),sz,@nanmean);
+clear subs sz
+% plot map
+figure; hold on
+worldmap([-90 90],[20 380]);
+setm(gca,'mapprojection','robinson');
+set(gcf,'units','inches','position',[0 5 20 10]);
+setm(gca,'ffacecolor','w');
+setm(gca,'fontsize',12);
+pcolorm(lat,[lon lon(end)+1],[all_data.gridded_oxygen(:,:,2) ...
+    all_data.gridded_oxygen(:,end,2)]');
+land = shaperead('landareas', 'UseGeoCoords', true);
+geoshow(land,'FaceColor',rgb('grey'));
+cmap = cmocean('ice'); cmap(1,:) = 1; colormap(cmap);
+caxis([0 400]);
+c=colorbar('location','southoutside');
+c.Label.String = 'Average Gridded [O_{2}]';
+c.FontSize = 22;
+c.TickLength = 0;
+mlabel off; plabel off;
+if ~isfolder([pwd '/Figures/Surface_Plots']); mkdir('Figures/Surface_Plots'); end
+exportgraphics(gcf,[pwd '/Figures/Surface_Plots/Gridded_O2_10dbar.png']);
+% clean up
+clear land cmap c
+close
+
 %% save combined oxygen data
 if ~exist([pwd '/Data'],'dir'); mkdir('Data'); end
 save(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...

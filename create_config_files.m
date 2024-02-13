@@ -4,29 +4,24 @@ if ~isfolder('Config'); mkdir('Config'); end
 %% create data download configuration file for adjusted and DMQC
 clear
 snap_date = 202311;
-glodap_year = 2022;
+file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
+glodap_year = 2023;
+snap_download = 0;
 data_modes = {'A' 'D'};
-float_file_ext = [];
-for m = 1:length(data_modes)
-    float_file_ext = [float_file_ext '_' data_modes{m}];
-end
-snap_download = 0; 
+float_file_ext = '_A_D';
 save(['Config/load_data_config' float_file_ext '.mat']);
 clear
 
 %% create data download configuration file for DMQC only
 clear
 snap_date = 202311;
-glodap_year = 2022;
-data_modes = {'D'};
-float_file_ext = [];
-for m = 1:length(data_modes)
-    float_file_ext = [float_file_ext '_' data_modes{m}];
-end
+file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
+glodap_year = 2023;
 snap_download = 0; 
+data_modes = {'D'};
+float_file_ext = '_D';
 save(['Config/load_data_config' float_file_ext '.mat']);
 clear
-
 
 %% create cluster configuration files
 clear
@@ -94,4 +89,26 @@ save('Config/base_config_RG.mat');
 clear
 base_grid = 'RFROM';
 save('Config/base_config_RFROM.mat');
+clear
+
+%% create years to predict configuration files
+% 4-year chunks
+clear
+y1 = 2004;
+while y1+3 <= 2023
+    years_to_predict = y1:y1+3;
+    save(['Config/predict_years_config_' sprintf('%02d',(y1-2000)) ...
+        '_' sprintf('%02d',(y1+3-2000)) '.mat'],'years_to_predict');
+    y1=y1+4;
+end
+clear
+% 1-year chunks
+clear
+y1 = 2004;
+while y1 <= 2023
+    years_to_predict = y1;
+    save(['Config/predict_years_config_' sprintf('%02d',(y1-2000)) ...
+        '.mat'],'years_to_predict');
+    y1=y1+1;
+end
 clear

@@ -18,8 +18,8 @@ output_temp = nan(chunkSize,chunkNums);
 % pad predictors to be divisible by chunk size
 predictors = [predictors;nan(chunkSize*chunkNums-test_sum,length(variables))];
 
-% compute predictions in parallel, 100,000 data points at a time
-parfor chunk = 1:chunkNums
+% compute predictions, 100,000 data points at a time
+for chunk = 1:chunkNums
     idx1 = (chunk-1)*chunkSize + 1;
     idx2 = (chunk-1)*chunkSize + chunkSize;
     output_temp(:,chunk) = predict(RFR,predictors(idx1:idx2,:));
