@@ -54,7 +54,7 @@ tic
 % tic; parpool(12); fprintf('Pool initiation:'); toc;
 
 % compute estimates for just the first month
-m=1;
+m=5;
     if strcmp(base_grid,'RG')
         % load dimensions
         TS = load_RG_dim([fpath '/Data/RG_CLIM/']);
@@ -86,7 +86,7 @@ m=1;
         % determine number of weeks in file
         nc_atts = ncinfo([fpath '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
-        for w = 1:nc_atts.Dimensions(3).Length
+        for w = 2%1:nc_atts.Dimensions(3).Length
             % get RFROM T and S
             TS.temperature = ncread([fpath '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
@@ -162,7 +162,7 @@ function apply_rfr_model(TS,num_clusters,rfr_dir,rfr_fnames,...
     probs_matrix = single(nan(length(TS.temperature_array),num_clusters));
 
     % apply models for each cluster
-    for c = 1:num_clusters
+    for c = 10%:num_clusters
 
       % check for existence of model
       if isfile([rfr_dir '/' rfr_fnames{c} '.mat'])

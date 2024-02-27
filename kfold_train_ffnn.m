@@ -56,13 +56,15 @@ nodes2 = [15 10 5];
 % fit and evaluate test models for each fold
 for f = 1:num_folds
     % fit test models for each cluster
-    ffnn_output.(['f' num2str(f)]) = ...
-        nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
+    output = nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
+
+
+%     ffnn_output.(['f' num2str(f)]) = ...
+%         nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
     parfor c = 1:num_clusters
-        % start timing fit
-        tic
+      % start timing fit
+      tic
       if any(all_data_clusters.clusters == c) % check for data in cluster
-        
         % fit test model for each cluster
         FFNN = ...
             fit_FFNN('oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
@@ -75,6 +77,7 @@ for f = 1:num_folds
         tic
         % predict data for each cluster
         ffnn_output.(['f' num2str(f)])(:,c) = ...
+        output = ...
             run_FFNN(FFNN,all_data,all_data_clusters.(['c' num2str(c)]),...
             test_idx.(['f' num2str(f)]),variables,thresh);
         % stop timing predictions

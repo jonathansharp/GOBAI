@@ -52,13 +52,13 @@ fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numstumps) '.png'];
 % set up parallel pool
 tic; parpool(6); fprintf('Pool initiation:'); toc;
 % fit test models for each fold
-parfor f = 1:num_folds
+for f = 1:num_folds
     % fit test models for each cluster
     output = nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
-    for c = 1:num_clusters
+    parfor c = 1:num_clusters
+      % start timing fit
+      tic
       if any(all_data_clusters.clusters == c) % check for data in cluster
-        % start timing fit
-        tic
         % fit test model for each cluster
         GBM = ...
             fit_GBM('oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
