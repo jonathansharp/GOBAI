@@ -8,6 +8,8 @@
 %
 % DATE: 1/3/2024
 
+numtrees = 5;
+
 %% initiate profile
 profile on
 

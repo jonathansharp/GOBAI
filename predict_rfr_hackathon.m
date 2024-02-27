@@ -178,7 +178,8 @@ function apply_rfr_model(TS,num_clusters,rfr_dir,rfr_fnames,...
     
         % load model for this cluster
         alg = load([rfr_dir '/' rfr_fnames{c}],'RFR');
-    
+   
+        % time RFR prediction step
         tic
 
         % predict data for each cluster

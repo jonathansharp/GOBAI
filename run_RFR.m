@@ -17,6 +17,7 @@ chunkNums = ceil(test_sum/chunkSize);
 output_temp = nan(chunkSize,chunkNums);
 % pad predictors to be divisible by chunk size
 predictors = [predictors;nan(chunkSize*chunkNums-test_sum,length(variables))];
+predictors = gpuArray(predictors);
 
 % compute predictions, 100,000 data points at a time
 for chunk = 1:chunkNums
