@@ -8,14 +8,13 @@
 %
 % DATE: 1/3/2024
 
-numtrees = 5;
-
 %% initiate profile
-profile on
+% profile on
 
 %% load configuration parameters
 gobai_o2_initiate;
 load_standard_config_files;
+numtrees = 5;
 load('Config/base_config_RFROM.mat'); % base grid
 load('Config/predict_years_config_04.mat'); % only for 2004
 dir_base = create_dir_base('RFR',{base_grid;num_clusters;file_date;...
@@ -113,6 +112,6 @@ fprintf('RFR Training: ');
 toc
 
 %% end and save profile
-p=profile('info');
-profsave(p,'profiles/train_rfr_hackathon')
-profile off
+% p=profile('info');
+% profsave(p,'profiles/train_rfr_hackathon')
+% profile off
