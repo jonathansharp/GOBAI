@@ -1,4 +1,4 @@
-% train_ffnn
+% train_ffnn_hackathon
 %
 % DESCRIPTION:
 % This function uses the combined dataset to train
@@ -6,13 +6,26 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 1/3/2024
+% DATE: 2/13/2024
 
-%% load combined data
+%% initiate profile
+profile on
+
+%% load configuration parameters
+gobai_o2_initiate;
+load_standard_config_files;
+load('Config/base_config_RFROM.mat'); % base grid
+load('Config/predict_years_config_04.mat'); % only for 2004
+dir_base = create_dir_base('FFNN',{base_grid;num_clusters;file_date;...
+    float_file_ext;train_ratio;val_ratio;test_ratio}); % directory name base
+fpath = '/raid'; % for RFROM
+% fpath = pwd; % for RG
+
+%% load combined data (created by gobai_o2_load.m)
 load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
-%% load data clusters
+%% load data clusters (created by gobai_o2_cluster_data.m)
 load(['Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
@@ -40,51 +53,51 @@ gobai_ffnn_dir = ...
 
 %% fit FFNNs using all data
 
-% set up parallel pool
-p = setup_pool(numWorkers_train);
-
 % start timing training
 tic
 
 % define model parameters
-nodes1 = [5 10 15];
-nodes2 = [15 10 5];
+nodes1 = [2];
+nodes2 = [2];
 
-% fit models for each cluster
+% set up parallel pool
+tic; parpool(8); fprintf('Pool initiation:'); toc;
+
+% fit models for just the first cluster
 parfor c = 1:num_clusters
 
-  % start timing fit
-  tic
+     % start timing fit
+    tic
 
-  % check for data in cluster
-  if any(all_data_clusters.clusters == c)
+    % check for data in cluster
+    if any(all_data_clusters.clusters == c)   
     
     % fit model for each cluster
     FFNN = ...
         fit_FFNN('oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
         true(size(all_data.platform)),variables,nodes1,nodes2,...
         train_ratio,val_ratio,test_ratio,thresh);
-
+    
     % save model for each cluster
     if ~isfolder([pwd '/' ffnn_dir]); mkdir(ffnn_dir);end
     % save([ffnn_dir '/' ffnn_fnames{c}],'FFNN','-v7.3');
     parsave([ffnn_dir '/' ffnn_fnames{c}],FFNN,'FFNN');
-
+    
     % clean up
     % clear FFNN
-
+    
     % stop timing fit
     fprintf(['Train FFNN - Cluster #' num2str(c) ': ']);
     toc
-
-  else
-
+    
+    else
+    
     % stop timing fit
     fprintf(['Train FFNN - Cluster #' num2str(c) ': N/A']);
     fprintf('\n');
     [~]=toc;
-
-  end
+    
+    end
 
 end
 
@@ -97,3 +110,8 @@ delete(gcp('nocreate'));
 % stop timing training
 fprintf('FFNN Training: ');
 toc
+
+%% end and save profile
+p=profile('info');
+profsave(p,'profiles/train_ffnn_hackathon')
+profile off

@@ -91,5 +91,42 @@ exportgraphics(gcf,[fig_dir '/' fig_name]);
 clear counts bin_centers h p myColorMap
 close
 
+%% plot gridded errors
+% determine bin number of each test data point on 1 degree grid
+lon_edges = -180:180; lon = -179.5:179.5;
+lat_edges = -90:90; lat = -89.5:89.5;
+[~,~,Xnum] = histcounts(all_data.longitude,lon_edges);
+[~,~,Ynum] = histcounts(all_data.latitude,lat_edges);
+% accumulate 3D grid of test data point errors
+subs = [Xnum, Ynum];
+idx_subs = any(subs==0,2);
+sz = [length(lon),length(lat)];
+ens_output.k_fold_delta_spatial = accumarray(subs(~idx_subs,:),...
+    abs(ens_output.k_fold_delta(~idx_subs)),sz,@nanmean);
+clear subs sz
+% plot map
+figure; hold on
+worldmap([-90 90],[20 380]);
+setm(gca,'mapprojection','robinson');
+set(gcf,'units','inches','position',[0 5 20 10]);
+setm(gca,'ffacecolor','w');
+setm(gca,'fontsize',12);
+pcolorm(lat,[lon lon(end)+1],[ens_output.k_fold_delta_spatial ...
+    ens_output.k_fold_delta_spatial(:,end)]');
+land = shaperead('landareas', 'UseGeoCoords', true);
+geoshow(land,'FaceColor',rgb('grey'));
+cmap = cmocean('amp'); cmap(1,:) = 1; colormap(cmap);
+caxis([0 20]);
+c=colorbar('location','southoutside');
+c.Label.String = ['Average Absolute \Delta[O_{2}]'];
+c.FontSize = 22;
+c.TickLength = 0;
+mlabel off; plabel off;
+if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
+exportgraphics(gcf,[fig_dir '/' fig_name_2]);
+% clean up
+clear land cmap c
+close
+
 %% clean up
 clear

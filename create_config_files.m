@@ -1,6 +1,12 @@
 % create directory
 if ~isfolder('Config'); mkdir('Config'); end
 
+%% create number of workers configuration file
+numWorkers_train = 20;
+numWorkers_predict = 12;
+save('Config/load_data_config_workers_hercules.mat');
+clear
+
 %% create data download configuration file for adjusted and DMQC
 clear
 snap_date = 202311;

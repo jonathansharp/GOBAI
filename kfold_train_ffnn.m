@@ -58,10 +58,11 @@ for f = 1:num_folds
     % fit test models for each cluster
     ffnn_output.(['f' num2str(f)]) = ...
         nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
-    for c = 1:num_clusters
-      if any(all_data_clusters.clusters == c) % check for data in cluster
+    parfor c = 1:num_clusters
         % start timing fit
         tic
+      if any(all_data_clusters.clusters == c) % check for data in cluster
+        
         % fit test model for each cluster
         FFNN = ...
             fit_FFNN('oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...

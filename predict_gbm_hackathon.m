@@ -1,33 +1,36 @@
-% predict_ffnn (hackathon test)
+% predict_gbm_hackathon
 %
 % DESCRIPTION:
-% This function uses trained FFNN models to predict
+% This function uses trained GBM models to predict
 % on a grid.
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 2/12/2024
+% DATE: 1/31/2024
+
+%% initiate profile
+profile on
 
 %% load configuration parameters
 gobai_o2_initiate;
 load_standard_config_files;
-load('Config/base_config_RFROM.mat');
-load('Config/predict_years_config_04.mat');
-dir_base = create_dir_base('FFNN',{base_grid;num_clusters;file_date;...
-    float_file_ext;train_ratio;val_ratio;test_ratio});
-fpath = '/raid';
+load('Config/base_config_RFROM.mat'); % base grid
+load('Config/predict_years_config_04.mat'); % only for 2004
+dir_base = create_dir_base('GBM',{base_grid;num_clusters;file_date;...
+        float_file_ext;numstumps});
+fpath = '/raid'; % for RFROM
+%fpath = pwd;
 
 %% create directory and file names
-ffnn_dir = ['Models/' dir_base];
-ffnn_fnames = cell(num_clusters,1);
+gbm_dir = ['Models/' dir_base];
+gbm_fnames = cell(num_clusters,1);
 for c = 1:num_clusters
-    ffnn_fnames(c) = ...
-        {['FFNN_oxygen_C' num2str(c)]};
+    gbm_fnames(c) = ...
+        {['GBM_oxygen_C' num2str(c)]};
 end
-gobai_ffnn_dir = ...
-    ['Data/GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/train' num2str(100*train_ratio) '_val' ...
-    num2str(100*val_ratio) '_test' num2str(100*val_ratio) '/'];
+gobai_gbm_dir = ...
+    ['Data/GOBAI/' base_grid '/GBM/c' num2str(num_clusters) '_' file_date ...
+    float_file_ext '/tr' num2str(numstumps) '/'];
 
 %% define variables for predictions
 variables_TS = cell(size(variables));
@@ -50,11 +53,9 @@ tic
 % set up parallel pool
 % tic; parpool(12); fprintf('Pool initiation:'); toc;
 
-% compute estimates for each month
-m1 = (years_to_predict(1)-2004)*12+1;
-m2 = (years_to_predict(end)-2004)*12+12;
-% parfor m = m1:m2
-for m = m1:m2
+
+% compute estimates for just the first month
+m=1;
     if strcmp(base_grid,'RG')
         % load dimensions
         TS = load_RG_dim([fpath '/Data/RG_CLIM/']);
@@ -75,10 +76,10 @@ for m = m1:m2
         % transform day
         TS.day_sin = sin((2.*pi.*TS.day)/365.25);
         TS.day_cos = cos((2.*pi.*TS.day)/365.25);
-        % apply ffnn model
-        apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
+        % apply gbm model
+        apply_gbm_model(TS,num_clusters,gbm_dir,gbm_fnames,...
             base_grid,m,1,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-            thresh,gobai_ffnn_dir);
+            thresh,gobai_gbm_dir,fpath);
     elseif strcmp(base_grid,'RFROM')
         % load dimensions
         TS = load_RFROM_dim([fpath '/Data/RFROM/']);
@@ -94,8 +95,11 @@ for m = m1:m2
             TS.salinity = ncread([fpath '/Data/RFROM/RFROM_SAL_v0.1/RFROM_SAL_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                 'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
+            TS.time = ncread([fpath '/Data/RFROM/RFROM_SAL_v0.1/RFROM_SAL_STABLE_' ...
+            num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
+                'time',w,1);
             % get RFROM time variables
-            date_temp = datevec(datenum(TS.years(m),TS.months(m),15));
+            date_temp = datevec(datenum(1950,1,1+double(TS.time)));
             date_temp0 = date_temp;
             date_temp0(:,2:3) = 1; % Jan. 1 of each year
             TS.year = date_temp(:,1);
@@ -103,33 +107,33 @@ for m = m1:m2
             % transform day
             TS.day_sin = sin((2.*pi.*TS.day)/365.25);
             TS.day_cos = cos((2.*pi.*TS.day)/365.25);
-            % apply ffnn model
-            apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
+            % apply gbm model
+            apply_gbm_model(TS,num_clusters,gbm_dir,gbm_fnames,...
             base_grid,m,w,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-            thresh,gobai_ffnn_dir);
+            thresh,gobai_gbm_dir,fpath);
         end
     end
-end
+
 
 
 % end parallel session
 delete(gcp('nocreate'));
 
 % stop timing predictions
-fprintf(['FFNN Prediction (' num2str(years_to_predict(1)) ' to ' num2str(years_to_predict(end)) '): ']);
+fprintf('GBM Prediction: ');
 toc
 
 % clean up
 
-%% determine seasonal averages
 
-%% determine annual averages
+%% end and save profile
+p=profile('info');
+profsave(p,'profiles/predict_gbm_hackathon')
+profile off
 
-%% determine long-term average
-
-%% embedded function for processing 3D grids and applying FFNN models
-function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
-    base_grid,m,w,xdim,ydim,zdim,variables_TS,thresh,gobai_ffnn_dir)
+%% embedded function for processing 3D grids and applying GBM models
+function apply_gbm_model(TS,num_clusters,gbm_dir,gbm_fnames,...
+    base_grid,m,w,xdim,ydim,zdim,variables_TS,thresh,gobai_gbm_dir,fpath)
 
     % convert to arrays
     TS_index = ~isnan(TS.temperature);
@@ -165,25 +169,25 @@ function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
     for c = 1:num_clusters
 
       % check for existence of model
-      if isfile([ffnn_dir '/' ffnn_fnames{c} '.mat'])
+      if isfile([gbm_dir '/' gbm_fnames{c} '.mat'])
 
         % load GMM cluster probabilities for this cluster and month, and convert to array
         GMM_probs = ...
             load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/c' num2str(c) ...
             '/m' num2str(m) '_w' num2str(w)],'GMM_cluster_probs');
-        GMM_probs.probabilities_array = GMM_probs.GMM_cluster_probs(TS_index); % convert to array
+        GMM_probs.probabilities_array = GMM_probs.GMM_cluster_probs(TS_index);
         GMM_probs.probabilities_array(GMM_probs.probabilities_array < thresh) = NaN; % remove probabilities below thresh
-        GMM_probs = rmfield(GMM_probs,{'GMM_cluster_probs'}); % remove 3D matrix
-        probs_matrix(:,c) = GMM_probs.probabilities_array; % add to probability matrix
-
+        GMM_probs = rmfield(GMM_probs,{'GMM_cluster_probs'});
+        probs_matrix(:,c) = GMM_probs.probabilities_array;
+    
         % load model for this cluster
-        alg = load([ffnn_dir '/' ffnn_fnames{c}],'FFNN');
+        alg = load([gbm_dir '/' gbm_fnames{c}],'GBM');
     
         % predict data for each cluster
         gobai_matrix(:,c) = ...
-            run_FFNN(alg.FFNN,TS,GMM_probs.probabilities_array,...
+            run_GBM(alg.GBM,TS,GMM_probs.probabilities_array,...
             true(size(TS.temperature_array)),variables_TS,thresh);
-
+    
       end
 
     end
@@ -198,8 +202,8 @@ function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
     gobai_3d(TS_index) = gobai_array;
     
     % create folder and save monthly output
-    if ~isfolder([fpath '/' gobai_ffnn_dir]); mkdir(gobai_ffnn_dir); end
-    filename = [gobai_ffnn_dir 'm' num2str(m) '_w' num2str(w) '.nc'];
+    if ~isfolder([fpath '/' gobai_gbm_dir]); mkdir(gobai_gbm_dir); end
+    filename = [gobai_gbm_dir 'm' num2str(m) '_w' num2str(w) '.nc'];
     if isfile(filename); delete(filename); end % delete file if it exists
     % oxygen
     nccreate(filename,'o2','Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim},...
@@ -231,8 +235,8 @@ function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
     ncwriteatt(filename,'pres','axis','Z');
     ncwriteatt(filename,'pres','long_name','pressure');
     ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
-    
-%     parsave([gobai_ffnn_dir 'm' num2str(m) '_w' num2str(w)],...
+
+%     parsave([gobai_gbm_dir 'm' num2str(m) '_w' num2str(w)],...
 %         gobai_3d,'gobai',w,'w',m,'m');
 
 end

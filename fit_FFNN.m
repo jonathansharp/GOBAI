@@ -32,6 +32,6 @@ for n = 1:numNets
     net.divideParam.testRatio = test_ratio;
     % Train the Network
     FFNN.(['n' num2str(n)]) = ...
-        train(net,predictors',data.(target)(idx_train)','useParallel','yes');
+        train(net,predictors',data.(target)(idx_train)','useParallel','no');
     % weird error was fixed by removing cpt_map toolbox from path 
 end

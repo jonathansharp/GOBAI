@@ -1,14 +1,21 @@
 %% Plot cluster probabilities
 
-for cluster_idx = 1:num_clusters
+% set pressures
+pressure = 100;
+
+% set up parallel pool
+tic; parpool; fprintf('Pool initiation:'); toc;
+
+parfor cluster_idx = 1:num_clusters
 
     % load probabilities
-    load(['Data/GMM_' num2str(num_clusters) '/GMM_c' num2str(cluster_idx)],'GMM_probs');
+    load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/c' ...
+        num2str(cluster_idx) '/m1w1],'GMM_probs');
 
     for depth_idx = 1:length(GMM.pressure)
 
     % establish figure
-    h=figure('visible','off','Position',[100 100 800 400]);
+    h=figure('visible','on','Position',[100 100 800 400]);
     set(h,'color','white');
     axis tight manual
 
@@ -20,7 +27,7 @@ for cluster_idx = 1:num_clusters
         worldmap([-90 90],[20 380]);
         title(extractAfter(datestr(datenum(2004,0.5+double(GMM_probs.time(m)),1)),'-'));
         pcolorm(double(GMM_probs.latitude),double(GMM_probs.longitude),...
-            double(GMM_probs.probabilities(:,:,depth_idx,m))');
+            GMM_cluster_probs(:,:,depth_idx,m)');
         colormap(flipud(gray(100)));
         plot_land('map');
         clim([0 1]);

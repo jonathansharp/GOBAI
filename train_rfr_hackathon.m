@@ -1,4 +1,4 @@
-% train_rfr
+% train_rfr_hackathon
 %
 % DESCRIPTION:
 % This function uses the combined dataset to train
@@ -7,6 +7,19 @@
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
 % DATE: 1/3/2024
+
+%% initiate profile
+profile on
+
+%% load configuration parameters
+gobai_o2_initiate;
+load_standard_config_files;
+load('Config/base_config_RFROM.mat'); % base grid
+load('Config/predict_years_config_04.mat'); % only for 2004
+dir_base = create_dir_base('RFR',{base_grid;num_clusters;file_date;...
+        float_file_ext;numtrees;minLeafSize});
+fpath = '/raid'; % for RFROM
+% fpath = pwd; % for RG
 
 %% load combined data
 load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
@@ -42,20 +55,23 @@ gobai_rfr_dir = ...
 % start timing training
 tic
 
-% set up parallel pool
-p = setup_pool(numWorkers_train);
-
 % define model parameters
 NumPredictors = ceil(sqrt(length(variables)));
 
-% fit models for each cluster
-parfor c = 1:num_clusters
+% set up parallel pool
+%tic; parpool(8); fprintf('Pool initiation:'); toc;
 
-  % start timing fit
-  tic
+% fit models for just the first cluster
+c = 1;
 
   % check for data in cluster
   if any(all_data_clusters.clusters == c) 
+
+    % start timing fit
+    tic
+
+    % normalize data
+    
 
     % fit model for each cluster
     RFR = ...
@@ -65,11 +81,10 @@ parfor c = 1:num_clusters
 
     % save model for each cluster
     if ~isfolder([pwd '/' rfr_dir]); mkdir(rfr_dir);end
-    %save([rfr_dir '/' rfr_fnames{c}],'RFR','-v7.3');
-    parsave([rfr_dir '/' rfr_fnames{c}],RFR,'RFR');
+    save([rfr_dir '/' rfr_fnames{c}],'RFR','-v7.3');
 
     % clean up
-    %clear RFR
+    clear RFR
 
     % stop timing fit
     fprintf(['Train RFR - Cluster #' num2str(c) ': ']);
@@ -84,7 +99,6 @@ parfor c = 1:num_clusters
 
   end
 
-end
 
 % clean up
 clear all_data all_data_clusters
@@ -95,3 +109,8 @@ delete(gcp('nocreate'));
 % stop timing training
 fprintf('RFR Training: ');
 toc
+
+%% end and save profile
+p=profile('info');
+profsave(p,'profiles/train_rfr_hackathon')
+profile off

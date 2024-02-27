@@ -1,4 +1,4 @@
-% train_gbm
+% train_gbm_hackathon
 %
 % DESCRIPTION:
 % This function uses the combined dataset to train
@@ -6,7 +6,20 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 1/3/2024
+% DATE: 2/24/2024
+
+%% initiate profile
+profile on
+
+%% load configuration parameters
+gobai_o2_initiate;
+load_standard_config_files;
+load('Config/base_config_RFROM.mat'); % base grid
+load('Config/predict_years_config_04.mat'); % only for 2004
+dir_base = create_dir_base('GBM',{base_grid;num_clusters;file_date;...
+        float_file_ext;numstumps});
+fpath = '/raid'; % for RFROM
+% fpath = pwd; % for RG
 
 %% load combined data
 load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
@@ -42,17 +55,18 @@ gobai_gbm_dir = ...
 % start timing training
 tic
 
-% set up parallel pool
-p = setup_pool(numWorkers_train);
-
-% fit models for each cluster
-parfor c = 1:num_clusters
-
-  % start timing fit
-  tic
+% fit models for just the first cluster
+c = 1;
 
   % check for data in cluster
   if any(all_data_clusters.clusters == c)
+
+    % start timing fit
+    tic
+
+    % normalize data
+    [X_norm,C,S] = normalize(predictor_matrix);
+    clear TS
 
     % fit model for each cluster
     GBM = ...
@@ -61,12 +75,10 @@ parfor c = 1:num_clusters
 
     % save model for each cluster
     if ~isfolder([pwd '/' gbm_dir]); mkdir(gbm_dir);end
-    parsave([gbm_dir '/' gbm_fnames{c}],GBM,'GBM');
-    %save([gbm_dir '/' gbm_fnames{c}],'GBM','-v7.3');
-
+    save([gbm_dir '/' gbm_fnames{c}],'GBM','-v7.3');
 
     % clean up
-    % clear GBM
+    clear GBM
 
     % stop timing fit
     fprintf(['Train GBM - Cluster #' num2str(c) ': ']);
@@ -81,7 +93,7 @@ parfor c = 1:num_clusters
 
   end
 
-end
+
 
 % clean up
 clear all_data all_data_clusters
@@ -92,3 +104,8 @@ delete(gcp('nocreate'));
 % stop timing training
 fprintf('GBM Training: ');
 toc
+
+%% end and save profile
+p=profile('info');
+profsave(p,'profiles/train_gbm_hackathon')
+profile off
