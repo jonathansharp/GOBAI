@@ -18,8 +18,8 @@ load('Config/base_config_RFROM.mat'); % base grid
 load('Config/predict_years_config_04.mat'); % only for 2004
 dir_base = create_dir_base('RFR',{base_grid;num_clusters;file_date;...
         float_file_ext;numtrees;minLeafSize});
-fpath = '/raid'; % for RFROM
-%fpath = pwd;
+%fpath = '/raid'; % for RFROM
+fpath = pwd;
 
 %% create directory and file names
 rfr_dir = ['Models/' dir_base];
