@@ -111,11 +111,6 @@ toc
 
 % clean up
 
-%% determine seasonal averages
-
-%% determine annual averages
-
-%% determine long-term average
 
 %% embedded function for processing 3D grids and applying FFNN models
 function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
@@ -222,7 +217,4 @@ function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
     ncwriteatt(filename,'pres','long_name','pressure');
     ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
     
-%     parsave([gobai_ffnn_dir 'm' num2str(m) '_w' num2str(w)],...
-%         gobai_3d,'gobai',w,'w',m,'m');
-
 end

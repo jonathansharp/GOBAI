@@ -28,7 +28,7 @@ if strcmp(base_grid,'RG')
     TS = load_RG_clim(TS,[pwd '/Data/RG_CLIM/']);
     TS = replicate_RG_dim(TS,12);
 elseif strcmp(base_grid,'RFROM')
-    [TS,timesteps] = load_RFROM_dim('/raid/Data/RFROM/');
+    [TS,timesteps] = load_RFROM_dim([pwd '/Data/RFROM/']);
     TS = load_RFROM_clim(TS,'/raid/Data/RFROM/');
     TS = replicate_RFROM_dim(TS,1);
 end

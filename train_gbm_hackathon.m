@@ -65,8 +65,8 @@ c = 1;
     tic
 
     % normalize data
-    [X_norm,C,S] = normalize(predictor_matrix);
-    clear TS
+%     [X_norm,C,S] = normalize(predictor_matrix);
+%     clear TS
 
     % fit model for each cluster
     GBM = ...
