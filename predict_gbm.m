@@ -138,11 +138,7 @@ function apply_gbm_model(TS,num_clusters,gbm_dir,gbm_fnames,...
     end
 
     % calculate absolute salinity, conservative temperature, potential density
-    TS.salinity_abs_array = gsw_SA_from_SP(TS.salinity_array,TS.pressure_array,...
-        TS.longitude_array,TS.latitude_array);
-    TS.temperature_cns_array = gsw_CT_from_t(TS.salinity_abs_array,...
-        TS.temperature_array,TS.pressure_array);
-    TS.sigma_array = gsw_sigma0(TS.salinity_abs_array,TS.temperature_cns_array);
+    TS.sigma_array = gsw_sigma0(TS.salinity_array,TS.temperature_array);
 
     % pre-allocate
     gobai_matrix = single(nan(length(TS.temperature_array),num_clusters));

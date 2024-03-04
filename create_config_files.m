@@ -2,9 +2,13 @@
 if ~isfolder('Config'); mkdir('Config'); end
 
 %% create number of workers configuration file
-numWorkers_train = 20;
-numWorkers_predict = 12;
-save('Config/load_data_config_workers_hercules.mat');
+numWorkers_train = 40;
+numWorkers_predict = 20;
+save('Config/workers_hercules.mat');
+clear
+numWorkers_train = 8;
+numWorkers_predict = 4;
+save('Config/workers_chinook.mat');
 clear
 
 %% create data download configuration file for adjusted and DMQC
@@ -20,7 +24,7 @@ clear
 
 %% create data download configuration file for DMQC only
 clear
-snap_date = 202311;
+snap_date = 202402;
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_year = 2023;
 snap_download = 0; 
@@ -31,7 +35,7 @@ clear
 
 %% create cluster configuration files
 clear
-clust_vars = {'temperature' 'salinity' 'pressure'};
+clust_vars = {'temperature_cns' 'salinity_abs' 'pressure'};
 % clust_vars = {'temperature' 'salinity' 'pressure' 'lon_cos_1' 'lon_cos_2' 'latitude'};
 for num_clusters = 2:1:30
     save(['Config/cluster_config_' num2str(num_clusters) '.mat']);

@@ -1,4 +1,4 @@
-% combine_data
+% combine_o2_data
 %
 % DESCRIPTION:
 % This function concatenates processed/adjusted float data and processed
@@ -7,6 +7,8 @@
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
 % DATE: 12/1/2023
+
+function combine_o2_data(float_file_ext,snap_date,glodap_year)
 
 %% load data after implementing float data adjustment
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
@@ -42,20 +44,20 @@ all_data.latitude = [float_data_adjusted.OXY_LAT(float_idx);...
     glodap_data.OXY_LAT(glodap_idx)];
 all_data.longitude = [float_data_adjusted.OXY_LON(float_idx);...
     glodap_data.OXY_LON(glodap_idx)];
-all_data.sigma = [float_data_adjusted.OXY_SIGMA(float_idx);...
-    glodap_data.OXY_SIGMA(glodap_idx)];
+% all_data.sigma = [float_data_adjusted.OXY_SIGMA(float_idx);...
+%     glodap_data.OXY_SIGMA(glodap_idx)];
 all_data.pressure = [float_data_adjusted.OXY_PRES(float_idx);...
     glodap_data.OXY_PRES(glodap_idx)];
 all_data.time = [float_data_adjusted.OXY_TIME(float_idx);...
     glodap_data.OXY_TIME(glodap_idx)];
 all_data.temperature = [float_data_adjusted.OXY_TEMP(float_idx);...
     glodap_data.OXY_TEMP(glodap_idx)];
-all_data.temperature_cns = [float_data_adjusted.OXY_CNSTEMP(float_idx);...
-    glodap_data.OXY_CNSTEMP(glodap_idx)];
+% all_data.temperature_cns = [float_data_adjusted.OXY_CNSTEMP(float_idx);...
+%     glodap_data.OXY_CNSTEMP(glodap_idx)];
 all_data.salinity = [float_data_adjusted.OXY_SAL(float_idx);...
     glodap_data.OXY_SAL(glodap_idx)];
-all_data.salinity_abs = [float_data_adjusted.OXY_ABSSAL(float_idx);...
-    glodap_data.OXY_ABSSAL(glodap_idx)];
+% all_data.salinity_abs = [float_data_adjusted.OXY_ABSSAL(float_idx);...
+%     glodap_data.OXY_ABSSAL(glodap_idx)];
 all_data.oxygen = [float_data_adjusted.OXY(float_idx);...
     glodap_data.OXY(glodap_idx)];
 
@@ -116,3 +118,5 @@ save(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
     'all_data','file_date','-v7.3');
 
 clear
+
+end

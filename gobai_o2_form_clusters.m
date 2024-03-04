@@ -2,7 +2,7 @@
 
 addpath(genpath(pwd));
 try
-    gmm_clustering;
+    gmm_clustering(base_grid,clust_vars,num_clusters,numWorkers_predict);
     disp('success!');
 catch ME
     display_error_info(ME);

@@ -8,6 +8,9 @@
 %
 % DATE: 1/31/2024
 
+%% initiate profile
+profile on
+
 %% create directory and file names
 rfr_dir = ['Models/' dir_base];
 rfr_fnames = cell(num_clusters,1);
@@ -26,11 +29,11 @@ for v = 1:length(variables)
 end
 
 %% determine timesteps
-if strcmp(base_grid,'RG')
-    [~,timesteps] = load_RG_dim([pwd '/Data/RG_CLIM/']);
-elseif strcmp(base_grid,'RFROM')
-    [~,timesteps] = load_RFROM_dim([pwd '/Data/RFROM/']);
-end
+% if strcmp(base_grid,'RG')
+%     [~,timesteps] = load_RG_dim([pwd '/Data/RG_CLIM/']);
+% elseif strcmp(base_grid,'RFROM')
+%     [~,timesteps] = load_RFROM_dim([pwd '/Data/RFROM/']);
+% end
 
 %% predict property on grid
 
@@ -110,6 +113,10 @@ toc
 
 % clean up
 
+%% end and save profile
+p=profile('info');
+profsave(p,'profiles/train_rfr_old')
+profile off
 
 %% embedded function for processing 3D grids and applying RFR models
 function apply_rfr_model(TS,num_clusters,rfr_dir,rfr_fnames,...
@@ -135,11 +142,7 @@ function apply_rfr_model(TS,num_clusters,rfr_dir,rfr_fnames,...
     end
 
     % calculate absolute salinity, conservative temperature, potential density
-    TS.salinity_abs_array = gsw_SA_from_SP(TS.salinity_array,TS.pressure_array,...
-        TS.longitude_array,TS.latitude_array);
-    TS.temperature_cns_array = gsw_CT_from_t(TS.salinity_abs_array,...
-        TS.temperature_array,TS.pressure_array);
-    TS.sigma_array = gsw_sigma0(TS.salinity_abs_array,TS.temperature_cns_array);
+    TS.sigma_array = gsw_sigma0(TS.salinity_array,TS.temperature_array);
 
     % pre-allocate
     gobai_matrix = single(nan(length(TS.temperature_array),num_clusters));
@@ -215,8 +218,5 @@ function apply_rfr_model(TS,num_clusters,rfr_dir,rfr_fnames,...
     ncwriteatt(filename,'pres','axis','Z');
     ncwriteatt(filename,'pres','long_name','pressure');
     ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
-    
-%     parsave([gobai_rfr_dir 'm' num2str(m) '_w' num2str(w)],...
-%         gobai_3d,'gobai',w,'w',m,'m');
 
 end

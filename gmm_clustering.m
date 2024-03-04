@@ -9,11 +9,20 @@
 %
 % DATE: 12/1/2023
 
+function gmm_clustering(base_grid,clust_vars,num_clusters,numWorkers_predict)
+
 %% load temperature and salinity climatological data
 if strcmp(base_grid,'RG')
     [TS,timesteps] = load_RG_dim([pwd '/Data/RG_CLIM/']);
     TS = load_RG_clim(TS,[pwd '/Data/RG_CLIM/']);
     TS = replicate_RG_dim(TS,12);
+    idx = ~isnan(TS.salinity) & ~isnan(TS.temperature);
+    TS.salinity_abs = nan(size(idx));
+    TS.salinity_abs(idx) = gsw_SA_from_SP(TS.salinity(idx),TS.pressure(idx),...
+        convert_lon(TS.longitude(idx)),TS.latitude(idx));
+    TS.temperature_cns = nan(size(idx));
+    TS.temperature_cns(idx) = ...
+        gsw_CT_from_t(TS.salinity_abs(idx),TS.temperature(idx),TS.pressure(idx));
 elseif strcmp(base_grid,'RFROM')
     [TS,timesteps] = load_RFROM_dim([pwd '/Data/RFROM/']);
     TS = load_RFROM_clim(TS,[pwd '/Data/RFROM/']);
@@ -24,17 +33,20 @@ end
 % Some replicates don't converge, investigate further...
 tic
 % transform to normalized arrays
-idx = ~isnan(TS.temperature) & ~isnan(TS.salinity);
+idx = ~isnan(TS.temperature_cns) & ~isnan(TS.salinity_abs);
 predictor_matrix = [];
 for v = 1:length(clust_vars)
     predictor_matrix = [predictor_matrix TS.(clust_vars{v})(idx)];
 end
 [X_norm,C,S] = normalize(predictor_matrix);
 clear TS
+% reduce inputs for model training to 10,000,000 random data points
+idx_rand = randperm(length(X_norm),10000000)';
+X_norm = X_norm(idx_rand,:);
 % fit GMM
 gmm = fitgmdist(X_norm,num_clusters,...
     'CovarianceType','full',...
-    'SharedCovariance',true,'Replicates',10);
+    'SharedCovariance',true,'Replicates',1);
 % save GMM model
 if ~isfolder(['Data/GMM_' base_grid '_' num2str(num_clusters)])
     mkdir(['Data/GMM_' base_grid '_' num2str(num_clusters)]);
@@ -67,6 +79,14 @@ parfor m = 1:timesteps
             'Temperature',[1 1 1 m],[Inf Inf Inf 1]);
         TS.salinity = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Sal.nc'],...
             'Salinity',[1 1 1 m],[Inf Inf Inf 1]);
+        % convert to absolute salinity and conservative temperature
+        idx = ~isnan(TS.salinity) & ~isnan(TS.temperature);
+        TS.salinity_abs = nan(size(idx));
+        TS.salinity_abs(idx) = gsw_SA_from_SP(TS.salinity(idx),TS.pressure(idx),...
+            convert_lon(TS.longitude(idx)),TS.latitude(idx));
+        TS.temperature_cns = nan(size(idx));
+        TS.temperature_cns(idx) = ...
+            gsw_CT_from_t(TS.salinity_abs(idx),TS.temperature(idx),TS.pressure(idx));
         % transform to normalized arrays
         idx = ~isnan(TS.temperature) & ~isnan(TS.salinity);
         predictor_matrix = [];
@@ -86,14 +106,14 @@ parfor m = 1:timesteps
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
         for w = 1:nc_atts.Dimensions(3).Length
             % get RFROM T and S
-            TS.temperature = ncread([pwd '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
+            TS.temperature_cns = ncread([pwd '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                 'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
-            TS.salinity = ncread([pwd '/Data/RFROM/RFROM_SAL_v0.1/RFROM_SAL_STABLE_' ...
+            TS.salinity_abs = ncread([pwd '/Data/RFROM/RFROM_SAL_v0.1/RFROM_SAL_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                 'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
             % transform to normalized arrays
-            idx = ~isnan(TS.temperature) & ~isnan(TS.salinity);
+            idx = ~isnan(TS.temperature_cns) & ~isnan(TS.salinity_abs);
             predictor_matrix = [];
             for v = 1:length(clust_vars)
                 predictor_matrix = [predictor_matrix TS.(clust_vars{v})(idx)];
@@ -150,6 +170,8 @@ toc
 % old time info
 % 1.8 hours for ten clusters and ten replicates on chinook? (9/8/23)
 % 2.2 hours for twenty clusters and twenty replicates on Hercules (9/8/23)
+
+end
 
 %% embedded function
 function assign_to_gmm_clusters(gmm,num_clusters,idx,X_norm,xdim,ydim,zdim,m,w,base_grid)

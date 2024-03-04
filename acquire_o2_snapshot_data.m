@@ -10,6 +10,8 @@
 %
 % DATE: 09/12/2023
 
+function acquire_o2_snapshot_data(data_modes,float_file_ext,snap_date,snap_download)
+
 %% Download BGC Argo snapshot
 if snap_download == 1
     
@@ -123,7 +125,9 @@ float_data.OXY_PROF_ID = [];
 %% set up figure
 figure(1); hold on;
 set(gcf,'visible','off','position',[100 100 1600 800]);
-worldmap([-90 90],[-180 180]);
+m_proj('robinson','lon',[20 380]);
+m_coast('patch','k');
+m_grid('linestyle','-','ytick',-90:30:90);
 
 %% Define interpolation parameters
 vars = {'PSAL' 'TEMP' 'DOXY'}; % define variables to interpolate
@@ -191,7 +195,9 @@ for n = 1:length(idx_folders) % for each DAC
             clear all_vars v
 
             %% add unprocessed oxygen data to plot
-            scatterm(float.(['F' floatnum]).LATITUDE,float.(['F' floatnum]).LONGITUDE,'.k');
+            lon_temp = convert_lon(convert_lon(float.(['F' floatnum]).LONGITUDE));
+            m_scatter(lon_temp,float.(['F' floatnum]).LATITUDE,'.k');
+            clear lon_temp
 
             %% Loop trough floats, interpolate profiles, and log data
             for k = 1:numel(vars) % for each variable
@@ -251,7 +257,7 @@ for n = 1:length(idx_folders) % for each DAC
             float.(['F' floatnum]).LATITUDEi = repmat(float.(['F' floatnum]).LATITUDE(~nan_idx)',length(zi),1);
             float.(['F' floatnum]).LONGITUDEi = repmat(float.(['F' floatnum]).LONGITUDE(~nan_idx)',length(zi),1);
             float.(['F' floatnum]).TIMEi = repmat(float.(['F' floatnum]).TIME(~nan_idx)',length(zi),1);
-            float.(['F' floatnum]).CYCLE_NUMBERi = repmat(float.(['F' floatnum]).CYCLE_NUMBER(~nan_idx),length(zi),1);
+            float.(['F' floatnum]).CYCLE_NUMBERi = repmat(float.(['F' floatnum]).CYCLE_NUMBER(~nan_idx)',length(zi),1);
             float.(['F' floatnum]).FLOAT_NUMBERi = repmat(str2double(floatnum),length(zi),sum(~nan_idx));
     
             %% add interpolated data to float data structure
@@ -294,12 +300,12 @@ clear idx_oxy idx_sal idx_temp idx_any v vars
 
 %% plot processed oxygen data
 figure(1); hold on;
-scatterm(float_data.OXY_LAT,float_data.OXY_LON,'.g');
-land = shaperead('landareas', 'UseGeoCoords', true);
-geoshow(land,'FaceColor',rgb('grey'));
+lon_temp = convert_lon(convert_lon(float_data.OXY_LON));
+m_scatter(lon_temp,float_data.OXY_LAT,'.g');
 if ~exist('Figures','dir'); mkdir('Figures'); end
-exportgraphics(gcf,['Figures/processed_float_'  file_date float_file_ext '.png']);
+exportgraphics(gcf,['Figures/Data/processed_float_'  file_date float_file_ext '.png']);
 close
+clear lon_temp
 
 %% convert times and dates
 date_temp = datevec(float_data.OXY_TIME);
@@ -327,5 +333,7 @@ save(['Data/processed_float_o2_data_' file_date float_file_ext '.mat'],...
 %% clean up
 clear float_data
 close all
+
+end
 
 end

@@ -1,4 +1,4 @@
-% adjust_float_data
+% adjust_o2_float_data
 %
 % DESCRIPTION:
 % This function bins float and glodap data, co-locates corresponding bins,
@@ -8,6 +8,8 @@
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
 % DATE: 09/22/2023
+
+function adjust_o2_float_data(float_file_ext,snap_date,glodap_year)
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
@@ -72,7 +74,7 @@ set(gca,'fontsize',16);
 plot([mean_delta+5*st_dev_delta mean_delta+5*st_dev_delta],[0 80000],'r','linewidth',2);
 plot([mean_delta-5*st_dev_delta mean_delta-5*st_dev_delta],[0 80000],'r','linewidth',2);
 xlabel('Float [O_{2}] - WOA [O_{2}]');
-exportgraphics(gcf,[pwd '/Figures/WOA_comp_histogram_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[pwd '/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
 close
 % scatter of delta values
 figure; hold on
@@ -92,7 +94,7 @@ set(gca,'ColorScale','log')
 caxis([1e0 1e5]);
 c=colorbar;
 c.Label.String = 'log10(Bin Counts)';
-exportgraphics(gcf,[pwd '/Figures/WOA_comp_scatter_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[pwd '/Figures/Data/WOA_comp_scatter_' file_date float_file_ext '.png']);
 close
 % clean up
 clear counts bin_centers c h myColorMap
@@ -164,11 +166,23 @@ if ~exist([pwd '/Data'],'dir'); mkdir('Data'); end
 save(['Data/binned_data_' file_date float_file_ext],'binned_data','-v7.3')
 
 % clean up
-clear glodap_data binned_data idx_float idx_glodap
+clear binned_data idx_float idx_glodap
 clear idx_float_tmp idx_glodap_tmp m sz subs_float subs_glodap
 clear x_edges x_bins y_bins z_edges z_bins t_bins
 
-%% Co-locate and compare float and glodap data
+%% Co-locate and compare float and glodap data (via profile crossovers)
+float_profile_IDs = unique(float_data.OXY_PROF_ID);
+for p = 1:length(float_profile_IDs)
+    lon = mean(float_data.OXY_LON(float_data.OXY_PROF_ID==float_profile_IDs(p)));
+    lat = mean(float_data.OXY_LAT(float_data.OXY_PROF_ID==float_profile_IDs(p)));
+    time = mean(float_data.OXY_TIME(float_data.OXY_PROF_ID==float_profile_IDs(p)));
+    idx_lon = abs(glodap_data.OXY_LON - lon) < 1;
+    idx_lat = abs(glodap_data.OXY_LAT - lat) < 1;
+    idx_time = abs(glodap_data.OXY_TIME - time) < 30;
+    glodap_data.OXY(idx_lon & idx_lat & idx_time);
+end
+
+%% Co-locate and compare float and glodap data (via bins)
 % load binned data
 load(['Data/binned_data_' file_date float_file_ext],'binned_data')
 % index where binned float and glodap data overlap under 300 dbars
@@ -181,16 +195,16 @@ matched_data.oxy_delta = matched_data.oxy_glodap-matched_data.oxy_float;
 matched_data.oxy_delta_per = (matched_data.oxy_glodap-matched_data.oxy_float)./matched_data.oxy_glodap;
 matched_data.pres = binned_data.pres(idx);
 % fit delta against [O2]
-mod = fitlm(matched_data.oxy_float,matched_data.oxy_delta_per,'Intercept',true);
-slp = mod.Coefficients.Estimate(2);
-int = mod.Coefficients.Estimate(1);
+mdl = fitlm(matched_data.oxy_float,matched_data.oxy_delta_per,'Intercept',true);
+slp = mdl.Coefficients.Estimate(2);
+int = mdl.Coefficients.Estimate(1);
 % apply linear correction to float O2
 matched_data.oxy_float_corr = matched_data.oxy_float + ...
     (slp.*matched_data.oxy_float + int).*matched_data.oxy_float;
 % re-calculate delta
 matched_data.oxy_delta_corr = matched_data.oxy_glodap-matched_data.oxy_float_corr;
 % clean up
-clear idx mod binned_data
+clear idx mdl binned_data
 
 %% save matched float and glodap data
 if ~exist([pwd '/Data'],'dir'); mkdir('Data'); end
@@ -219,7 +233,7 @@ matched_data.slope = matched_data.slope(1);
 text(300,120,['Med. Err. = ' num2str(round(matched_data.err_md,2))],'fontsize',12);
 text(300,90,['RMSE = ' num2str(round(matched_data.rmse,1))],'fontsize',12);
 text(300,60,['R^{2} = ' num2str(round(matched_data.r2,2))],'fontsize',12);
-exportgraphics(gcf,['Figures/delta_vs_float_300_uncorr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,['Figures/Data/delta_vs_float_300_uncorr_' file_date float_file_ext '.png']);
 close
 % histogram
 figure; hold on
@@ -239,7 +253,7 @@ text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
 text(0.9*xL(1),0.8*yL(2),['Std. \Delta[O_{2}] = ' ...
     num2str(round(std(matched_data.oxy_delta),2))],...
     'HorizontalAlignment','left','VerticalAlignment','top');
-exportgraphics(gcf,[pwd '/Figures/GLODAP_comp_histogram_uncorr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[pwd '/Figures/Data/GLODAP_comp_histogram_uncorr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear matched_data
@@ -260,7 +274,7 @@ matched_data.slope_corr = matched_data.slope_corr(1);
 text(300,120,['Med. Err. = ' num2str(round(matched_data.err_md_corr,2))],'fontsize',12);
 text(300,90,['RMSE = ' num2str(round(matched_data.rmse_corr,1))],'fontsize',12);
 text(300,60,['R^{2} = ' num2str(round(matched_data.r2_corr,2))],'fontsize',12);
-exportgraphics(gcf,['Figures/delta_vs_float_300_corr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,['Figures/Data/delta_vs_float_300_corr_' file_date float_file_ext '.png']);
 close
 % histogram
 figure; hold on
@@ -280,7 +294,7 @@ text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
 text(0.9*xL(1),0.8*yL(2),['Std. \Delta[O_{2}] = ' ...
     num2str(round(std(matched_data.oxy_delta_corr),2))],...
     'HorizontalAlignment','left','VerticalAlignment','top');
-exportgraphics(gcf,[pwd '/Figures/GLODAP_comp_histogram_corr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[pwd '/Figures/Data/GLODAP_comp_histogram_corr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear matched_data

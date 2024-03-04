@@ -9,6 +9,8 @@
 %
 % DATE: 09/12/2023
 
+function acquire_o2_glodap_data(glodap_year)
+
 %% Only do all this if downloaded glodap matlab file does not exist
 if exist(['Data/processed_glodap_o2_data_' num2str(glodap_year) '.mat'],'file') ~= 2
 
@@ -23,13 +25,15 @@ glodap_data.date0(:,2:3) = 1;
 glodap_data.day = datenum(glodap_data.date) - datenum(glodap_data.date0) + 1;
 
 %% plot unprocessed oxygen profile locations
-figure(1); worldmap([-90 90],[-180 180]);
-set(gcf,'position',[100 100 1600 800]); hold on;
-scatterm(glodap_data.G2latitude,glodap_data.G2longitude,'.k');
-land = shaperead('landareas', 'UseGeoCoords', true);
-geoshow(land,'FaceColor',rgb('grey'));
+figure(1); hold on;
+set(gcf,'visible','on','position',[100 100 1600 800]);
+m_proj('robinson','lon',[20 380]);
+m_coast('patch','k');
+m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
+lon_temp = convert_lon(convert_lon(glodap_data.G2longitude));
+m_scatter(lon_temp,glodap_data.G2latitude,'.k');
 hold off;
-clear land;
+clear lon_temp
 
 %% indices for glodap oxygen
 idx_nans = ~isnan(glodap_data.G2temperature) & ~isnan(glodap_data.G2pressure) & ...
@@ -155,9 +159,11 @@ disp(['# of matching GLODAP cruises (OXY): ' num2str(length(unique(glodap_data.O
 
 %% plot processed oxygen profile locations on top of unprocessed
 figure(1); hold on;
-scatterm(glodap_data.OXY_LAT,glodap_data.OXY_LON,'.g'); hold off;
+lon_temp = convert_lon(convert_lon(glodap_data.OXY_LON));
+m_scatter(lon_temp,glodap_data.OXY_LAT,'.g'); hold off;
 if ~exist('Figures','dir'); mkdir('Figures'); end
-exportgraphics(gcf,['Figures/processed_glodap_' year '.png']);
+exportgraphics(gcf,['Figures/Data/processed_glodap_' year '.png']);
+clear lon_temp
 
 %% clean up
 clear path idx_oxy default_names index
@@ -175,5 +181,7 @@ save(['Data/processed_glodap_o2_data_' year '.mat'],'glodap_data');
 %% clean up
 clear glodap_data
 close all
+
+end
 
 end

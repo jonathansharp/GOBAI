@@ -65,11 +65,7 @@ parfor c = 1:num_clusters
 
     % save model for each cluster
     if ~isfolder([pwd '/' rfr_dir]); mkdir(rfr_dir);end
-    %save([rfr_dir '/' rfr_fnames{c}],'RFR','-v7.3');
     parsave([rfr_dir '/' rfr_fnames{c}],RFR,'RFR');
-
-    % clean up
-    %clear RFR
 
     % stop timing fit
     fprintf(['Train RFR - Cluster #' num2str(c) ': ']);

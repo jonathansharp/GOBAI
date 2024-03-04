@@ -1,4 +1,4 @@
-% display_data
+% display_o2_data
 %
 % DESCRIPTION:
 % This function is used to create and save some descriptive figures of the
@@ -7,6 +7,8 @@
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
 % DATE: 09/12/2023
+
+function display_o2_data(float_file_ext,snap_date,glodap_year)
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
@@ -130,3 +132,5 @@ if ~exist([pwd '/Figures/Data'],'dir'); mkdir('Figures/Data'); end
 exportgraphics(gcf,['Figures/Data/data_by_longitude_' file_date float_file_ext '.png']);
 clear edges
 close
+
+end
