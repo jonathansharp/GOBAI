@@ -2,7 +2,7 @@
 pressures = [2.5 100 500 1000 1975];
 for d = 1:length(pressures)
     % establish figure
-    h=figure('visible','off','Position',[100 100 800 400]);
+    h=figure('visible','off','Position',[100 100 800 400]); hold on;
     axis tight manual
     % create folder
     dname = ['Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
@@ -37,10 +37,12 @@ for d = 1:length(pressures)
             GMM_clusters = load(['Data/GMM_' base_grid '_' num2str(num_clusters) ...
                 '/m' num2str(m) '_w1'],'GMM_clusters');
             % make plot
-            worldmap([-90 90],[20 380]);
+            m_proj('robinson','lon',[20 380]);
             title(extractAfter(datestr(datenum(2004,m,1)),'-'));
-            pcolorm(double(Latitude),double(Longitude),...
+            m_pcolor(double(Longitude),double(Latitude),...
                 double(GMM_clusters.GMM_clusters(:,:,depth_idx))');
+            m_coast('patch',rgb('grey'));
+            m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
             colormap([1,1,1;flipud(jet(num_clusters))]); % white then jet
             plot_land('map');
             clim([-0.5 num_clusters+0.5]);
@@ -48,7 +50,6 @@ for d = 1:length(pressures)
             c.Limits = [0.5 num_clusters+0.5];
             c.Label.String = 'Cluster';
             c.TickLength = 0;
-            mlabel off; plabel off;
             % capture frame
             frame = getframe(h);
             im = frame2im(frame);
@@ -67,9 +68,11 @@ for d = 1:length(pressures)
                 GMM_clusters = load(['Data/GMM_' base_grid '_' num2str(num_clusters) ...
                     '/m' num2str(m) '_w' num2str(w)],'GMM_clusters');
                 % make plot
-                worldmap([-90 90],[20 380]);
+                m_proj('robinson','lon',[20 380]);
+                m_coast('patch',rgb('grey'));
+                m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
                 title(extractAfter(datestr(datenum(2004,m,1)),'-'));
-                pcolorm(double(Latitude),double(Longitude),...
+                m_pcolor(double(Latitude),double(Longitude),...
                     double(GMM_clusters.GMM_clusters(:,:,depth_idx))');
                 colormap([1,1,1;flipud(jet(num_clusters))]); % white then jet
                 plot_land('map');
@@ -78,7 +81,6 @@ for d = 1:length(pressures)
                 c.Limits = [0.5 num_clusters+0.5];
                 c.Label.String = 'Cluster';
                 c.TickLength = 0;
-                mlabel off; plabel off;
                 % capture frame
                 frame = getframe(h);
                 im = frame2im(frame);

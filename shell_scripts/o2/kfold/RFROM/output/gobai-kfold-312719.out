@@ -1,0 +1,66 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Starting parallel pool (parpool) using the 'Processes' profile ...
+[Warning: The system time zone setting, 'US/Central', does not specify a single
+time zone unambiguously. It will be treated as 'America/Chicago'. See the <a
+href="matlab:doc('datetime.TimeZone')">datetime.TimeZone property</a> for
+details about specifying time zones.] 
+[> In verifyTimeZone (line 38)
+In datetime (line 559)
+In parallel.internal.pool.JavaBackedSessionNotifier>iLongToDatetime (line 128)
+In parallel.internal.pool.JavaBackedSessionNotifier>iJavaDateToDatetime (line
+148)
+In parallel.internal.pool.JavaBackedSessionNotifier.sessionInfoFromJava (line
+102)
+In parallel.internal.pool/JavaBackedSessionNotifier/wrapNotificationMethod
+(line 17)
+In parallel.internal.pool/JavaBackedSessionNotifier/notifyAboutToStart (line
+36)
+In parallel.internal.pool.ISessionNotifier.buildAboutToStartInfo (line 34)
+In parallel.internal.pool.argumentsParser>iPoolStartingMessage (line 188)
+In parallel.internal.pool.argumentsParser>iGetClusterAndNumWorkers (line 108)
+In parallel.internal.pool.argumentsParser (line 45)
+In parallel.internal.pool.doParpool (line 17)
+In parpool (line 127)
+In parallel.internal.parpool.getOrCreateCurrentPool (line 17)
+In gcp (line 45)
+In nncalc.setup1>setupImpl (line 95)
+In nncalc.setup1 (line 16)
+In nncalc.setup (line 7)
+In network/train (line 368)
+In fit_FFNN (line 33)
+In kfold_train_ffnn (line 67)
+In gobai_o2_kfold_train_ffnn (line 5)
+] 
+Connected to the parallel pool (number of workers: 40).
+Train FFNN - Fold #1, Cluster #1: Elapsed time is 150.281864 seconds.
+Run FFNN - Fold #1, Cluster #1: Elapsed time is 0.506344 seconds.
+Train FFNN - Fold #1, Cluster #2: Elapsed time is 101.370180 seconds.
+Run FFNN - Fold #1, Cluster #2: Elapsed time is 0.308023 seconds.
+Train FFNN - Fold #1, Cluster #3: Elapsed time is 360.816567 seconds.
+Run FFNN - Fold #1, Cluster #3: Elapsed time is 0.597582 seconds.
+Train FFNN - Fold #1, Cluster #4: Elapsed time is 311.821495 seconds.
+Run FFNN - Fold #1, Cluster #4: Elapsed time is 0.485499 seconds.
+Train FFNN - Fold #1, Cluster #5: Elapsed time is 0.901556 seconds.
+  MException with properties:
+
+    identifier: 'MATLAB:invalidConversion'
+       message: 'Conversion to double from struct is not possible.'
+         cause: {}
+         stack: [3x1 struct]
+    Correction: []
+
+Function: gobai_o2_kfold_train_ffnn
+Line: 5
+Function: kfold_train_ffnn
+Line: 77
+Function: run_FFNN
+Line: 19

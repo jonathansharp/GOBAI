@@ -6,18 +6,29 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 09/14/2023
+% DATE: 3/15/2024
+
+function kfold_train_gbm(param,dir_base,base_grid,file_date,...
+    float_file_ext,glodap_only,num_clusters,num_folds,variables,...
+    numstumps,thresh)
+
+%% process parameter name
+if strcmp(param,'o2')
+    param1 = 'O2';
+    param2 = 'oxygen';
+    param3 = '[O_{2}]';
+end
 
 %% load combined data
-load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
+load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
-load(['Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% load data cluster indices
-load(['Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
+load([param1 '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
     '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],...
     'num_folds','train_idx','test_idx');
 
@@ -32,7 +43,7 @@ end
 clear glodap_idx vars v
 
 %% create directory and file names
-gbm_dir = ['Models/' dir_base];
+gbm_dir = [param1 '/Models/' dir_base];
 gbm_fnames = cell(num_folds,num_clusters);
 for f = 1:num_folds
     for c = 1:num_clusters
@@ -40,9 +51,9 @@ for f = 1:num_folds
             {['GBM_oxygen_C' num2str(c) '_F' num2str(f) '_test']};
     end
 end
-kfold_dir = ['KFold/GBM/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+kfold_dir = [param1 '/KFold/GBM/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 kfold_name = ['GBM_output_tr' num2str(numstumps)];
-fig_dir = ['Figures/KFold/GBM/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+fig_dir = [param1 '/Figures/KFold/GBM/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 fig_name_1 = ['k_fold_comparison_tr' num2str(numstumps) '.png'];
 fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numstumps) '.png'];
 
@@ -124,8 +135,10 @@ gbm_rmse = sqrt(mean(gbm_output.k_fold_delta.^2));
 if ~isfolder([pwd '/' kfold_dir]); mkdir(kfold_dir); end
 save([kfold_dir '/' kfold_name],'gbm_output','gbm_rmse',...
     'gbm_med_err','gbm_mean_err','-v7.3');
+clear gbm_output gbm_rmse gbm_med_err gbm_mean_err
 
 %% plot histogram of errors
+load([kfold_dir '/' kfold_name],'gbm_output','gbm_rmse');
 figure('visible','off'); hold on;
 set(gca,'fontsize',12);
 set(gcf,'position',[100 100 600 400]);
@@ -178,7 +191,7 @@ geoshow(land,'FaceColor',rgb('grey'));
 cmap = cmocean('amp'); cmap(1,:) = 1; colormap(cmap);
 caxis([0 20]);
 c=colorbar('location','southoutside');
-c.Label.String = ['Average Absolute \Delta[O_{2}]'];
+c.Label.String = ['Average Absolute \Delta' param3];
 c.FontSize = 22;
 c.TickLength = 0;
 mlabel off; plabel off;
@@ -192,3 +205,5 @@ close
 clear gbm_output gbm_rmse gbm_med_err gbm_mean_err probs_matrix
 clear num_clusters numtrees minLeafSize NumPredictors gbm_dir gbm_fnames
 clear all_data all_data_clusters train_idx test_idx train_sum
+
+end

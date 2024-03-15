@@ -1,0 +1,151 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Train GBM - Fold #1, Cluster #1: Elapsed time is 134.760965 seconds.
+Run GBM - Fold #1, Cluster #1: Elapsed time is 2.387836 seconds.
+Train GBM - Fold #1, Cluster #2: Elapsed time is 82.389428 seconds.
+Run GBM - Fold #1, Cluster #2: Elapsed time is 1.796743 seconds.
+Train GBM - Fold #1, Cluster #3: Elapsed time is 401.722942 seconds.
+Run GBM - Fold #1, Cluster #3: Elapsed time is 5.435101 seconds.
+Train GBM - Fold #1, Cluster #4: Elapsed time is 249.202288 seconds.
+Run GBM - Fold #1, Cluster #4: Elapsed time is 4.150179 seconds.
+Train GBM - Fold #1, Cluster #5: N/ARun GBM - Fold #1, Cluster #5: N/ATrain GBM - Fold #1, Cluster #6: Elapsed time is 261.477367 seconds.
+Run GBM - Fold #1, Cluster #6: Elapsed time is 3.835138 seconds.
+Train GBM - Fold #1, Cluster #7: Elapsed time is 360.295495 seconds.
+Run GBM - Fold #1, Cluster #7: Elapsed time is 5.052800 seconds.
+Train GBM - Fold #1, Cluster #8: Elapsed time is 32.237798 seconds.
+Run GBM - Fold #1, Cluster #8: Elapsed time is 0.731847 seconds.
+Train GBM - Fold #1, Cluster #9: Elapsed time is 6.732327 seconds.
+Run GBM - Fold #1, Cluster #9: Elapsed time is 0.162131 seconds.
+Train GBM - Fold #1, Cluster #10: Elapsed time is 84.460203 seconds.
+Run GBM - Fold #1, Cluster #10: Elapsed time is 1.800723 seconds.
+Train GBM - Fold #1, Cluster #11: Elapsed time is 31.367615 seconds.
+Run GBM - Fold #1, Cluster #11: Elapsed time is 0.780058 seconds.
+Train GBM - Fold #1, Cluster #12: Elapsed time is 51.262240 seconds.
+Run GBM - Fold #1, Cluster #12: Elapsed time is 1.176201 seconds.
+Train GBM - Fold #1, Cluster #13: Elapsed time is 19.281887 seconds.
+Run GBM - Fold #1, Cluster #13: Elapsed time is 0.542655 seconds.
+Train GBM - Fold #1, Cluster #14: Elapsed time is 14.923217 seconds.
+Run GBM - Fold #1, Cluster #14: Elapsed time is 0.521020 seconds.
+Train GBM - Fold #1, Cluster #15: Elapsed time is 296.566618 seconds.
+Run GBM - Fold #1, Cluster #15: Elapsed time is 4.510429 seconds.
+Train GBM - Fold #2, Cluster #1: Elapsed time is 141.174536 seconds.
+Run GBM - Fold #2, Cluster #1: Elapsed time is 2.142190 seconds.
+Train GBM - Fold #2, Cluster #2: Elapsed time is 89.817171 seconds.
+Run GBM - Fold #2, Cluster #2: Elapsed time is 1.498771 seconds.
+Train GBM - Fold #2, Cluster #3: Elapsed time is 396.028183 seconds.
+Run GBM - Fold #2, Cluster #3: Elapsed time is 5.309605 seconds.
+Train GBM - Fold #2, Cluster #4: Elapsed time is 269.123195 seconds.
+Run GBM - Fold #2, Cluster #4: Elapsed time is 3.274728 seconds.
+Train GBM - Fold #2, Cluster #5: N/ARun GBM - Fold #2, Cluster #5: N/ATrain GBM - Fold #2, Cluster #6: Elapsed time is 273.484498 seconds.
+Run GBM - Fold #2, Cluster #6: Elapsed time is 3.421660 seconds.
+Train GBM - Fold #2, Cluster #7: Elapsed time is 367.971625 seconds.
+Run GBM - Fold #2, Cluster #7: Elapsed time is 4.533034 seconds.
+Train GBM - Fold #2, Cluster #8: Elapsed time is 31.908927 seconds.
+Run GBM - Fold #2, Cluster #8: Elapsed time is 0.697233 seconds.
+Train GBM - Fold #2, Cluster #9: Elapsed time is 6.692346 seconds.
+Run GBM - Fold #2, Cluster #9: Elapsed time is 0.158982 seconds.
+Train GBM - Fold #2, Cluster #10: Elapsed time is 90.290702 seconds.
+Run GBM - Fold #2, Cluster #10: Elapsed time is 1.411714 seconds.
+Train GBM - Fold #2, Cluster #11: Elapsed time is 31.002031 seconds.
+Run GBM - Fold #2, Cluster #11: Elapsed time is 0.801564 seconds.
+Train GBM - Fold #2, Cluster #12: Elapsed time is 50.848919 seconds.
+Run GBM - Fold #2, Cluster #12: Elapsed time is 1.221833 seconds.
+Train GBM - Fold #2, Cluster #13: Elapsed time is 19.207523 seconds.
+Run GBM - Fold #2, Cluster #13: Elapsed time is 0.552606 seconds.
+Train GBM - Fold #2, Cluster #14: Elapsed time is 15.249962 seconds.
+Run GBM - Fold #2, Cluster #14: Elapsed time is 0.526043 seconds.
+Train GBM - Fold #2, Cluster #15: Elapsed time is 318.213177 seconds.
+Run GBM - Fold #2, Cluster #15: Elapsed time is 3.678943 seconds.
+Train GBM - Fold #3, Cluster #1: Elapsed time is 129.100698 seconds.
+Run GBM - Fold #3, Cluster #1: Elapsed time is 2.522635 seconds.
+Train GBM - Fold #3, Cluster #2: Elapsed time is 88.752783 seconds.
+Run GBM - Fold #3, Cluster #2: Elapsed time is 1.494440 seconds.
+Train GBM - Fold #3, Cluster #3: Elapsed time is 397.144732 seconds.
+Run GBM - Fold #3, Cluster #3: Elapsed time is 5.317753 seconds.
+Train GBM - Fold #3, Cluster #4: Elapsed time is 256.821004 seconds.
+Run GBM - Fold #3, Cluster #4: Elapsed time is 3.849219 seconds.
+Train GBM - Fold #3, Cluster #5: N/ARun GBM - Fold #3, Cluster #5: N/ATrain GBM - Fold #3, Cluster #6: Elapsed time is 267.873948 seconds.
+Run GBM - Fold #3, Cluster #6: Elapsed time is 3.578153 seconds.
+Train GBM - Fold #3, Cluster #7: Elapsed time is 359.726124 seconds.
+Run GBM - Fold #3, Cluster #7: Elapsed time is 4.651772 seconds.
+Train GBM - Fold #3, Cluster #8: Elapsed time is 27.986467 seconds.
+Run GBM - Fold #3, Cluster #8: Elapsed time is 0.871489 seconds.
+Train GBM - Fold #3, Cluster #9: Elapsed time is 6.718678 seconds.
+Run GBM - Fold #3, Cluster #9: Elapsed time is 0.159704 seconds.
+Train GBM - Fold #3, Cluster #10: Elapsed time is 88.729101 seconds.
+Run GBM - Fold #3, Cluster #10: Elapsed time is 1.622363 seconds.
+Train GBM - Fold #3, Cluster #11: Elapsed time is 27.011533 seconds.
+Run GBM - Fold #3, Cluster #11: Elapsed time is 1.003716 seconds.
+Train GBM - Fold #3, Cluster #12: Elapsed time is 54.105777 seconds.
+Run GBM - Fold #3, Cluster #12: Elapsed time is 0.999754 seconds.
+Train GBM - Fold #3, Cluster #13: Elapsed time is 17.968212 seconds.
+Run GBM - Fold #3, Cluster #13: Elapsed time is 0.672925 seconds.
+Train GBM - Fold #3, Cluster #14: Elapsed time is 14.722874 seconds.
+Run GBM - Fold #3, Cluster #14: Elapsed time is 0.540540 seconds.
+Train GBM - Fold #3, Cluster #15: Elapsed time is 306.339566 seconds.
+Run GBM - Fold #3, Cluster #15: Elapsed time is 4.203732 seconds.
+Train GBM - Fold #4, Cluster #1: Elapsed time is 136.124001 seconds.
+Run GBM - Fold #4, Cluster #1: Elapsed time is 2.206197 seconds.
+Train GBM - Fold #4, Cluster #2: Elapsed time is 86.966828 seconds.
+Run GBM - Fold #4, Cluster #2: Elapsed time is 1.497384 seconds.
+Train GBM - Fold #4, Cluster #3: Elapsed time is 409.277285 seconds.
+Run GBM - Fold #4, Cluster #3: Elapsed time is 4.595114 seconds.
+Train GBM - Fold #4, Cluster #4: Elapsed time is 257.789146 seconds.
+Run GBM - Fold #4, Cluster #4: Elapsed time is 3.825813 seconds.
+Train GBM - Fold #4, Cluster #5: N/ARun GBM - Fold #4, Cluster #5: N/ATrain GBM - Fold #4, Cluster #6: Elapsed time is 269.484067 seconds.
+Run GBM - Fold #4, Cluster #6: Elapsed time is 3.407883 seconds.
+Train GBM - Fold #4, Cluster #7: Elapsed time is 370.127319 seconds.
+Run GBM - Fold #4, Cluster #7: Elapsed time is 4.360175 seconds.
+Train GBM - Fold #4, Cluster #8: Elapsed time is 27.210656 seconds.
+Run GBM - Fold #4, Cluster #8: Elapsed time is 0.931829 seconds.
+Train GBM - Fold #4, Cluster #9: Elapsed time is 4.985809 seconds.
+Run GBM - Fold #4, Cluster #9: Elapsed time is 0.379076 seconds.
+Train GBM - Fold #4, Cluster #10: Elapsed time is 92.542705 seconds.
+Run GBM - Fold #4, Cluster #10: Elapsed time is 1.438306 seconds.
+Train GBM - Fold #4, Cluster #11: Elapsed time is 30.064011 seconds.
+Run GBM - Fold #4, Cluster #11: Elapsed time is 0.830702 seconds.
+Train GBM - Fold #4, Cluster #12: Elapsed time is 49.733591 seconds.
+Run GBM - Fold #4, Cluster #12: Elapsed time is 1.288925 seconds.
+Train GBM - Fold #4, Cluster #13: Elapsed time is 18.634919 seconds.
+Run GBM - Fold #4, Cluster #13: Elapsed time is 0.629409 seconds.
+Train GBM - Fold #4, Cluster #14: Elapsed time is 15.386864 seconds.
+Run GBM - Fold #4, Cluster #14: Elapsed time is 0.497126 seconds.
+Train GBM - Fold #4, Cluster #15: Elapsed time is 310.519886 seconds.
+Run GBM - Fold #4, Cluster #15: Elapsed time is 4.079656 seconds.
+Train GBM - Fold #5, Cluster #1: Elapsed time is 143.801254 seconds.
+Run GBM - Fold #5, Cluster #1: Elapsed time is 1.959576 seconds.
+Train GBM - Fold #5, Cluster #2: Elapsed time is 86.704762 seconds.
+Run GBM - Fold #5, Cluster #2: Elapsed time is 1.584738 seconds.
+Train GBM - Fold #5, Cluster #3: Elapsed time is 397.162805 seconds.
+Run GBM - Fold #5, Cluster #3: Elapsed time is 5.477092 seconds.
+Train GBM - Fold #5, Cluster #4: Elapsed time is 267.240447 seconds.
+Run GBM - Fold #5, Cluster #4: Elapsed time is 3.252679 seconds.
+Train GBM - Fold #5, Cluster #5: N/ARun GBM - Fold #5, Cluster #5: N/ATrain GBM - Fold #5, Cluster #6: Elapsed time is 268.309422 seconds.
+Run GBM - Fold #5, Cluster #6: Elapsed time is 3.731502 seconds.
+Train GBM - Fold #5, Cluster #7: Elapsed time is 363.255633 seconds.
+Run GBM - Fold #5, Cluster #7: Elapsed time is 4.627313 seconds.
+Train GBM - Fold #5, Cluster #8: Elapsed time is 31.148492 seconds.
+Run GBM - Fold #5, Cluster #8: Elapsed time is 0.675208 seconds.
+Train GBM - Fold #5, Cluster #9: Elapsed time is 3.240959 seconds.
+Run GBM - Fold #5, Cluster #9: Elapsed time is 0.510753 seconds.
+Train GBM - Fold #5, Cluster #10: Elapsed time is 80.175157 seconds.
+Run GBM - Fold #5, Cluster #10: Elapsed time is 1.916247 seconds.
+Train GBM - Fold #5, Cluster #11: Elapsed time is 31.905573 seconds.
+Run GBM - Fold #5, Cluster #11: Elapsed time is 0.661502 seconds.
+Train GBM - Fold #5, Cluster #12: Elapsed time is 51.051460 seconds.
+Run GBM - Fold #5, Cluster #12: Elapsed time is 1.082546 seconds.
+Train GBM - Fold #5, Cluster #13: Elapsed time is 18.455990 seconds.
+Run GBM - Fold #5, Cluster #13: Elapsed time is 0.588431 seconds.
+Train GBM - Fold #5, Cluster #14: Elapsed time is 15.424688 seconds.
+Run GBM - Fold #5, Cluster #14: Elapsed time is 0.509038 seconds.
+Train GBM - Fold #5, Cluster #15: Elapsed time is 305.746955 seconds.
+Run GBM - Fold #5, Cluster #15: Elapsed time is 4.000748 seconds.
+success!

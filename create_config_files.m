@@ -1,7 +1,7 @@
 % create directory
 if ~isfolder('Config'); mkdir('Config'); end
 
-%% create number of workers configuration file
+%% create number of workers configuration files
 numWorkers_train = 40;
 numWorkers_predict = 20;
 save('Config/workers_hercules.mat');

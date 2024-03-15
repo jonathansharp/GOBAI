@@ -1,0 +1,38 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Train GBM - Cluster #1: Elapsed time is 1147.999495 seconds.
+Train GBM - Cluster #2: Elapsed time is 1626.513480 seconds.
+Train GBM - Cluster #3: Elapsed time is 2270.407974 seconds.
+Train GBM - Cluster #4: Elapsed time is 1189.802311 seconds.
+Train GBM - Cluster #5: Elapsed time is 781.609955 seconds.
+Train GBM - Cluster #6: Elapsed time is 1309.919441 seconds.
+Train GBM - Cluster #7: Elapsed time is 481.386774 seconds.
+Train GBM - Cluster #8: Elapsed time is 29.087031 seconds.
+Train GBM - Cluster #9: Elapsed time is 608.267612 seconds.
+Train GBM - Cluster #10: Elapsed time is 744.425343 seconds.
+Train GBM - Cluster #11: Elapsed time is 180.545153 seconds.
+Train GBM - Cluster #12: Elapsed time is 332.413867 seconds.
+Train GBM - Cluster #13: N/AElapsed time is 332.428376 seconds.
+Train GBM - Cluster #14: Elapsed time is 194.575495 seconds.
+Train GBM - Cluster #15: Elapsed time is 928.408844 seconds.
+GBM Training: Elapsed time is 928.459456 seconds.
+  MException with properties:
+
+    identifier: 'MATLAB:UndefinedFunction'
+       message: 'Unrecognized function or variable 'lon'.'
+         cause: {}
+         stack: [2x1 struct]
+    Correction: []
+
+Function: gobai_o2_train_gbm
+Line: 5
+Function: train_gbm
+Line: 148

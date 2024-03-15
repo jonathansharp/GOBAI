@@ -1,0 +1,63 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Starting parallel pool (parpool) using the 'Processes' profile ...
+Connected to the parallel pool (number of workers: 40).
+Train FFNN - Fold #1, Cluster #1: Elapsed time is 436.796077 seconds.
+Run FFNN - Fold #1, Cluster #1: Elapsed time is 0.910522 seconds.
+Train FFNN - Fold #1, Cluster #2: Elapsed time is 423.274904 seconds.
+Run FFNN - Fold #1, Cluster #2: Elapsed time is 0.830000 seconds.
+Train FFNN - Fold #1, Cluster #3: Elapsed time is 242.735108 seconds.
+Run FFNN - Fold #1, Cluster #3: Elapsed time is 0.342762 seconds.
+Train FFNN - Fold #1, Cluster #4: Elapsed time is 196.003743 seconds.
+Run FFNN - Fold #1, Cluster #4: Elapsed time is 0.397310 seconds.
+Train FFNN - Fold #1, Cluster #5: Elapsed time is 439.942206 seconds.
+Run FFNN - Fold #1, Cluster #5: Elapsed time is 0.756989 seconds.
+Train FFNN - Fold #2, Cluster #1: Elapsed time is 391.891969 seconds.
+Run FFNN - Fold #2, Cluster #1: Elapsed time is 0.651428 seconds.
+Train FFNN - Fold #2, Cluster #2: Elapsed time is 566.301830 seconds.
+Run FFNN - Fold #2, Cluster #2: Elapsed time is 0.697187 seconds.
+Train FFNN - Fold #2, Cluster #3: Elapsed time is 249.837052 seconds.
+Run FFNN - Fold #2, Cluster #3: Elapsed time is 0.309550 seconds.
+Train FFNN - Fold #2, Cluster #4: Elapsed time is 278.928478 seconds.
+Run FFNN - Fold #2, Cluster #4: Elapsed time is 0.372359 seconds.
+Train FFNN - Fold #2, Cluster #5: Elapsed time is 569.991397 seconds.
+Run FFNN - Fold #2, Cluster #5: Elapsed time is 0.729375 seconds.
+Train FFNN - Fold #3, Cluster #1: Elapsed time is 189.683707 seconds.
+Run FFNN - Fold #3, Cluster #1: Elapsed time is 0.657221 seconds.
+Train FFNN - Fold #3, Cluster #2: Elapsed time is 548.610638 seconds.
+Run FFNN - Fold #3, Cluster #2: Elapsed time is 0.738003 seconds.
+Train FFNN - Fold #3, Cluster #3: Elapsed time is 169.096765 seconds.
+Run FFNN - Fold #3, Cluster #3: Elapsed time is 0.309762 seconds.
+Train FFNN - Fold #3, Cluster #4: Elapsed time is 225.993611 seconds.
+Run FFNN - Fold #3, Cluster #4: Elapsed time is 0.416380 seconds.
+Train FFNN - Fold #3, Cluster #5: Elapsed time is 351.767443 seconds.
+Run FFNN - Fold #3, Cluster #5: Elapsed time is 0.756593 seconds.
+Train FFNN - Fold #4, Cluster #1: Elapsed time is 165.938362 seconds.
+Run FFNN - Fold #4, Cluster #1: Elapsed time is 0.637725 seconds.
+Train FFNN - Fold #4, Cluster #2: Elapsed time is 481.240833 seconds.
+Run FFNN - Fold #4, Cluster #2: Elapsed time is 0.751464 seconds.
+Train FFNN - Fold #4, Cluster #3: Elapsed time is 193.593234 seconds.
+Run FFNN - Fold #4, Cluster #3: Elapsed time is 0.309875 seconds.
+Train FFNN - Fold #4, Cluster #4: Elapsed time is 216.380840 seconds.
+Run FFNN - Fold #4, Cluster #4: Elapsed time is 0.405769 seconds.
+Train FFNN - Fold #4, Cluster #5: Elapsed time is 463.922047 seconds.
+Run FFNN - Fold #4, Cluster #5: Elapsed time is 0.696595 seconds.
+Train FFNN - Fold #5, Cluster #1: Elapsed time is 416.253784 seconds.
+Run FFNN - Fold #5, Cluster #1: Elapsed time is 0.674613 seconds.
+Train FFNN - Fold #5, Cluster #2: Elapsed time is 578.025611 seconds.
+Run FFNN - Fold #5, Cluster #2: Elapsed time is 0.709145 seconds.
+Train FFNN - Fold #5, Cluster #3: Elapsed time is 236.033641 seconds.
+Run FFNN - Fold #5, Cluster #3: Elapsed time is 0.327120 seconds.
+Train FFNN - Fold #5, Cluster #4: Elapsed time is 133.091214 seconds.
+Run FFNN - Fold #5, Cluster #4: Elapsed time is 0.357390 seconds.
+Train FFNN - Fold #5, Cluster #5: Elapsed time is 309.088819 seconds.
+Run FFNN - Fold #5, Cluster #5: Elapsed time is 0.755717 seconds.
+success!

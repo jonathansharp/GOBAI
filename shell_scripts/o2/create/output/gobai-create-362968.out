@@ -1,0 +1,71 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2022 The MathWorks, Inc.
+                  R2022b (9.13.0.2049777) 64-bit (glnxa64)
+                              August 24, 2022
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Starting parallel pool (parpool) using the 'Processes' profile ...
+[Warning: The system time zone setting, 'US/Central', does not specify a single
+time zone unambiguously. It will be treated as 'America/Chicago'. See the <a
+href="matlab:doc('datetime.TimeZone')">datetime.TimeZone property</a> for
+details about specifying time zones.] 
+[> In verifyTimeZone (line 38)
+In datetime (line 559)
+In parallel.internal.pool.JavaBackedSessionNotifier>iLongToDatetime (line 128)
+In parallel.internal.pool.JavaBackedSessionNotifier>iJavaDateToDatetime (line
+148)
+In parallel.internal.pool.JavaBackedSessionNotifier.sessionInfoFromJava (line
+102)
+In parallel.internal.pool/JavaBackedSessionNotifier/wrapNotificationMethod
+(line 17)
+In parallel.internal.pool/JavaBackedSessionNotifier/notifyAboutToStart (line
+36)
+In parallel.internal.pool.ISessionNotifier.buildAboutToStartInfo (line 34)
+In parallel.internal.pool.argumentsParser>iPoolStartingMessage (line 188)
+In parallel.internal.pool.argumentsParser>iGetClusterAndNumWorkers (line 108)
+In parallel.internal.pool.argumentsParser (line 45)
+In parallel.internal.pool.doParpool (line 17)
+In parpool (line 127)
+In train_rfr (line 178)
+In gobai_o2_train_rfr (line 5)
+] 
+Connected to the parallel pool (number of workers: 40).
+[Warning: A worker aborted during execution of the parfor loop. The parfor loop
+will now run again on the remaining workers.] 
+[> In distcomp/remoteparfor/handleIntervalErrorResult (line 246)
+In distcomp/remoteparfor/getCompleteIntervals (line 396)
+In parallel_function>distributed_execution (line 746)
+In parallel_function (line 578)
+In train_rfr (line 181)
+In gobai_o2_train_rfr (line 5)] 
+  ParallelException with properties:
+
+     identifier: 'parallel:lang:pool:TimeoutFromPrevious'
+        message: 'No workers from the parallel pool were available for remote execution after waiting 60 seconds. This could be because a previous SPMD block or PARFOR loop failed to complete correctly and was interrupted, or because at least one worker is busy executing a PARFEVAL. If this problem persists, you may need to restart the parallel pool.'
+          cause: {}
+    remotecause: {[1x1 MException]}
+          stack: [8x1 struct]
+     Correction: []
+
+Function: gobai_o2_train_rfr
+Line: 5
+Function: train_rfr
+Line: 181
+Function: remoteparfor.getCompleteIntervals
+Line: 396
+Function: remoteparfor.handleIntervalErrorResult
+Line: 259
+Function: remoteparfor.rebuildParforController
+Line: 190
+Function: remoteparfor.buildParforController
+Line: 123
+Function: getJavaFutureInterruptibly
+Line: 33
+Function: getJavaFutureResult
+Line: 33
+IdleTimeout has been reached.
+Parallel pool using the 'Processes' profile is shutting down.

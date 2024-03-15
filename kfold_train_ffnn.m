@@ -6,18 +6,29 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 09/14/2023
+% DATE: 3/15/2024
+
+function kfold_train_ffnn(param,dir_base,base_grid,file_date,...
+    float_file_ext,glodap_only,num_clusters,num_folds,variables,...
+    train_ratio,val_ratio,test_ratio,thresh)
+
+%% process parameter name
+if strcmp(param,'o2')
+    param1 = 'O2';
+    param2 = 'oxygen';
+    param3 = '[O_{2}]';
+end
 
 %% load combined data
-load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
+load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
-load(['Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% load data cluster indices
-load(['Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
+load([param1 '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
     '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],...
     'num_folds','train_idx','test_idx');
 
@@ -32,18 +43,18 @@ end
 clear glodap_only glodap_idx vars v
 
 %% create directory and file names
-ffnn_dir = ['Models/' dir_base];
+ffnn_dir = [param1 '/Models/' dir_base];
 ffnn_fnames = cell(num_folds,num_clusters);
 for f = 1:num_folds
     for c = 1:num_clusters
         ffnn_fnames(f,c) = ...
-            {['FFNN_oxygen_C' num2str(c) '_F' num2str(f) '_test']};
+            {['FFNN_' param2 '_C' num2str(c) '_F' num2str(f) '_test']};
     end
 end
-kfold_dir = ['KFold/FFNN/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+kfold_dir = [param1 '/KFold/FFNN/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 kfold_name = ['FFNN_output_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) ...
     '_test' num2str(100*val_ratio)];
-fig_dir = ['Figures/KFold/FFNN/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+fig_dir = [param1 '/Figures/KFold/FFNN/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 fig_name_1 = ['k_fold_comparison_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) ...
     '_test' num2str(100*val_ratio) '.png'];
 fig_name_2 = ['k_fold_spatial_comparison_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) ...
@@ -57,17 +68,13 @@ nodes2 = [15 10 5];
 for f = 1:num_folds
     % fit test models for each cluster
     output = nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
-
-
-%     ffnn_output.(['f' num2str(f)]) = ...
-%         nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
-    parfor c = 1:num_clusters
+    for c = 1:num_clusters
       % start timing fit
       tic
       if any(all_data_clusters.clusters == c) % check for data in cluster
         % fit test model for each cluster
         FFNN = ...
-            fit_FFNN('oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
+            fit_FFNN(param2,all_data,all_data_clusters.(['c' num2str(c)]),...
             train_idx.(['f' num2str(f)]),variables,nodes1,nodes2,...
             train_ratio,val_ratio,test_ratio,thresh);
         % stop timing fit
@@ -76,7 +83,6 @@ for f = 1:num_folds
         % start timing predictions
         tic
         % predict data for each cluster
-        ffnn_output.(['f' num2str(f)])(:,c) = ...
         output = ...
             run_FFNN(FFNN,all_data,all_data_clusters.(['c' num2str(c)]),...
             test_idx.(['f' num2str(f)]),variables,thresh);
@@ -84,10 +90,8 @@ for f = 1:num_folds
         fprintf(['Run FFNN - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
         toc
         % save test model for each cluster
-        if ~isfolder([pwd '/' ffnn_dir]); mkdir(ffnn_dir);end
-        save([ffnn_dir '/' ffnn_fnames{f,c}],'FFNN','-v7.3');
-        % clean up
-        clear FFNN
+        if ~isfolder([pwd '/' ffnn_dir]); mkdir(ffnn_dir); end
+        parsave([ffnn_dir '/' ffnn_fnames{f,c}],FFNN,'FFNN',output,'output');
       else
         fprintf(['Train FFNN - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
         fprintf('\n');
@@ -96,28 +100,36 @@ for f = 1:num_folds
         [~]=toc;
       end
     end
-    % assemble matrix of probabilities greater than the threshold (5%)
+end
+% calculate weighted average over each cluster using probabilities
+for f = 1:num_folds
+    % pre-allocate probabilities
     probs_matrix = [];
     for c = 1:num_clusters
+        % assemble matrix of probabilities greater than the threshold (5%)
         probs_array = all_data_clusters.(['c' num2str(c)])(test_idx.(['f' num2str(f)]));
         probs_array(probs_array < thresh) = NaN;
         probs_matrix = [probs_matrix,probs_array];
         clear probs_array
+        % load output
+        load([ffnn_dir '/' ffnn_fnames{f,c}],'output')
+        ffnn_output.(['f' num2str(f)])(:,c) = output;
+        clear output
     end
-    % calculate weighted average over each cluster using probabilities
     ffnn_output.(['f' num2str(f) '_mean']) = ...
         double(sum(ffnn_output.(['f' num2str(f)]).*probs_matrix,2,'omitnan')./...
         sum(probs_matrix,2,'omitnan'));
-    clear probs_matrix c
 end
+% clean up
+clear f c
 % aggregate output from all folds
-ffnn_output.k_fold_test_oxygen = nan(size(all_data.oxygen));
+ffnn_output.(['k_fold_test_' param2]) = nan(size(all_data.(param2)));
 for f = 1:num_folds
-    ffnn_output.k_fold_test_oxygen(test_idx.(['f' num2str(f)])) = ...
+    ffnn_output.(['k_fold_test_' param2])(test_idx.(['f' num2str(f)])) = ...
         ffnn_output.(['f' num2str(f) '_mean']);
 end
 % compare k-fold output to data
-ffnn_output.k_fold_delta = ffnn_output.k_fold_test_oxygen - all_data.oxygen;
+ffnn_output.k_fold_delta = ffnn_output.(['k_fold_test_' param2]) - all_data.(param2);
 % calculate error stats
 ffnn_mean_err = mean(ffnn_output.k_fold_delta);
 ffnn_med_err = median(ffnn_output.k_fold_delta);
@@ -133,14 +145,14 @@ load([kfold_dir '/' kfold_name],'ffnn_output','ffnn_rmse');
 figure('visible','off'); hold on;
 set(gca,'fontsize',12);
 set(gcf,'position',[100 100 600 400]);
-[counts,bin_centers] = hist3([all_data.oxygen ffnn_output.k_fold_test_oxygen],...
+[counts,bin_centers] = hist3([all_data.(param2) ffnn_output.(['k_fold_test_' param2])],...
     'Edges',{0:5:500 0:5:500});
 h=pcolor(bin_centers{1},bin_centers{2},counts');
 plot([0 500],[0 500],'k--');
 set(h,'EdgeColor','none');
 xlim([0 500]); ylim([0 500]);
-xlabel('Measured Oxygen (\mumol kg^{-1})');
-ylabel('FFNN Oxygen (\mumol kg^{-1})');
+xlabel(['Measured ' param2 ' (\mumol kg^{-1})']);
+ylabel(['FFNN ' param2 ' (\mumol kg^{-1})']);
 myColorMap = flipud(hot(256.*32));
 myColorMap(1,:) = 1;
 colormap(myColorMap);
@@ -182,7 +194,7 @@ geoshow(land,'FaceColor',rgb('grey'));
 cmap = cmocean('amp'); cmap(1,:) = 1; colormap(cmap);
 caxis([0 20]);
 c=colorbar('location','southoutside');
-c.Label.String = ['Average Absolute \Delta[O_{2}]'];
+c.Label.String = ['Average Absolute \Delta' param3];
 c.FontSize = 22;
 c.TickLength = 0;
 mlabel off; plabel off;
@@ -196,3 +208,5 @@ close
 clear ffnn_output ffnn_rmse ffnn_med_err ffnn_mean_err probs_matrix f c
 clear variables f c numtrees minLeafSize NumPredictors ffnn_dir ffnn_fnames
 clear ans all_data all_data_clusters num_folds train_idx test_idx train_sum
+
+end

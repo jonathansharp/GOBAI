@@ -46,7 +46,7 @@ X_norm = X_norm(idx_rand,:);
 % fit GMM
 gmm = fitgmdist(X_norm,num_clusters,...
     'CovarianceType','full',...
-    'SharedCovariance',true,'Replicates',1);
+    'SharedCovariance',true,'Replicates',50);
 % save GMM model
 if ~isfolder(['Data/GMM_' base_grid '_' num2str(num_clusters)])
     mkdir(['Data/GMM_' base_grid '_' num2str(num_clusters)]);

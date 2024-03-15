@@ -1,6 +1,5 @@
 %% plot data points by cluster
 % load combined data
-file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 % load cluster data
@@ -12,19 +11,20 @@ pressures = sort(unique(all_data.pressure));
 parpool;
 % make plots
 parfor p = 1:length(pressures)
-    h=figure('visible','off','Position',[100 100 800 400]);
+    h=figure('visible','off','Position',[100 100 800 400]); hold on;
     idx = all_data.pressure == pressures(p);
-    worldmap([-90 90],[20 380]);
+    m_proj('robinson','lon',[20 380]);
+    m_coast('patch',rgb('grey'));
+    m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
+    lon_temp = convert_lon(convert_lon(all_data.longitude));
     title(['Data by Cluster (' num2str(pressures(p)) ' dbars)']);
-    scatterm(all_data.latitude(idx),all_data.longitude(idx),1,all_data_clusters.clusters(idx));
+    m_scatter(lon_temp(idx),all_data.latitude(idx),3,all_data_clusters.clusters(idx),'filled');
     colormap([1,1,1;flipud(jet(num_clusters))]); % white then jet
-    plot_land('map');
     clim([-0.5 num_clusters+0.5]);
     c=colorbar;
     c.Limits = [0.5 num_clusters+0.5];
     c.Label.String = 'Cluster';
     c.TickLength = 0;
-    mlabel off; plabel off;
     % save figure
     dname = ['Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end

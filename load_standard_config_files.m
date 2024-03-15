@@ -1,5 +1,5 @@
 % Load standard configuration files
-load([pwd '/Config/load_data_config_workers_hercules.mat']);
+load([pwd '/Config/workers_hercules.mat']);
 load([pwd '/Config/load_data_config_D.mat']);
 load([pwd '/Config/cluster_config_15.mat']);
 load([pwd '/Config/kfold_config_5.mat']);
