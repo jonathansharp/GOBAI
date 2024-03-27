@@ -17,4 +17,4 @@
 source /home/sharp/shell_scripts/dir.txt
 cd $GOBAI_DIR
 module load matlab
-matlab -nodisplay -r "gobai_o2_initiate; load_standard_config_files; gobai_o2_kfold_ensemble;"
+matlab -nodisplay -r "gobai_initiate; load_standard_config_files; gobai_o2_kfold_ensemble;"

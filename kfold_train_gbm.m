@@ -13,11 +13,7 @@ function kfold_train_gbm(param,dir_base,base_grid,file_date,...
     numstumps,thresh)
 
 %% process parameter name
-if strcmp(param,'o2')
-    param1 = 'O2';
-    param2 = 'oxygen';
-    param3 = '[O_{2}]';
-end
+[param1,param2,param3,~,~,~,~,param_edges] = param_name(param);
 
 %% load combined data
 load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
@@ -48,7 +44,7 @@ gbm_fnames = cell(num_folds,num_clusters);
 for f = 1:num_folds
     for c = 1:num_clusters
         gbm_fnames(f,c) = ...
-            {['GBM_oxygen_C' num2str(c) '_F' num2str(f) '_test']};
+            {['GBM_' param2 '_C' num2str(c) '_F' num2str(f) '_test']};
     end
 end
 kfold_dir = [param1 '/KFold/GBM/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
@@ -60,8 +56,9 @@ fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numstumps) '.png'];
 %% fit and evaluate test models (GBM)
 % define model parameters
 
+
 % set up parallel pool
-tic; parpool(6); fprintf('Pool initiation:'); toc;
+tic; parpool; fprintf('Pool initiation:'); toc;
 % fit test models for each fold
 for f = 1:num_folds
     % fit test models for each cluster
@@ -72,7 +69,7 @@ for f = 1:num_folds
       if any(all_data_clusters.clusters == c) % check for data in cluster
         % fit test model for each cluster
         GBM = ...
-            fit_GBM('oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
+            fit_GBM(param2,all_data,all_data_clusters.(['c' num2str(c)]),...
             train_idx.(['f' num2str(f)]),variables,numstumps,thresh);
         % stop timing fit
         fprintf(['Train GBM - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
@@ -98,6 +95,8 @@ for f = 1:num_folds
       end
     end
 end
+% end parallel session
+delete(gcp('nocreate'))
 % calculate weighted average over each cluster using probabilities
 for f = 1:num_folds
     % pre-allocate probabilities
@@ -120,17 +119,17 @@ end
 % clean up
 clear f c
 % aggregate output from all folds
-gbm_output.k_fold_test_oxygen = nan(size(all_data.oxygen));
+gbm_output.(['k_fold_test_' param2]) = nan(size(all_data.(param2)));
 for f = 1:num_folds
-    gbm_output.k_fold_test_oxygen(test_idx.(['f' num2str(f)])) = ...
+    gbm_output.(['k_fold_test_' param2])(test_idx.(['f' num2str(f)])) = ...
         gbm_output.(['f' num2str(f) '_mean']);
 end
 % compare k-fold output to data
-gbm_output.k_fold_delta = gbm_output.k_fold_test_oxygen - all_data.oxygen;
+gbm_output.k_fold_delta = gbm_output.(['k_fold_test_' param2]) - all_data.(param2);
 % calculate error stats
-gbm_mean_err = mean(gbm_output.k_fold_delta);
-gbm_med_err = median(gbm_output.k_fold_delta);
-gbm_rmse = sqrt(mean(gbm_output.k_fold_delta.^2));
+gbm_mean_err = mean(gbm_output.k_fold_delta,'omitnan');
+gbm_med_err = median(gbm_output.k_fold_delta,'omitnan');
+gbm_rmse = sqrt(mean(gbm_output.k_fold_delta.^2,'omitnan'));
 % save predicted data
 if ~isfolder([pwd '/' kfold_dir]); mkdir(kfold_dir); end
 save([kfold_dir '/' kfold_name],'gbm_output','gbm_rmse',...
@@ -139,17 +138,17 @@ clear gbm_output gbm_rmse gbm_med_err gbm_mean_err
 
 %% plot histogram of errors
 load([kfold_dir '/' kfold_name],'gbm_output','gbm_rmse');
-figure('visible','off'); hold on;
+figure('visible','on'); hold on;
 set(gca,'fontsize',12);
 set(gcf,'position',[100 100 600 400]);
-[counts,bin_centers] = hist3([all_data.oxygen gbm_output.k_fold_test_oxygen],...
-    'Edges',{0:5:500 0:5:500});
+[counts,bin_centers] = hist3([all_data.(param2) gbm_output.(['k_fold_test_' param2])],...
+    'Edges',{param_edges param_edges});
 h=pcolor(bin_centers{1},bin_centers{2},counts');
-plot([0 500],[0 500],'k--');
+plot([param_edges(1) param_edges(end)],[param_edges(1) param_edges(end)],'k--');
 set(h,'EdgeColor','none');
-xlim([0 500]); ylim([0 500]);
-xlabel('Measured Oxygen (\mumol kg^{-1})');
-ylabel('Gradient-Boosted Machine Oxygen (\mumol kg^{-1})');
+xlim([param_edges(1) param_edges(end)]); ylim([param_edges(1) param_edges(end)]);
+xlabel(['Measured ' param2 ' (\mumol kg^{-1})']);
+ylabel(['GBM ' param2 ' (\mumol kg^{-1})']);
 myColorMap = flipud(hot(256.*32));
 myColorMap(1,:) = 1;
 colormap(myColorMap);
@@ -157,7 +156,8 @@ set(gca,'ColorScale','log');
 caxis([1e0 1e5]);
 c=colorbar;
 c.Label.String = 'log_{10}(Bin Counts)';
-text(300,50,['RMSE = ' num2str(round(gbm_rmse,1)) '\mumol kg^{-1}'],'fontsize',12);
+text((3/5)*param_edges(end),(1/10)*param_edges(end),...
+    ['RMSE = ' num2str(round(gbm_rmse,1)) '\mumol kg^{-1}'],'fontsize',12);
 if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
 exportgraphics(gcf,[fig_dir '/' fig_name_1]);
 % clean up
@@ -189,7 +189,7 @@ pcolorm(lat,[lon lon(end)+1],[gbm_output.k_fold_delta_spatial ...
 land = shaperead('landareas', 'UseGeoCoords', true);
 geoshow(land,'FaceColor',rgb('grey'));
 cmap = cmocean('amp'); cmap(1,:) = 1; colormap(cmap);
-caxis([0 20]);
+caxis([0 (2/50)*param_edges(end)]);
 c=colorbar('location','southoutside');
 c.Label.String = ['Average Absolute \Delta' param3];
 c.FontSize = 22;

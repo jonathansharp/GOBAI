@@ -17,4 +17,4 @@
 source /home/sharp/shell_scripts/dir.txt
 cd $GOBAI_DIR
 module load matlab
-matlab -nodisplay -r "gobai_o2_initiate; load('Config/base_config_RG.mat'); load('Config/load_data_config_D.mat'); load('Config/cluster_config_5.mat'); load('Config/kfold_config_5.mat'); load('Config/ffnn_config_70_15_15.mat'); gobai_o2_kfold_train_ffnn;"
+matlab -nodisplay -r "gobai_initiate; load('Config/base_config_RG.mat'); load('Config/load_data_config_D.mat'); load('Config/cluster_config_5.mat'); load('Config/kfold_config_5.mat'); load('Config/ffnn_config_70_15_15.mat'); gobai_o2_kfold_ffnn;"

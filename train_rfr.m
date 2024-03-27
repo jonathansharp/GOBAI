@@ -63,6 +63,9 @@ parfor c = 1:num_clusters
         true(size(all_data.platform)),variables,numtrees,minLeafSize,...
             NumPredictors,0,thresh);
 
+    % convert RFR to compact
+    RFR = compact(RFR);
+
     % save model for each cluster
     if ~isfolder([pwd '/' rfr_dir]); mkdir(rfr_dir);end
     parsave([rfr_dir '/' rfr_fnames{c}],RFR,'RFR');

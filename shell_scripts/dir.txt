@@ -1,0 +1,7 @@
+#SBATCH --mail-user=hartmut.frenzel@noaa.gov
+#SBATCH -o test_%x-%j.out
+#SBATCH -e test_%x-%j.err
+#SBATCH --mail-type=END,FAIL
+
+
+GOBAI_DIR="/work2/noaa/hindcasts/GOBAI"

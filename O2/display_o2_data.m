@@ -8,7 +8,7 @@
 %
 % DATE: 09/12/2023
 
-function display_o2_data(float_file_ext,snap_date,glodap_year)
+function display_o2_data(float_file_ext,file_date,glodap_year)
 
 %% load interpolated float and glodap data
 load(['O2/Data/processed_float_o2_data_' file_date float_file_ext '.mat'],...
@@ -91,7 +91,7 @@ min_year = datevec(min(float_data.OXY_TIME));
 min_year = min_year(1);
 max_year = datevec(max(float_data.OXY_TIME));
 max_year = max_year(1);
-year_temp = (min_year:max_year)';
+year_temp = (min_year:max_year+1)';
 edges=datenum([year_temp ones(length(year_temp),1) ones(length(year_temp),1)]);
 histogram(float_data.OXY_TIME(f_idx),edges,'FaceColor','r');
 histogram(glodap_data.OXY_TIME(g_idx),edges,'FaceColor','b');

@@ -13,11 +13,7 @@ function kfold_train_ffnn(param,dir_base,base_grid,file_date,...
     train_ratio,val_ratio,test_ratio,thresh)
 
 %% process parameter name
-if strcmp(param,'o2')
-    param1 = 'O2';
-    param2 = 'oxygen';
-    param3 = '[O_{2}]';
-end
+[param1,param2,param3,~,~,~,~,param_edges] = param_name(param);
 
 %% load combined data
 load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
@@ -64,11 +60,13 @@ fig_name_2 = ['k_fold_spatial_comparison_train' num2str(100*train_ratio) '_val' 
 % define model parameters
 nodes1 = [5 10 15];
 nodes2 = [15 10 5];
+% set up parallel pool
+tic; parpool; fprintf('Pool initiation:'); toc;
 % fit and evaluate test models for each fold
 for f = 1:num_folds
     % fit test models for each cluster
     output = nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
-    for c = 1:num_clusters
+    parfor c = 1:num_clusters
       % start timing fit
       tic
       if any(all_data_clusters.clusters == c) % check for data in cluster
@@ -101,6 +99,8 @@ for f = 1:num_folds
       end
     end
 end
+% end parallel session
+delete(gcp('nocreate'))
 % calculate weighted average over each cluster using probabilities
 for f = 1:num_folds
     % pre-allocate probabilities
@@ -146,11 +146,11 @@ figure('visible','off'); hold on;
 set(gca,'fontsize',12);
 set(gcf,'position',[100 100 600 400]);
 [counts,bin_centers] = hist3([all_data.(param2) ffnn_output.(['k_fold_test_' param2])],...
-    'Edges',{0:5:500 0:5:500});
+    'Edges',{param_edges param_edges});
 h=pcolor(bin_centers{1},bin_centers{2},counts');
-plot([0 500],[0 500],'k--');
+plot([param_edges(1) param_edges(end)],[param_edges(1) param_edges(end)],'k--');
 set(h,'EdgeColor','none');
-xlim([0 500]); ylim([0 500]);
+xlim([param_edges(1) param_edges(end)]); ylim([param_edges(1) param_edges(end)]);
 xlabel(['Measured ' param2 ' (\mumol kg^{-1})']);
 ylabel(['FFNN ' param2 ' (\mumol kg^{-1})']);
 myColorMap = flipud(hot(256.*32));
@@ -160,7 +160,8 @@ set(gca,'ColorScale','log');
 caxis([1e0 1e5]);
 c=colorbar;
 c.Label.String = 'log_{10}(Bin Counts)';
-text(300,50,['RMSE = ' num2str(round(ffnn_rmse,1)) '\mumol kg^{-1}'],'fontsize',12);
+text((3/5)*param_edges(end),(1/10)*param_edges(end),...
+    ['RMSE = ' num2str(round(ffnn_rmse,1)) '\mumol kg^{-1}'],'fontsize',12);
 if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
 exportgraphics(gcf,[fig_dir '/' fig_name_1]);
 % clean up
@@ -192,7 +193,7 @@ pcolorm(lat,[lon lon(end)+1],[ffnn_output.k_fold_delta_spatial ...
 land = shaperead('landareas', 'UseGeoCoords', true);
 geoshow(land,'FaceColor',rgb('grey'));
 cmap = cmocean('amp'); cmap(1,:) = 1; colormap(cmap);
-caxis([0 20]);
+caxis([0 (2/50)*param_edges(end)]);
 c=colorbar('location','southoutside');
 c.Label.String = ['Average Absolute \Delta' param3];
 c.FontSize = 22;

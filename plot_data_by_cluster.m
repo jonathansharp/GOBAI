@@ -1,9 +1,24 @@
+% plot_data_by_cluster
+%
+% DESCRIPTION:
+% This function plots data points according to their most fitting cluster.
+%
+% AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
+%
+% DATE: 3/20/2024
+
+function plot_data_by_cluster(param,base_grid,file_date,float_file_ext,...
+    clust_vars,num_clusters)
+
+%% process parameter name
+param1 = param_name(param);
+
 %% plot data points by cluster
 % load combined data
-load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
+load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 % load cluster data
-load(['Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 % define pressure axis
 pressures = sort(unique(all_data.pressure));
@@ -17,6 +32,7 @@ parfor p = 1:length(pressures)
     m_coast('patch',rgb('grey'));
     m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
     lon_temp = convert_lon(convert_lon(all_data.longitude));
+    lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
     title(['Data by Cluster (' num2str(pressures(p)) ' dbars)']);
     m_scatter(lon_temp(idx),all_data.latitude(idx),3,all_data_clusters.clusters(idx),'filled');
     colormap([1,1,1;flipud(jet(num_clusters))]); % white then jet
@@ -26,7 +42,7 @@ parfor p = 1:length(pressures)
     c.Label.String = 'Cluster';
     c.TickLength = 0;
     % save figure
-    dname = ['Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
+    dname = [param1 '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
     exportgraphics(gcf,[dname '/clustered_data_' num2str(pressures(p)) '.png']);
     close

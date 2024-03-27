@@ -8,9 +8,14 @@
 %
 % DATE: 10/05/2023
 
+function assign_data_to_clusters(param,base_grid,file_date,float_file_ext,...
+    clust_vars,num_clusters)
+
+%% process parameter name
+param1 = param_name(param);
+
 %% load combined data
-file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
+load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% assign data points and probabilities to clusters
@@ -31,6 +36,6 @@ for c = 1:size(p,2)
 end
 % save data clusters
 if ~isfolder([pwd '/Data']); mkdir('Data'); end
-save(['Data/all_data_clusters_'  base_grid '_' num2str(num_clusters) '_' ...
+save([param1 '/Data/all_data_clusters_'  base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters','-v7.3');
 clear lon_cos X_norm c C S gmm p

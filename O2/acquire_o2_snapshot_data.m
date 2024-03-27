@@ -100,7 +100,7 @@ else
     snap_date = snap_date;
 end
 
-%% Only do all this if downloaded glodap matlab file does not exist
+%% Only do all this if downloaded float matlab file does not exist
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 % if exist(['O2/Data/processed_float_o2_data_' file_date float_file_ext '.mat'],'file') ~= 2
 
@@ -328,7 +328,7 @@ disp(['# of matching Argo floats (OXY): ' num2str(length(unique(float_data.OXY_F
 
 %% save processed float data
 if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-save(['/O2/Data/processed_float_o2_data_' file_date float_file_ext '.mat'],...
+save(['O2/Data/processed_float_o2_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date','-v7.3');
 
 %% clean up

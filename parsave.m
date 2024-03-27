@@ -5,11 +5,19 @@ function parsave(fname,varargin)
     else
         for i = 1:2:length(varargin)-1
             if i == 1
-            data.(varargin{i+1}) = varargin{i};
-            save(fname,'-struct','data','-v7.3')
+                data.(varargin{i+1}) = varargin{i};
+                try
+                    save(fname,'-struct','data','-v7')
+                catch
+                    save(fname,'-struct','data','-v7.3')
+                end
             else
-            data.(varargin{i+1}) = varargin{i};
-            save(fname,'-struct','data','-append')
+                data.(varargin{i+1}) = varargin{i};
+                try
+                    save(fname,'-struct','data','-append')
+                catch
+                    save(fname,'-struct','data','-append')
+                end
             end
         end 
     end

@@ -28,9 +28,10 @@ glodap_data.day = datenum(glodap_data.date) - datenum(glodap_data.date0) + 1;
 figure(1); hold on;
 set(gcf,'visible','on','position',[100 100 1600 800]);
 m_proj('robinson','lon',[20 380]);
-m_coast('patch','k');
+m_coast('patch',rgb('gray'));
 m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
 lon_temp = convert_lon(convert_lon(glodap_data.G2longitude));
+lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,glodap_data.G2latitude,'.k');
 hold off;
 clear lon_temp
@@ -160,6 +161,7 @@ disp(['# of matching GLODAP cruises (OXY): ' num2str(length(unique(glodap_data.O
 %% plot processed oxygen profile locations on top of unprocessed
 figure(1); hold on;
 lon_temp = convert_lon(convert_lon(glodap_data.OXY_LON));
+lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,glodap_data.OXY_LAT,'.g'); hold off;
 if ~exist('Figures','dir'); mkdir('Figures'); end
 exportgraphics(gcf,['O2/Figures/Data/processed_glodap_' year '.png']);
