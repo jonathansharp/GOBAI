@@ -1,5 +1,11 @@
 %% Plot clusters over time
-pressures = [2.5 100 500 1000 1975];
+
+% set pressures
+pressures = [2.5 10 50 100 200 300 500 1000 1500 1975];
+
+% set up parallel pool
+%tic; parpool; fprintf('Pool initiation:'); toc;
+
 for d = 1:length(pressures)
     % establish figure
     h=figure('visible','off','Position',[100 100 800 400]); hold on;
@@ -72,7 +78,7 @@ for d = 1:length(pressures)
                 m_coast('patch',rgb('grey'));
                 m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
                 title(extractAfter(datestr(datenum(2004,m,1)),'-'));
-                m_pcolor(double(Latitude),double(Longitude),...
+                m_pcolor(double(Longitude),double(Latitude),...
                     double(GMM_clusters.GMM_clusters(:,:,depth_idx))');
                 colormap([1,1,1;flipud(jet(num_clusters))]); % white then jet
                 plot_land('map');

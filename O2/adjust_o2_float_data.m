@@ -83,10 +83,11 @@ xlabel('WOA [O_{2}]');
 ylabel('Float [O_{2}] - WOA [O_{2}]');
 [counts,bin_centers] = ...
     hist3([WOA_match,WOA_delta],'Edges',{0:10:460 -345:15:345});
-h=pcolor(bin_centers{1},bin_centers{2},counts');
+h=pcolor(bin_centers{1}-mean(diff(bin_centers{1}))/2,...
+    bin_centers{2}-mean(diff(bin_centers{2}))/2,counts');
 plot([0 450],[0 0],'k--');
 set(h,'EdgeColor','none');
-xlim([0 450]); ylim([-340 340]);
+xlim([-0.5 460]); ylim([-345.5 345]);
 myColorMap = flipud(hot(256.*32));
 myColorMap(1,:) = 1;
 colormap(myColorMap);
@@ -118,7 +119,7 @@ y_bins = -84.5:84.5;
 z_edges = [0 5:10:175 190:20:450 475:50:1375 1450:100:1950 2000];
 z_bins = [2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975];
 mn_edges = 1:12;
-yr_edges = 2004:2022;
+yr_edges = 2004:glodap_year;
 t_edges = datenum([[repelem(yr_edges,1,length(mn_edges)) yr_edges(end)+1]', ...
                   [repmat(mn_edges,1,length(yr_edges)) 1]', ...
                   [zeros(1,length(mn_edges)*length(yr_edges)+1)]']);
@@ -253,6 +254,7 @@ crossover.oxy_sat_float = exp(a0 + Ts.*(a1 + Ts.*(a2 + Ts.*(a3 + Ts.*(a4 + a5*Ts
           + crossover.sal_float.*(b0 + Ts.*(b1 + Ts.*(b2 + b3*Ts)) + c0*crossover.sal_float));
 crossover.oxy_float_sat_per = 100*(crossover.oxy_float./crossover.oxy_sat_float);
 crossover.oxy_delta_sat_per = 100*(crossover.oxy_delta./crossover.oxy_sat_float);
+
 % index to below 300 dbars
 idx = crossover.pres > 300 & ~isnan(crossover.oxy_float) & ~isnan(crossover.oxy_glodap);
 % clean up
@@ -401,8 +403,27 @@ load(['O2/Data/float_corr_' file_date float_file_ext],'slp','int');
 vars = fieldnames(float_data);
 for v = 1:length(vars)
     if strcmp(vars{v},'OXY')
-        float_data_adjusted.OXY = double(float_data.OXY + ...
-            (slp.*float_data.OXY + int).*float_data.OXY);
+        % calculate float oxygen saturation
+        Ts = log((298.15 - float_data.TEMP)./(273.15 + float_data.TEMP)); 
+        % The coefficents below are from the second column of Table 1 of Garcia and
+        % Gordon (1992)
+        a0 =  5.80871; 
+        a1 =  3.20291;
+        a2 =  4.17887;
+        a3 =  5.10006;
+        a4 = -9.86643e-2;
+        a5 =  3.80369;
+        b0 = -7.01577e-3;
+        b1 = -7.70028e-3;
+        b2 = -1.13864e-2;
+        b3 = -9.51519e-3;
+        c0 = -2.75915e-7;
+        float_data.OXY_SAT = exp(a0 + Ts.*(a1 + Ts.*(a2 + Ts.*(a3 + Ts.*(a4 + a5*Ts)))) ...
+                  + float_data.SAL.*(b0 + Ts.*(b1 + Ts.*(b2 + b3*Ts)) + c0*float_data.SAL));
+        float_data.OXY_SAT_PER = 100*(float_data.OXY./float_data.OXY_SAT);
+        % apply linear correction to float O2
+        float_data_adjusted.OXY = double(((float_data.OXY_SAT_PER - ...
+            (slp .* float_data.OXY_SAT + int))./100) .* float_data.OXY_SAT);
     else
         float_data_adjusted.(vars{v}) = float_data.(vars{v});
     end

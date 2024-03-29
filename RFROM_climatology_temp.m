@@ -17,7 +17,7 @@ fname = '/RFROM_TEMP_STABLE_';
 if ~isfolder([fpath folder '_annual']); mkdir([fpath folder '_annual']); end
 % timespan
 y1 = 2004;
-y2 = 2022;
+y2 = 2023;
 
 %% create monthly annual files
 % loop through each year to create annual files
@@ -69,16 +69,16 @@ end
 schema = ncinfo([fpath folder '_annual' fname '2004.nc']);
 schema.Variables(3).Attributes(1).Value = 'month of year';
 schema.Variables(3).Attributes(2).Value = 'Number of Month, 1 (Jan.) to 12 (Dec.)';
-if isfile([fpath fname 'CLIM.nc'])
-    delete([fpath fname 'CLIM.nc']);
+if isfile([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'])
+    delete([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc']);
 end
-ncwriteschema([fpath fname 'CLIM.nc'],schema);
+ncwriteschema([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],schema);
 clear schema
 % add dimensional variables to monthly file
 vars = {'longitude' 'latitude' 'mean_pressure' 'mean_pressure_bnds'};
 for v = 1:length(vars)
     a=ncread([fpath folder '_annual' fname '2004.nc'],vars{v});
-    ncwrite([fpath fname 'CLIM.nc'],vars{v},a);
+    ncwrite([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],vars{v},a);
 end
 % clean up
 clear a m v y vars
@@ -97,8 +97,8 @@ for m = 1:12
     % average monthly values to climatological means
     RFROM_clim = mean(RFROM_clim,4,'omitnan');
     % add to NetCDF
-    ncwrite([fpath fname 'CLIM.nc'],'time',m,m);
-    ncwrite([fpath fname 'CLIM.nc'],'ocean_temperature',...
+    ncwrite([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'time',m,m);
+    ncwrite([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'ocean_temperature',...
         RFROM_clim,[1 1 1 m]);
     % clean up
     clear RFROM_clim a m v y vars

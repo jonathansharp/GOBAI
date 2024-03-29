@@ -106,7 +106,7 @@ c.Label.String = ['Average Gridded ' param3];
 c.FontSize = 22;
 c.TickLength = 0;
 if ~isfolder([pwd '/' param1 '/Figures/Surface_Plots']); mkdir([param1 '/Figures/Surface_Plots']); end
-exportgraphics(gcf,[pwd '/' param1 '/Figures/Surface_Plots/Gridded_' param1 '_10dbar.png']);
+exportgraphics(gcf,[pwd '/' param1 '/Figures/Surface_Plots/Gridded_' param1 '_10dbar_' file_date float_file_ext '.png']);
 % clean up
 clear land cmap c
 close

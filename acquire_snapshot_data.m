@@ -308,7 +308,7 @@ figure(1); hold on;
 lon_temp = convert_lon(convert_lon(float_data.LON));
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,float_data.LAT,'.g');
-if ~exist('Figures','dir'); mkdir('Figures'); end
+if ~exist([pwd '/' param1 '/Figures/Data'],'dir'); mkdir([param1 '/Figures/Data']); end
 exportgraphics(gcf,[param1 '/Figures/Data/processed_float_'  file_date float_file_ext '.png']);
 close
 clear lon_temp

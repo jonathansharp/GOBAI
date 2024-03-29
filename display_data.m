@@ -11,7 +11,7 @@
 function display_data(param,float_file_ext,file_date,glodap_year)
 
 %% process parameter name
-param1 = param_name(param);
+[param1,~,~,~,param5] = param_name(param);
 
 %% load interpolated float and glodap data
 load([param1 '/Data/processed_float_' param '_data_' file_date float_file_ext '.mat'],...
@@ -27,8 +27,8 @@ float_mean = nan(size(zi));
 float_std = nan(size(zi));
 for z = 1:length(zi)
     idx_float = float_data.PRES == zi(z);
-    float_mean(z) = mean(float_data.OXY(idx_float));
-    float_std(z) = std(float_data.OXY(idx_float));
+    float_mean(z) = mean(float_data.(param5)(idx_float));
+    float_std(z) = std(float_data.(param5)(idx_float));
 end
 figure; hold on;
 plot(float_mean,zi);
@@ -44,8 +44,8 @@ glodap_mean = nan(size(zi));
 glodap_std = nan(size(zi));
 for z = 1:length(zi)
     idx_glodap = glodap_data.PRES == zi(z);
-    glodap_mean(z) = mean(glodap_data.OXY(idx_glodap),'omitnan');
-    glodap_std(z) = std(glodap_data.OXY(idx_glodap),'omitnan');
+    glodap_mean(z) = mean(glodap_data.(param5)(idx_glodap),'omitnan');
+    glodap_std(z) = std(glodap_data.(param5)(idx_glodap),'omitnan');
 end
 figure; hold on;
 plot(glodap_mean,zi);
@@ -60,7 +60,7 @@ figure; hold on;
 profs = unique(glodap_data.ID);
 for z = 1:length(profs)
     idx = glodap_data.ID == profs(z);
-    plot(glodap_data.OXY(idx),glodap_data.PRES(idx));
+    plot(glodap_data.(param5)(idx),glodap_data.PRES(idx));
 end
 set(gca,'YDir','reverse');
 hold off;

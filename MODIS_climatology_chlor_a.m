@@ -1,20 +1,19 @@
-% RFROM_climatology_sal.m
+% MODIS_climatology_chlor_a.m
 %
 % DESCRIPTION:
-% This function calculates annual monthly files and a
-% monthly climatology from weekly RFROM salinity files
+% This script calculates annual monthly files and a
+% monthly climatology from 8-day MODIS chlorophyll files
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 11/30/2023
+% DATE: 3/27/2024
 
 %% establish paths, folders, and options
 % file paths and names
-fpath = [pwd '/Data/RFROM/'];
-folder = 'RFROM_SAL_v0.1';
-fname = '/RFROM_SAL_STABLE_';
+fpath = '/raid/Data/Sat/Modis/Aqua/Mapped/8-day/9km/';
+fname = 'Aqua.L3m_8D_chlor_a_9km.nc';
 % create annual file folder
-if ~isfolder([fpath folder '_annual']); mkdir([fpath folder '_annual']); end
+if ~isfolder('MODIS_annual'); mkdir('MODIS_annual'); end
 % timespan
 y1 = 2004;
 y2 = 2023;
@@ -69,16 +68,16 @@ end
 schema = ncinfo([fpath folder '_annual' fname '2004.nc']);
 schema.Variables(3).Attributes(1).Value = 'month of year';
 schema.Variables(3).Attributes(2).Value = 'Number of Month, 1 (Jan.) to 12 (Dec.)';
-if isfile([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'])
-    delete([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc']);
+if isfile([fpath fname 'CLIM.nc'])
+    delete([fpath fname 'CLIM.nc']);
 end
-ncwriteschema([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],schema);
+ncwriteschema([fpath fname 'CLIM.nc'],schema);
 clear schema
 % add dimensional variables to monthly file
 vars = {'longitude' 'latitude' 'mean_pressure' 'mean_pressure_bnds'};
 for v = 1:length(vars)
     a=ncread([fpath folder '_annual' fname '2004.nc'],vars{v});
-    ncwrite([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],vars{v},a);
+    ncwrite([fpath fname 'CLIM.nc'],vars{v},a);
 end
 % clean up
 clear a m v y vars
@@ -97,8 +96,8 @@ for m = 1:12
     % average monthly values to climatological means
     RFROM_clim = mean(RFROM_clim,4,'omitnan');
     % add to NetCDF
-    ncwrite([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'time',m,m);
-    ncwrite([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'ocean_salinity',...
+    ncwrite([fpath fname 'CLIM.nc'],'time',m,m);
+    ncwrite([fpath fname 'CLIM.nc'],'ocean_salinity',...
         RFROM_clim,[1 1 1 m]);
     % clean up
     clear RFROM_clim a m v y vars

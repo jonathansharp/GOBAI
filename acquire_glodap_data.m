@@ -15,7 +15,7 @@ function acquire_glodap_data(param,glodap_year)
 [param1,~,~,~,param5,param6] = param_name(param);
 
 %% Only do all this if downloaded glodap matlab file does not exist
-%if exist([param1 '/Data/processed_glodap_' param '_data_' num2str(glodap_year) '.mat'],'file') ~= 2
+if exist([param1 '/Data/processed_glodap_' param '_data_' num2str(glodap_year) '.mat'],'file') ~= 2
 
 %% load GLODAP data
 year = num2str(glodap_year);
@@ -188,6 +188,6 @@ save([param1 '/Data/processed_glodap_' param '_data_' year '.mat'],'glodap_data'
 clear glodap_data
 close all
 
-% end
+end
 
 end

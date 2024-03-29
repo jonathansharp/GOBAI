@@ -35,8 +35,8 @@ clear
 
 %% create cluster configuration files
 clear
-% clust_vars = {'temperature_cns' 'salinity_abs' 'pressure'};
-clust_vars = {'temperature' 'salinity' 'pressure' 'lon_cos_1' 'lon_cos_2' 'latitude'};
+clust_vars = {'temperature_cns' 'salinity_abs' 'pressure'};
+% clust_vars = {'temperature' 'salinity' 'pressure'};
 for num_clusters = 2:1:30
     save(['Config/cluster_config_' num2str(num_clusters) '.mat']);
 end

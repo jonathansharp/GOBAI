@@ -1,14 +1,14 @@
 %% Plot GOBAI over time
 
 % set pressures
-pressures = [2.5 100 500 1000 1975];
+pressures = [2.5 10 50 100 200 300 500 1000 1500 1975];
 
 % set up parallel pool
 tic; parpool; fprintf('Pool initiation:'); toc;
 
 parfor d = 1:length(pressures)
     % establish figure
-    h=figure('visible','on','Position',[100 100 800 400]);
+    h=figure('visible','off','Position',[100 100 800 400]);
     axis tight manual
     % create folder
     dname = ['Figures/GOBAI/' base_grid '_' mod_type '_c' num2str(num_clusters)];

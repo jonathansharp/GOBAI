@@ -23,11 +23,14 @@ if strcmp(base_grid,'RG')
     TS.temperature_cns = nan(size(idx));
     TS.temperature_cns(idx) = ...
         gsw_CT_from_t(TS.salinity_abs(idx),TS.temperature(idx),TS.pressure(idx));
+    TS = rmfield(TS,{'temperature' 'salinity'});
 elseif strcmp(base_grid,'RFROM')
     [TS,timesteps] = load_RFROM_dim([pwd '/Data/RFROM/']);
     TS = load_RFROM_clim(TS,[pwd '/Data/RFROM/']);
     TS = replicate_RFROM_dim(TS,1);
 end
+
+
 
 %% fit GMM from climatological mean temperature and salinity
 % Some replicates don't converge, investigate further...

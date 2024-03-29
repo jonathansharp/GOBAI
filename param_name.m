@@ -11,7 +11,7 @@ if strcmp(p,'o2')
     p6 = 'G2oxygen'; % glodap name
     p7 = 'OXYGEN'; % woa folder
     edges = 0:5:500;
-elseif strcmp(p,'n03')
+elseif strcmp(p,'no3')
     p1 = 'NO3'; % directory name
     p2 = 'nitrate'; % for saving figures?
     p3 = '[NO_{3}]'; % axis labels
@@ -19,6 +19,7 @@ elseif strcmp(p,'n03')
     p5 = 'NIT'; % my name
     p6 = 'G2nitrate'; % glodap name
     p7 = 'NITRATE'; % woa folder
+    edges = 0:0.4:40;
 elseif strcmp(p,'ph')
     p1 = 'pH'; % directory name
     p2 = 'ph'; % for saving figures?
@@ -26,4 +27,5 @@ elseif strcmp(p,'ph')
     p4 = 'PH_IN_SITU_TOTAL'; % Argo name
     p5 = 'PH'; % my name
     p6 = 'G2phtsinsitutp'; % glodap name
+    edges = 7.2:0.01:8.2;
 end
