@@ -6,14 +6,21 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 1/3/2024
+% DATE: 4/2/2024
+
+function train_gbm(param,dir_base,base_grid,file_date,...
+        float_file_ext,glodap_only,num_clusters,variables,...
+        numstumps,numbins,thresh)
+
+%% process parameter name
+[param1,param2] = param_name(param);
 
 %% load combined data
-load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
+load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
-load(['Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% remove float data for GLODAP only test
@@ -27,23 +34,20 @@ end
 clear glodap_idx vars v
 
 %% create directory and file names
-gbm_dir = ['Models/' dir_base];
+gbm_dir = [param1 '/Models/' dir_base];
 gbm_fnames = cell(num_clusters,1);
 for c = 1:num_clusters
     gbm_fnames(c) = ...
-        {['GBM_oxygen_C' num2str(c)]};
+        {['GBM_' param2 '_C' num2str(c)]};
 end
-gobai_gbm_dir = ...
-    ['Data/GOBAI/' base_grid '/GBM/c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/tr' num2str(numstumps) '/'];
 
 %% fit GBMs using all data
 
+% set up parallel pool
+tic; parpool(num_clusters); fprintf('Pool initiation:'); toc;
+
 % start timing training
 tic
-
-% set up parallel pool
-p = setup_pool(numWorkers_train);
 
 % fit models for each cluster
 parfor c = 1:num_clusters
@@ -56,17 +60,12 @@ parfor c = 1:num_clusters
 
     % fit model for each cluster
     GBM = ...
-        fit_GBM('oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
-        true(size(all_data.platform)),variables,numstumps,thresh);
+        fit_GBM(param2,all_data,all_data_clusters.(['c' num2str(c)]),...
+        true(size(all_data.platform)),variables,numstumps,numbins,thresh);
 
     % save model for each cluster
     if ~isfolder([pwd '/' gbm_dir]); mkdir(gbm_dir);end
     parsave([gbm_dir '/' gbm_fnames{c}],GBM,'GBM');
-    %save([gbm_dir '/' gbm_fnames{c}],'GBM','-v7.3');
-
-
-    % clean up
-    % clear GBM
 
     % stop timing fit
     fprintf(['Train GBM - Cluster #' num2str(c) ': ']);
@@ -92,3 +91,5 @@ delete(gcp('nocreate'));
 % stop timing training
 fprintf('GBM Training: ');
 toc
+
+end

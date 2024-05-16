@@ -6,14 +6,21 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 1/3/2024
+% DATE: 4/2/2024
+
+function train_ffnn(param,dir_base,base_grid,file_date,...
+        float_file_ext,glodap_only,num_clusters,variables,...
+        train_ratio,val_ratio,test_ratio,thresh)
+
+%% process parameter name
+[param1,param2] = param_name(param);
 
 %% load combined data
-load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
+load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
-load(['Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% remove float data for GLODAP only test
@@ -27,21 +34,17 @@ end
 clear glodap_idx vars v
 
 %% create directory and file names
-ffnn_dir = ['Models/' dir_base];
+ffnn_dir = [param1 '/Models/' dir_base];
 ffnn_fnames = cell(num_clusters,1);
 for c = 1:num_clusters
     ffnn_fnames(c) = ...
-        {['FFNN_oxygen_C' num2str(c)]};
+        {['FFNN_' param2 '_C' num2str(c)]};
 end
-gobai_ffnn_dir = ...
-    ['Data/GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/train' num2str(100*train_ratio) '_val' ...
-    num2str(100*val_ratio) '_test' num2str(100*val_ratio) '/'];
 
 %% fit FFNNs using all data
 
 % set up parallel pool
-p = setup_pool(numWorkers_train);
+tic; parpool(num_clusters); fprintf('Pool initiation:'); toc;
 
 % start timing training
 tic
@@ -61,17 +64,13 @@ parfor c = 1:num_clusters
     
     % fit model for each cluster
     FFNN = ...
-        fit_FFNN('oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
+        fit_FFNN(param2,all_data,all_data_clusters.(['c' num2str(c)]),...
         true(size(all_data.platform)),variables,nodes1,nodes2,...
         train_ratio,val_ratio,test_ratio,thresh);
 
     % save model for each cluster
     if ~isfolder([pwd '/' ffnn_dir]); mkdir(ffnn_dir);end
-    % save([ffnn_dir '/' ffnn_fnames{c}],'FFNN','-v7.3');
     parsave([ffnn_dir '/' ffnn_fnames{c}],FFNN,'FFNN');
-
-    % clean up
-    % clear FFNN
 
     % stop timing fit
     fprintf(['Train FFNN - Cluster #' num2str(c) ': ']);
@@ -97,3 +96,5 @@ delete(gcp('nocreate'));
 % stop timing training
 fprintf('FFNN Training: ');
 toc
+
+end

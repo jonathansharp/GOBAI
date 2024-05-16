@@ -6,14 +6,21 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 1/3/2024
+% DATE: 4/2/2024
+
+function train_rfr(param,dir_base,base_grid,file_date,...
+    float_file_ext,glodap_only,num_clusters,variables,...
+    numtrees,minLeafSize,thresh)
+
+%% process parameter name
+[param1,param2] = param_name(param);
 
 %% load combined data
-load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
+load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
-load(['Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% remove float data for GLODAP only test
@@ -27,23 +34,20 @@ end
 clear glodap_idx vars v
 
 %% create directory and file names
-rfr_dir = ['Models/' dir_base];
+rfr_dir = [param1 '/Models/' dir_base];
 rfr_fnames = cell(num_clusters,1);
 for c = 1:num_clusters
     rfr_fnames(c) = ...
-        {['RFR_oxygen_C' num2str(c)]};
+        {['RFR_' param2 '_C' num2str(c)]};
 end
-gobai_rfr_dir = ...
-    ['Data/GOBAI/' base_grid '/RFR/c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize) '/'];
 
 %% fit RFRs using all data
 
+% set up parallel pool
+tic; parpool(num_clusters); fprintf('Pool initiation:'); toc;
+
 % start timing training
 tic
-
-% set up parallel pool
-p = setup_pool(numWorkers_train);
 
 % define model parameters
 NumPredictors = ceil(sqrt(length(variables)));
@@ -59,7 +63,7 @@ parfor c = 1:num_clusters
 
     % fit model for each cluster
     RFR = ...
-        fit_RFR('oxygen',all_data,all_data_clusters.(['c' num2str(c)]),...
+        fit_RFR(param2,all_data,all_data_clusters.(['c' num2str(c)]),...
         true(size(all_data.platform)),variables,numtrees,minLeafSize,...
             NumPredictors,0,thresh);
 
@@ -94,3 +98,5 @@ delete(gcp('nocreate'));
 % stop timing training
 fprintf('RFR Training: ');
 toc
+
+end

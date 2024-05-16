@@ -1,15 +1,17 @@
 %% Plot clusters over time
 
+function plot_cluster_animation(param,base_grid,num_clusters)
+
+% process parameter name
+param1 = param_name(param);
+
 % set pressures
 pressures = [2.5 10 50 100 200 300 500 1000 1500 1975];
 
 % set up parallel pool
-%tic; parpool; fprintf('Pool initiation:'); toc;
+tic; parpool(length(pressures)); fprintf('Pool initiation:'); toc;
 
-for d = 1:length(pressures)
-    % establish figure
-    h=figure('visible','off','Position',[100 100 800 400]); hold on;
-    axis tight manual
+parfor d = 1:length(pressures)
     % create folder
     dname = ['Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
@@ -34,23 +36,36 @@ for d = 1:length(pressures)
         Latitude = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'latitude');
         Pressure = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'mean_pressure');
     end
+    % process longitude
+    idx_20 = Longitude<20;
+    Longitude(idx_20) = Longitude(idx_20)+360;
+    Longitude = [Longitude(~idx_20);Longitude(idx_20)];
     % depth index
     depth_idx = find(Pressure == pressures(d));
+    % set counter
+    cnt = 1;
+    % establish fiugre
+    h = figure('color','w','visible','off');
+    axis tight manual
     % plot clusters each month/week
     for m = 1:timesteps
         if strcmp(base_grid,'RG')
+            % clear frame
+            clf
             % load monthly clusters
             GMM_clusters = load(['Data/GMM_' base_grid '_' num2str(num_clusters) ...
                 '/m' num2str(m) '_w1'],'GMM_clusters');
+            % establish figure
+            figure(h);
             % make plot
             m_proj('robinson','lon',[20 380]);
-            title(extractAfter(datestr(datenum(2004,m,1)),'-'));
-            m_pcolor(double(Longitude),double(Latitude),...
-                double(GMM_clusters.GMM_clusters(:,:,depth_idx))');
+            z = [GMM_clusters.GMM_clusters(~idx_20,:,depth_idx);...
+                GMM_clusters.GMM_clusters(idx_20,:,depth_idx)];
+            m_pcolor(double(Longitude),double(Latitude),double(z)');
+            title(gca,extractAfter(datestr(datenum(2004,m,1)),'-'));
+            colormap([1,1,1;flipud(jet(num_clusters))]); % white then jet
             m_coast('patch',rgb('grey'));
             m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
-            colormap([1,1,1;flipud(jet(num_clusters))]); % white then jet
-            plot_land('map');
             clim([-0.5 num_clusters+0.5]);
             c=colorbar;
             c.Limits = [0.5 num_clusters+0.5];
@@ -70,18 +85,22 @@ for d = 1:length(pressures)
             % determine number of weeks in file
             weeks = length(dir(['Data/GMM_' base_grid '_' num2str(num_clusters) '/m' num2str(m) '_*.mat']));
             for w = 1:weeks
+                % clear frame
+                clf
                 % load monthly clusters
                 GMM_clusters = load(['Data/GMM_' base_grid '_' num2str(num_clusters) ...
                     '/m' num2str(m) '_w' num2str(w)],'GMM_clusters');
+                % establish figure
+                figure(h);
                 % make plot
                 m_proj('robinson','lon',[20 380]);
+                z = [GMM_clusters.GMM_clusters(~idx_20,:,depth_idx);...
+                    GMM_clusters.GMM_clusters(idx_20,:,depth_idx)];
+                m_pcolor(double(Longitude),double(Latitude),double(z)');
+                title(gca,extractAfter(datestr(datenum(2004,m,1)),'-'));
+                colormap([1,1,1;flipud(jet(num_clusters))]); % white then jet
                 m_coast('patch',rgb('grey'));
                 m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
-                title(extractAfter(datestr(datenum(2004,m,1)),'-'));
-                m_pcolor(double(Longitude),double(Latitude),...
-                    double(GMM_clusters.GMM_clusters(:,:,depth_idx))');
-                colormap([1,1,1;flipud(jet(num_clusters))]); % white then jet
-                plot_land('map');
                 clim([-0.5 num_clusters+0.5]);
                 c=colorbar;
                 c.Limits = [0.5 num_clusters+0.5];
@@ -92,13 +111,18 @@ for d = 1:length(pressures)
                 im = frame2im(frame);
                 [imind,cm] = rgb2ind(im,256);
                 % write to file
-                if m == 1
+                if cnt == 1
                     imwrite(imind,cm,[dname '/' fname],'gif','Loopcount',inf,'DelayTime',0.1);
                 else
                     imwrite(imind,cm,[dname '/' fname],'gif','WriteMode','append','DelayTime',0.1);
                 end
+                % increase counter
+                cnt = cnt + 1;
             end
         end
     end
     close
 end
+
+% end parallel session
+delete(gcp('nocreate'));

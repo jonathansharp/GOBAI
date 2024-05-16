@@ -17,4 +17,4 @@
 source /home/sharp/shell_scripts/dir.txt
 cd $GOBAI_DIR
 module load matlab
-matlab -nodisplay -r "gobai_o2_initiate; load_standard_config_files; load('Config/base_config_RFROM.mat'); load('Config/predict_years_config_04.mat'); gobai_o2_predict_rfr_new;"
+matlab -nodisplay -r "gobai_initiate; load_standard_config_files; load('Config/base_config_RFROM.mat'); load('Config/predict_years_config_04.mat'); gobai_o2_predict_rfr_new;"

@@ -6,7 +6,7 @@ try
         float_file_ext;numstumps});
     kfold_train_gbm('o2',dir_base,base_grid,file_date,...
         float_file_ext,glodap_only,num_clusters,num_folds,variables,...
-        numstumps,thresh);
+        numstumps,numbins,thresh,0);
     disp('success!');
 catch ME
     display_error_info(ME);

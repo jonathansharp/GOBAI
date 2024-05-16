@@ -1,55 +1,125 @@
-%% Plot cluster probabilities
+%% Plot cluster probabilities over time
 
-% set pressures
-pressure = 100;
+function plot_probability_animation(param,base_grid,num_clusters,pressure)
+
+% process parameter name
+param1 = param_name(param);
 
 % set up parallel pool
-tic; parpool; fprintf('Pool initiation:'); toc;
+tic; parpool(length(pressures)); fprintf('Pool initiation:'); toc;
 
-parfor cluster_idx = 1:num_clusters
-
-    % load probabilities
-    load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/c' ...
-        num2str(cluster_idx) '/m1w1],'GMM_probs');
-
-    for depth_idx = 1:length(GMM.pressure)
-
-    % establish figure
-    h=figure('visible','on','Position',[100 100 800 400]);
-    set(h,'color','white');
+parfor cl = 1:length(num_clusters)
+    % create folder
+    dname = ['Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
+    if ~isfolder([pwd '/' dname]); mkdir(dname); end
+    % establish file name
+    fname = ['probability_animation_c' num2str(num_clusters(cl)) '_' num2str(pressure) 'dbar.gif'];
+    % determine number of monthly timesteps
+    ds = dir(['Data/GMM_' base_grid '_' num2str(num_clusters) '/*.mat']);
+    timesteps = length(ds);
+    % load dimensions
+    if strcmp(base_grid,'RG')
+        % file path
+        fpath = [pwd '/Data/RG_CLIM/'];
+        % load
+        Longitude = ncread([fpath 'RG_Climatology_Temp.nc'],'Longitude');
+        Latitude = ncread([fpath 'RG_Climatology_Temp.nc'],'Latitude');
+        Pressure = ncread([fpath 'RG_Climatology_Temp.nc'],'Pressure');
+    elseif strcmp(base_grid,'RFROM')
+        % file path
+        fpath = [pwd '/Data/RFROM/'];
+        % load
+        Longitude = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'longitude');
+        Latitude = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'latitude');
+        Pressure = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'mean_pressure');
+    end
+    % process longitude
+    idx_20 = Longitude<20;
+    Longitude(idx_20) = Longitude(idx_20)+360;
+    Longitude = [Longitude(~idx_20);Longitude(idx_20)];
+    % depth index
+    depth_idx = find(Pressure == pressures(d));
+    % set counter
+    cnt = 1;
+    % establish fiugre
+    h = figure('color','w','visible','off');
     axis tight manual
-
-    filename = ['Figures/Clusters_' num2str(num_clusters) ...
-        '/cluster_probability_animation_c' num2str(cluster_idx) ...
-        '_' num2str(GMM_probs.pressure(depth_idx)) 'dbar.gif'];
-    n=1;
-    for m = 1:5%length(GMM_probs.time)
-        worldmap([-90 90],[20 380]);
-        title(extractAfter(datestr(datenum(2004,0.5+double(GMM_probs.time(m)),1)),'-'));
-        pcolorm(double(GMM_probs.latitude),double(GMM_probs.longitude),...
-            GMM_cluster_probs(:,:,depth_idx,m)');
-        colormap(flipud(gray(100)));
-        plot_land('map');
-        clim([0 1]);
-        c=colorbar;
-        c.Label.String = ['Cluster #' num2str(cluster_idx) ' Probability'];
-        c.TickLength = 0;
-        mlabel off; plabel off;
-        % capture frame
-        frame = getframe(h);
-        im = frame2im(frame);
-        [imind,cm] = rgb2ind(im,256);
-        % write to file
-        if n == 1
-            imwrite(imind,cm,filename,'gif','Loopcount',inf,'DelayTime',0.1);
-        else
-            imwrite(imind,cm,filename,'gif','WriteMode','append','DelayTime',0.1);
+    % plot clusters each month/week
+    for m = 1:timesteps
+        if strcmp(base_grid,'RG')
+            % clear frame
+            clf
+            % load monthly clusters
+            GMM_cluster_probs = load(['Data/GMM_' base_grid '_' num2str(num_clusters) ...
+                '/c' num2str(num_clusters(cl)) '/m' num2str(m) '_w1'],'GMM_clusters');
+            % establish figure
+            figure(h);
+            % make plot
+            m_proj('robinson','lon',[20 380]);
+            z = [GMM_cluster_probs.GMM_cluster_probs(~idx_20,:,depth_idx);...
+                GMM_cluster_probs.GMM_cluster_probs(idx_20,:,depth_idx)];
+            m_pcolor(double(Longitude),double(Latitude),double(z)');
+            title(gca,extractAfter(datestr(datenum(2004,m,1)),'-'));
+            colormap(cmocean('amp'));
+            m_coast('patch',rgb('grey'));
+            m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
+            clim([0 100]);
+            c=colorbar;
+            c.Limits = [0 100];
+            c.Label.String = ['Cluster ' num2str(num_clusters(cl)) ' Probability'];
+            c.TickLength = 0;
+            % capture frame
+            frame = getframe(h);
+            im = frame2im(frame);
+            [imind,cm] = rgb2ind(im,256);
+            % write to file
+            if m == 1
+                imwrite(imind,cm,[dname '/' fname],'gif','Loopcount',inf,'DelayTime',0.1);
+            else
+                imwrite(imind,cm,[dname '/' fname],'gif','WriteMode','append','DelayTime',0.1);
+            end
+        elseif strcmp(base_grid,'RFROM')
+            % determine number of weeks in file
+            weeks = length(dir(['Data/GMM_' base_grid '_' num2str(num_clusters) '/m' num2str(m) '_*.mat']));
+            for w = 1:weeks
+                % clear frame
+                clf
+                % load monthly clusters
+                GMM_cluster_probs = load(['Data/GMM_' base_grid '_' num2str(num_clusters) ...
+                    '/c' num2str(num_clusters(cl)) '/m' num2str(m) '_w' num2str(w)],'GMM_clusters');
+                % establish figure
+                figure(h);
+                % make plot
+                m_proj('robinson','lon',[20 380]);
+                z = [GMM_cluster_probs.GMM_cluster_probs(~idx_20,:,depth_idx);...
+                    GMM_cluster_probs.GMM_cluster_probs(idx_20,:,depth_idx)];
+                m_pcolor(double(Longitude),double(Latitude),double(z)');
+                title(gca,extractAfter(datestr(datenum(2004,m,1)),'-'));
+                colormap(cmocean('amp'));
+                m_coast('patch',rgb('grey'));
+                m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
+                clim([0 100]);
+                c=colorbar;
+                c.Limits = [0 100];
+                c.Label.String = ['Cluster ' num2str(num_clusters(cl)) ' Probability'];
+                c.TickLength = 0;
+                % capture frame
+                frame = getframe(h);
+                im = frame2im(frame);
+                [imind,cm] = rgb2ind(im,256);
+                % write to file
+                if cnt == 1
+                    imwrite(imind,cm,[dname '/' fname],'gif','Loopcount',inf,'DelayTime',0.1);
+                else
+                    imwrite(imind,cm,[dname '/' fname],'gif','WriteMode','append','DelayTime',0.1);
+                end
+                % increase counter
+                cnt = cnt + 1;
+            end
         end
-        n=n+1;
     end
     close
-    
-    % clean up
-    clear GMM_probs filename h cluster_idx depth_idx n m c frame im imind cm
-
 end
+
+% end parallel session
+delete(gcp('nocreate'));

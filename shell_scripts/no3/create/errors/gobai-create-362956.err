@@ -1,3 +1,0 @@
-srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
-slurmstepd: error: *** STEP 362956.0 ON hercules-02-44 CANCELLED AT 2024-01-05T18:13:46 ***
-slurmstepd: error: *** JOB 362956 ON hercules-02-44 CANCELLED AT 2024-01-05T18:13:46 ***

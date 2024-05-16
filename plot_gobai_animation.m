@@ -1,22 +1,24 @@
 %% Plot GOBAI over time
 
+function plot_gobai_animation(param,dir_base,base_grid,num_clusters,mod_type)
+
+% process parameter name
+param1 = param_name(param);
+
 % set pressures
 pressures = [2.5 10 50 100 200 300 500 1000 1500 1975];
 
 % set up parallel pool
-tic; parpool; fprintf('Pool initiation:'); toc;
+tic; parpool(length(pressures)); fprintf('Pool initiation:'); toc;
 
 parfor d = 1:length(pressures)
-    % establish figure
-    h=figure('visible','off','Position',[100 100 800 400]);
-    axis tight manual
     % create folder
-    dname = ['Figures/GOBAI/' base_grid '_' mod_type '_c' num2str(num_clusters)];
+    dname = [param1 '/Figures/GOBAI/' base_grid '_' mod_type '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
     % establish file name
     fname = ['gobai_animation_' num2str(pressures(d)) 'dbar.gif'];
     % determine number of monthly timesteps
-    ds = dir(['Data/GOBAI/' dir_base '/*.nc']);
+    ds = dir([param1 '/Data/GOBAI/' dir_base '/*.nc']);
     timesteps = length(ds);
     % load dimensions
     if strcmp(base_grid,'RG')
@@ -34,26 +36,39 @@ parfor d = 1:length(pressures)
         Latitude = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'latitude');
         Pressure = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'mean_pressure');
     end
+    % process longitude
+    idx_20 = Longitude<20;
+    Longitude(idx_20) = Longitude(idx_20)+360;
+    Longitude = [Longitude(~idx_20);Longitude(idx_20)];
     % depth index
     depth_idx = find(Pressure == pressures(d));
-    % plot gobai each month/week
+    % set counter
+    cnt = 1;
+    % establish fiugre
+    h = figure('color','w','visible','off');
+    axis tight manual
+    % plot clusters each month/week
     for m = 1:timesteps
         if strcmp(base_grid,'RG')
+            % clear frame
+            clf
             % load monthly gobai
-            gobai = ncread(['Data/GOBAI/' dir_base '/m' num2str(m) '_w1.nc'],'o2');
+            gobai = ncread([param1 '/Data/GOBAI/' dir_base '/m' num2str(m) '_w1.nc'],param);
+            % establish figure
+            figure(h);
             % make plot
-            worldmap([-90 90],[20 380]);
-            title(extractAfter(datestr(datenum(2004,m,1)),'-'),'fontsize',16);
-            pcolorm(double(Latitude),double(Longitude),...
-                double(gobai(:,:,depth_idx))');
-            colormap(cmocean('ice')); % white then jet
-            plot_land('map');
+            m_proj('robinson','lon',[20 380]);
+            z = [gobai(~idx_20,:,depth_idx);gobai(idx_20,:,depth_idx)];
+            m_pcolor(double(Longitude),double(Latitude),double(z)');
+            title(gca,extractAfter(datestr(datenum(2004,m,1)),'-'));
+            colormap(cmocean('ice'));
+            m_coast('patch',rgb('grey'));
+            m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
             clim([0 350]);
             c=colorbar;
             c.Limits = [0 350];
             c.Label.String = '[O_{2}] (\mumol kg^{-1})';
             c.TickLength = 0;
-            mlabel off; plabel off;
             % capture frame
             frame = getframe(h);
             im = frame2im(frame);
@@ -68,36 +83,47 @@ parfor d = 1:length(pressures)
             % determine number of weeks in file
             weeks = length(dir(['Data/GMM_' base_grid '_' num2str(num_clusters) '/m' num2str(m) '_*.mat']));
             for w = 1:weeks
+                % clear frame
+                clf
                 % load weekly gobai
-                gobai = ncread(['Data/GOBAI/' dir_base '/m' num2str(m) '_w' num2str(w) '.nc'],'o2');
+                gobai = ncread([param1 '/Data/GOBAI/' dir_base '/m' num2str(m) '_w' num2str(w) '.nc'],param);
+                % establish figure
+                figure(h);
                 % make plot
-                worldmap([-90 90],[20 380]);
-                title(extractAfter(datestr(datenum(2004,m,1)),'-'));
-                pcolorm(double(Latitude),double(Longitude),...
-                    double(gobai(:,:,depth_idx))');
-                colormap(cmocean('ice')); % white then jet
-                plot_land('map');
+                m_proj('robinson','lon',[20 380]);
+                z = [gobai(~idx_20,:,depth_idx);gobai(idx_20,:,depth_idx)];
+                m_pcolor(double(Longitude),double(Latitude),double(z)');
+                title(gca,extractAfter(datestr(datenum(2004,m,1)),'-'));
+                colormap(cmocean('ice'));
+                m_coast('patch',rgb('grey'));
+                m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
                 clim([0 350]);
                 c=colorbar;
                 c.Limits = [0 350];
                 c.Label.String = '[O_{2}] (\mumol kg^{-1})';
                 c.TickLength = 0;
-                mlabel off; plabel off;
                 % capture frame
                 frame = getframe(h);
                 im = frame2im(frame);
                 [imind,cm] = rgb2ind(im,256);
                 % write to file
-                if m == 1 && w == 1
+                if cnt == 1
                     imwrite(imind,cm,[dname '/' fname],'gif','Loopcount',inf,'DelayTime',0.1);
                 else
                     imwrite(imind,cm,[dname '/' fname],'gif','WriteMode','append','DelayTime',0.1);
                 end
+                % increase counter
+                cnt = cnt + 1;
             end
         end
     end
     close
+    % display information
+    dname
+    disp(['GOBAI-' param1 ' (' mod_type ') animation at ' num2str(pressures(d)) ' dbar plotted'])
 end
 
 % end parallel session
 delete(gcp('nocreate'));
+
+end

@@ -1,4 +1,0 @@
-Fontconfig warning: "/usr/share/fontconfig/conf.avail/05-reset-dirs-sample.conf", line 6: unknown element "reset-dirs"
-slurmstepd: error: Detected 3 oom_kill events in StepId=362289.0. Some of the step tasks have been OOM Killed.
-srun: error: hercules-01-12: task 0: Out Of Memory
-srun: Terminating StepId=362289.0

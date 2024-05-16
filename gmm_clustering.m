@@ -11,6 +11,9 @@
 
 function gmm_clustering(base_grid,clust_vars,num_clusters,numWorkers_predict)
 
+% check for existence of model
+if exist(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model.mat'],'file') ~= 2
+
 %% load temperature and salinity climatological data
 if strcmp(base_grid,'RG')
     [TS,timesteps] = load_RG_dim([pwd '/Data/RG_CLIM/']);
@@ -30,8 +33,6 @@ elseif strcmp(base_grid,'RFROM')
     TS = replicate_RFROM_dim(TS,1);
 end
 
-
-
 %% fit GMM from climatological mean temperature and salinity
 % Some replicates don't converge, investigate further...
 tic
@@ -43,8 +44,8 @@ for v = 1:length(clust_vars)
 end
 [X_norm,C,S] = normalize(predictor_matrix);
 clear TS
-% reduce inputs for model training to 10,000,000 random data points
-idx_rand = randperm(length(X_norm),10000000)';
+% reduce inputs for model training to 1,000,000 random data points
+idx_rand = randperm(length(X_norm),1000000)';
 X_norm = X_norm(idx_rand,:);
 % fit GMM
 gmm = fitgmdist(X_norm,num_clusters,...
@@ -133,46 +134,15 @@ delete(gcp('nocreate'));
 
 toc
 
-%% concatenate clusters and probabilities
-% % load and concatenate clusters
-% GMM.clusters = uint8([]);
-% GMM.longitude = TS.Longitude;
-% GMM.latitude = TS.Latitude;
-% GMM.pressure = TS.Pressure;
-% GMM.time = TS.Time;
-% for m = 1:length(TS.Time)
-%     load(['Data/GMM_' num2str(num_clusters) '/m' num2str(m)],'GMM_monthly');
-%     GMM.clusters = cat(4,GMM.clusters,uint8(GMM_monthly));
-%     clear GMM_monthly
-% end
-% if ~isfolder('Data'); mkdir('Data'); end
-% save(['Data/GMM_' num2str(num_clusters) '/GMM'],'GMM','-v7.3');
-% clear GMM
-% % load and concatenate cluster probabilities
-% for c = 1:num_clusters
-%     GMM_probs.probabilities = single([]);
-%     GMM_probs.longitude = TS.Longitude;
-%     GMM_probs.latitude = TS.Latitude;
-%     GMM_probs.pressure = TS.Pressure;
-%     GMM_probs.time = TS.Time;
-%     for m = 1:length(TS.Time)
-%         load(['Data/GMM_' num2str(num_clusters) '/c' num2str(c) ...
-%             '/m' num2str(m)],'GMM_monthly_probs');
-%         GMM_probs.probabilities = ...
-%             cat(4,GMM_probs.probabilities,single(GMM_monthly_probs));
-%         clear GMM_monthly_probs
-%     end
-%     if ~isfolder(['Data/GMM_' num2str(num_clusters)])
-%         mkdir(['Data/GMM_' num2str(num_clusters)]);
-%     end
-%     save(['Data/GMM_' num2str(num_clusters) '/GMM_c' num2str(c)],'GMM_probs','-v7.3');
-%     clear GMM_probs
-% end
+% display information
+disp([num2str(num_clusters) ' clusters formed using ' base_grid ' grid']);
 
+else
 
-% old time info
-% 1.8 hours for ten clusters and ten replicates on chinook? (9/8/23)
-% 2.2 hours for twenty clusters and twenty replicates on Hercules (9/8/23)
+% display information
+disp(['already used ' base_grid ' grid to form ' num2str(num_clusters) ' clusters']);
+
+end
 
 end
 

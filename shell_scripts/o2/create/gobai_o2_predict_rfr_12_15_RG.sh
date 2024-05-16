@@ -16,4 +16,4 @@
 
 module load matlab
 cd /work2/noaa/hindcasts/GOBAI
-matlab -nodisplay -r "gobai_o2_initiate; load_standard_config_files; load('Config/base_config_RG.mat'); load('Config/predict_years_config_12_15.mat'); gobai_o2_predict_rfr;"
+matlab -nodisplay -r "gobai_initiate; load_standard_config_files; load('Config/base_config_RG.mat'); load('Config/predict_years_config_12_15.mat'); gobai_o2_predict_rfr;"

@@ -4,8 +4,7 @@ addpath(genpath(pwd));
 try
     assign_data_to_clusters('o2',base_grid,file_date,float_file_ext,...
         clust_vars,num_clusters);
-    plot_data_by_cluster('o2',base_grid,file_date,float_file_ext,...
-        clust_vars,num_clusters);
+    plot_data_by_cluster('o2',base_grid,file_date,float_file_ext,num_clusters);
     kfold_split_data('o2',base_grid,file_date,float_file_ext,...
         glodap_only,num_clusters,num_folds,thresh);
     disp('success!');

@@ -2,9 +2,9 @@
 
 addpath(genpath(pwd));
 try
-    %plot_clusters;
-    plot_cluster_animation;
-    %plot_probability_animation;
+    % plot_clusters;
+    plot_cluster_animation(param,base_grid,num_clusters,pressure);
+    plot_probability_animation(param,base_grid,num_clusters,pressure);
     disp('success!');
 catch ME % if you can
     display_error_info(ME);

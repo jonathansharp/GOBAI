@@ -8,30 +8,44 @@
 %
 % DATE: 11/22/2023
 
+function combine_gobai(param,dir_base,base_grid,file_date,float_file_ext,...
+    num_clusters,variables,train_ratio,val_ratio,test_ratio,thresh,...
+    numWorkers_predict,years_to_predict)
+
+% process parameter name
+param1 = param_name(param);
+
 %% create directory names
-file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 gobai_ffnn_dir = ... % FFNN
-    ['Data/GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) '_' file_date ...
+    [param1 '/Data/GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/train' num2str(100*train_ratio) '_val' ...
     num2str(100*val_ratio) '_test' num2str(100*val_ratio) '/'];
 gobai_rfr_dir = ... % RFR
-    ['Data/GOBAI/' base_grid '/RFR/c' num2str(num_clusters) '_' file_date ...
+    [param1 '/Data/GOBAI/' base_grid '/RFR/c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize) '/'];
 gobai_gbm_dir = ... % GBM
-    ['Data/GOBAI/' base_grid '/GBM/c' num2str(num_clusters) '_' file_date ...
+    [param1 '/Data/GOBAI/' base_grid '/GBM/c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/tr' num2str(numstumps) '/'];
 gobai_dir = ... % final product
-    ['Data/GOBAI/' base_grid '/' num2str(num_clusters) '_' file_date float_file_ext '/'];
+    [param1 '/Data/GOBAI/' base_grid '/' num2str(num_clusters) '_' file_date ...
+    float_file_ext '/'];
 
 %% process time
-start_year = 2004;
-end_year = floor(snap_date/1e2);
-end_month = mod(snap_date,1e2);
-years = repelem(start_year:end_year,12)';
-months = repmat(1:12,1,length(years)/12)';
-years = years(1:end-(12-end_month));
-months = months(1:end-(12-end_month));
-clear start_year end_year end_month
+% start_year = 2004;
+% end_year = floor(snap_date/1e2);
+% end_month = mod(snap_date,1e2);
+% years = repelem(start_year:end_year,12)';
+% months = repmat(1:12,1,length(years)/12)';
+% years = years(1:end-(12-end_month));
+% months = months(1:end-(12-end_month));
+% clear start_year end_year end_month
+
+%% determine timesteps
+if strcmp(base_grid,'RG')
+    [~,timesteps] = load_RG_dim([pwd '/Data/RG_CLIM/']);
+elseif strcmp(base_grid,'RFROM')
+    [~,timesteps] = load_RFROM_dim([pwd '/Data/RFROM/']);
+end
 
 %% average over each time window
 parfor m = 1:length(years)

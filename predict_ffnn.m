@@ -8,17 +8,24 @@
 %
 % DATE: 1/31/2024
 
+function predict_ffnn(param,dir_base,base_grid,file_date,float_file_ext,...
+    num_clusters,variables,train_ratio,val_ratio,test_ratio,thresh,...
+    numWorkers_predict,years_to_predict)
+
+%% process parameter name
+[param1,param2,~,~,~,~,~,~,units,long_param_name] = param_name(param);
+
 %% create directory and file names
-ffnn_dir = ['Models/' dir_base];
+ffnn_dir = [param1 '/Models/' dir_base];
 ffnn_fnames = cell(num_clusters,1);
 for c = 1:num_clusters
     ffnn_fnames(c) = ...
-        {['FFNN_oxygen_C' num2str(c)]};
+        {['FFNN_' param2 '_C' num2str(c)]};
 end
 gobai_ffnn_dir = ...
-    ['Data/GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/train' num2str(100*train_ratio) '_val' ...
-    num2str(100*val_ratio) '_test' num2str(100*val_ratio) '/'];
+    [param1 '/Data/GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) ...
+    '_' file_date float_file_ext '/train' num2str(100*train_ratio) ...
+    '_val' num2str(100*val_ratio) '_test' num2str(100*test_ratio) '/'];
 
 %% define variables for predictions
 variables_TS = cell(size(variables));
@@ -27,19 +34,19 @@ for v = 1:length(variables)
 end
 
 %% determine timesteps
-if strcmp(base_grid,'RG')
-    [~,timesteps] = load_RG_dim([pwd '/Data/RG_CLIM/']);
-elseif strcmp(base_grid,'RFROM')
-    [~,timesteps] = load_RFROM_dim([pwd '/Data/RFROM/']);
-end
+% if strcmp(base_grid,'RG')
+%     [~,timesteps] = load_RG_dim([pwd '/Data/RG_CLIM/']);
+% elseif strcmp(base_grid,'RFROM')
+%     [~,timesteps] = load_RFROM_dim([pwd '/Data/RFROM/']);
+% end
 
 %% predict property on grid
 
+% set up parallel pool
+tic; parpool(numWorkers_predict); fprintf('Pool initiation:'); toc;
+
 % start timing predictions
 tic
-
-% set up parallel pool
-tic; parpool(12); fprintf('Pool initiation:'); toc;
 
 % compute estimates for each month
 m1 = (years_to_predict(1)-2004)*12+1;
@@ -55,6 +62,12 @@ parfor m = m1:m2
             [1 1 1 m],[Inf Inf Inf 1]);
         TS.salinity = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Sal.nc'],'Salinity',...
             [1 1 1 m],[Inf Inf Inf 1]);
+        % covert RG T and S to conservative temperature and absolute salinity
+        pres_3d = repmat(permute(TS.Pressure,[3 2 1]),length(TS.Longitude),length(TS.Latitude),1);
+        lon_3d = repmat(TS.Longitude,1,length(TS.Latitude),length(TS.Pressure));
+        lat_3d = repmat(TS.Latitude',length(TS.Longitude),1,length(TS.Pressure));
+        TS.salinity_abs = gsw_SA_from_SP(TS.salinity,pres_3d,convert_lon(lon_3d),lat_3d);
+        TS.temperature_cns = gsw_CT_from_t(TS.salinity_abs,TS.temperature,pres_3d);
         % get RG time variables
         TS.Time = ncread('Data/RG_CLIM/RG_Climatology_Temp.nc','Time',m,1);
         date_temp = datevec(datenum(2004,1,1+double(TS.Time)));
@@ -68,7 +81,7 @@ parfor m = m1:m2
         % apply ffnn model
         apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
             base_grid,m,1,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-            thresh,gobai_ffnn_dir);
+            thresh,gobai_ffnn_dir,param,units,long_param_name);
     elseif strcmp(base_grid,'RFROM')
         % load dimensions
         TS = load_RFROM_dim([pwd '/Data/RFROM/']);
@@ -78,10 +91,10 @@ parfor m = m1:m2
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
         for w = 1:nc_atts.Dimensions(3).Length
             % get RFROM T and S
-            TS.temperature = ncread([pwd '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
+            TS.temperature_cns = ncread([pwd '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                 'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
-            TS.salinity = ncread([pwd '/Data/RFROM/RFROM_SAL_v0.1/RFROM_SAL_STABLE_' ...
+            TS.salinity_abs = ncread([pwd '/Data/RFROM/RFROM_SAL_v0.1/RFROM_SAL_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                 'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
             % get RFROM time variables
@@ -96,7 +109,7 @@ parfor m = m1:m2
             % apply ffnn model
             apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
             base_grid,m,w,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-            thresh,gobai_ffnn_dir);
+            thresh,gobai_ffnn_dir,param,units,long_param_name);
         end
     end
 end
@@ -111,13 +124,15 @@ toc
 
 % clean up
 
+end
 
 %% embedded function for processing 3D grids and applying FFNN models
 function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
-    base_grid,m,w,xdim,ydim,zdim,variables_TS,thresh,gobai_ffnn_dir)
+    base_grid,m,w,xdim,ydim,zdim,variables_TS,thresh,gobai_ffnn_dir,...
+    param,units,long_param_name)
 
     % convert to arrays
-    TS_index = ~isnan(TS.temperature);
+    TS_index = ~isnan(TS.temperature_cns);
     vars = fieldnames(TS);
     for v = 1:length(vars)
         if ndims(TS.(vars{v})) == 3
@@ -130,17 +145,17 @@ function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
     vars = fieldnames(TS);
     for v = 1:length(vars)
         if length(TS.(vars{v})) == 1
-            TS.([vars{v} '_array']) = repmat(TS.(vars{v}),size(TS.temperature_array));
+            TS.([vars{v} '_array']) = repmat(TS.(vars{v}),size(TS.temperature_cns_array));
             TS = rmfield(TS,vars{v});
         end
     end
 
     % calculate absolute salinity, conservative temperature, potential density
-    TS.sigma_array = gsw_sigma0(TS.salinity_array,TS.temperature_array);
+    TS.sigma_array = gsw_sigma0(TS.salinity_abs_array,TS.temperature_cns_array);
 
     % pre-allocate
-    gobai_matrix = single(nan(length(TS.temperature_array),num_clusters));
-    probs_matrix = single(nan(length(TS.temperature_array),num_clusters));
+    gobai_matrix = single(nan(length(TS.temperature_cns_array),num_clusters));
+    probs_matrix = single(nan(length(TS.temperature_cns_array),num_clusters));
 
     % apply models for each cluster
     for c = 1:num_clusters
@@ -163,7 +178,7 @@ function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
         % predict data for each cluster
         gobai_matrix(:,c) = ...
             run_FFNN(alg.FFNN,TS,GMM_probs.probabilities_array,...
-            true(size(TS.temperature_array)),variables_TS,thresh);
+            true(size(TS.temperature_cns_array)),variables_TS,thresh);
 
       end
 
@@ -182,12 +197,12 @@ function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
     if ~isfolder([pwd '/' gobai_ffnn_dir]); mkdir(gobai_ffnn_dir); end
     filename = [gobai_ffnn_dir 'm' num2str(m) '_w' num2str(w) '.nc'];
     if isfile(filename); delete(filename); end % delete file if it exists
-    % oxygen
-    nccreate(filename,'o2','Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim},...
+    % parameter
+    nccreate(filename,param,'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim},...
         'DataType','single','FillValue',NaN);
-    ncwrite(filename,'o2',gobai_3d);
-    ncwriteatt(filename,'o2','units','umol/kg');
-    ncwriteatt(filename,'o2','long_name','Dissolved Oxygen Amount Content');
+    ncwrite(filename,param,gobai_3d);
+    ncwriteatt(filename,param,'units',units);
+    ncwriteatt(filename,param,'long_name',long_param_name);
     % longitude
     nccreate(filename,'lon','Dimensions',{'lon',xdim},...
         'DataType','single','FillValue',NaN);
@@ -212,5 +227,9 @@ function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
     ncwriteatt(filename,'pres','axis','Z');
     ncwriteatt(filename,'pres','long_name','pressure');
     ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
+
+    % display information
+    fprintf(['FFNN Prediction (Month ' num2str(m) ', Week ' num2str(w) ')\n']);
+
     
 end

@@ -188,6 +188,12 @@ save([param1 '/Data/processed_glodap_' param '_data_' year '.mat'],'glodap_data'
 clear glodap_data
 close all
 
+% display information
+disp('GLODAP data processed and saved.')
+
 end
+
+% display information
+disp('GLODAP data already processed.')
 
 end

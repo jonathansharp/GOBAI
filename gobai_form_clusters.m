@@ -3,7 +3,7 @@
 addpath(genpath(pwd));
 try
     gmm_clustering(base_grid,clust_vars,num_clusters,numWorkers_predict);
-    disp(['success! ' num2str(num_clusters) ' clusters formed using ' base_grid ' grid']);
+    disp('success!');
 catch ME
     display_error_info(ME);
 end

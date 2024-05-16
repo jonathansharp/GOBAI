@@ -1,4 +1,0 @@
-Fontconfig warning: "/usr/share/fontconfig/conf.avail/05-reset-dirs-sample.conf", line 6: unknown element "reset-dirs"
-srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
-slurmstepd: error: *** STEP 312910.0 ON hercules-01-01 CANCELLED AT 2023-12-20T03:07:14 DUE TO TIME LIMIT ***
-slurmstepd: error: *** JOB 312910 ON hercules-01-01 CANCELLED AT 2023-12-20T03:07:14 DUE TO TIME LIMIT ***

@@ -10,7 +10,7 @@
 
 function kfold_train_gbm(param,dir_base,base_grid,file_date,...
     float_file_ext,glodap_only,num_clusters,num_folds,variables,...
-    numstumps,thresh)
+    numstumps,numbins,thresh,reduce_data)
 
 %% process parameter name
 [param1,param2,param3,~,~,~,~,param_edges] = param_name(param);
@@ -38,6 +38,17 @@ if glodap_only
 end
 clear glodap_idx vars v
 
+%% reduce data if indicated
+if reduce_data == 1
+    for f = 1:num_folds
+        rng(64); % reset random number generator for consistency
+        rand_nums = randperm(length(all_data.oxygen))'; % generate set of random numbers
+        idx_rand = rand_nums >= 0.05*length(all_data.oxygen); % index 95% of those random numbers
+        train_idx.(['f' num2str(f)])(idx_rand) = false; % remove 95% of training indices
+        test_idx.(['f' num2str(f)])(idx_rand) = false; % remove 95% of test indices
+    end
+end
+
 %% create directory and file names
 gbm_dir = [param1 '/Models/' dir_base];
 gbm_fnames = cell(num_folds,num_clusters);
@@ -48,29 +59,26 @@ for f = 1:num_folds
     end
 end
 kfold_dir = [param1 '/KFold/GBM/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
-kfold_name = ['GBM_output_tr' num2str(numstumps)];
+kfold_name = ['GBM_output_tr' num2str(numstumps) '_bin' num2str(numbins)];
 fig_dir = [param1 '/Figures/KFold/GBM/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
-fig_name_1 = ['k_fold_comparison_tr' num2str(numstumps) '.png'];
-fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numstumps) '.png'];
+fig_name_1 = ['k_fold_comparison_tr' num2str(numstumps) '_bin' num2str(numbins) '.png'];
+fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numstumps) '_bin' num2str(numbins) '.png'];
 
 %% fit and evaluate test models (GBM)
 % define model parameters
 
-
 % set up parallel pool
-tic; parpool; fprintf('Pool initiation:'); toc;
+%tic; parpool(num_clusters); fprintf('Pool initiation:'); toc;
 % fit test models for each fold
 for f = 1:num_folds
-    % fit test models for each cluster
-    output = nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
-    parfor c = 1:num_clusters
+    for c = 1:num_clusters
       % start timing fit
       tic
       if any(all_data_clusters.clusters == c) % check for data in cluster
         % fit test model for each cluster
         GBM = ...
             fit_GBM(param2,all_data,all_data_clusters.(['c' num2str(c)]),...
-            train_idx.(['f' num2str(f)]),variables,numstumps,thresh);
+            train_idx.(['f' num2str(f)]),variables,numstumps,numbins,thresh);
         % stop timing fit
         fprintf(['Train GBM - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
         toc
@@ -91,6 +99,10 @@ for f = 1:num_folds
         fprintf('\n');
         fprintf(['Run GBM - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
         fprintf('\n');
+        % save test output (NaNs) for each cluster
+        if ~isfolder([pwd '/' gbm_dir]); mkdir(gbm_dir); end
+        output = nan(sum(test_idx.(['f' num2str(f)])),1);
+        parsave([gbm_dir '/' gbm_fnames{f,c}],output,'output');
         [~]=toc;
       end
     end

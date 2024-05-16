@@ -13,6 +13,8 @@ function combine_data(param,float_file_ext,file_date,glodap_year)
 %% process parameter name
 [param1,param2,param3,~,param5] = param_name(param);
 
+if exist([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],'file') ~= 2
+
 %% load data after implementing float data adjustment
 load([param1 '/Data/processed_float_' param '_data_adjusted_' file_date float_file_ext '.mat'],...
     'float_data_adjusted','file_date');
@@ -117,5 +119,7 @@ save([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.ma
     'all_data','file_date','-v7.3');
 
 clear
+
+end
 
 end

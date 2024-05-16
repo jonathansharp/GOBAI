@@ -8,7 +8,7 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 09/12/2023
+% DATE: 4/4/2024
 
 function acquire_snapshot_data(param,data_modes,float_file_ext,snap_date,snap_download)
 
@@ -99,8 +99,9 @@ if snap_download == 1
         delete(['BGC_Argo_Snapshots/' tarname]);
     end
     clear url snap_url isnap filename tarname
+    disp('Float snapshot acquired.')
 else
-    snap_date = snap_date;
+    disp('Float snapshot already downloaded.')
 end
 
 %% Only do all this if downloaded float matlab file does not exist
@@ -147,6 +148,7 @@ for n = 1:length(idx_folders) % for each DAC
     clear fileinfo
 
     %% Download and process floats in each DAC
+    counter = 1;
     for f = 1:length(filenames) % for each float
 
         %% Download float data
@@ -229,16 +231,28 @@ for n = 1:length(idx_folders) % for each DAC
                 % loop through profiles and interpolate
                 for p = 1:length(float.(['F' floatnum]).CYCLE_NUMBER) % for each profile
                     if sum(index(:,p)) > 10 % if more than ten data points are available
-                        % interpolate to edges (without extrapolation)
+                        % extract temporary pressure axis and parameter
                         temp_pres = float.(['F' floatnum]).PRES_ADJUSTED(index(:,p),p);
                         temp_var = float.(['F' floatnum]).([vars{k} '_ADJUSTED'])(index(:,p),p);
+                        % remove data deeper than 1950m for oxygen
+                        if strcmp(vars{k},'DOXY')
+                            temp_var(temp_pres>1950) = [];
+                            temp_pres(temp_pres>1950) = [];
+                        end
+                        % interpolate to edges (with extrapolation)
                         [~,unique_idx_pres] = unique(temp_pres);
                         temp_var_i = interp1(temp_pres(unique_idx_pres),...
-                            temp_var(unique_idx_pres),zi,'linear');
-        
+                            temp_var(unique_idx_pres),zi,'linear','extrap');
+                        % remove interpolated data more than 100m from a measurement
+                        index_from = false(size(zi));
+                        for z = 1:length(zi)
+                            index_from(z) = any(abs(temp_pres-zi(z)) < 100);
+                        end
+                        temp_var_i(~index_from) = NaN;
+
                         % log interpolated profile
                         float.(['F' floatnum]).([vars{k} '_ADJUSTEDi'])(:,p) = temp_var_i;
-        
+
                     else
         
                         % log profile as not available if no matching data
@@ -246,6 +260,25 @@ for n = 1:length(idx_folders) % for each DAC
                         
                     end
                 end
+
+                % save a random profile every 100 floats
+                if k == 3 && mod(counter,100) == 0
+                    prof_to_plot = randi(n_prof);
+                    figure('visible','on');
+                    plot(float.(['F' floatnum]).([vars{k} '_ADJUSTED'])(:,prof_to_plot),...
+                        float.(['F' floatnum]).PRES_ADJUSTED(:,prof_to_plot),'linewidth',2);
+                    info = gcf; info.Position(4) = info.Position(4)*2;
+                    hold on; set(gca,'YDir','reverse');
+                    plot(float.(['F' floatnum]).([vars{k} '_ADJUSTEDi'])(:,prof_to_plot),...
+                        zi,'linewidth',2);
+                    legend({'Measurements' 'Interpolation'},'Location',...
+                        'northoutside','NumColumns',2);
+                    if ~exist([pwd '/' param1 '/Figures/Data/Profiles'],'dir')
+                        mkdir([param1 '/Figures/Data/Profiles']); end
+                    exportgraphics(gcf,[param1 '/Figures/Data/Profiles/float_' ...
+                        num2str(floatnum) '_prof' num2str(prof_to_plot) '.png']);
+                end
+ 
             end
             clear index p k temp_pres temp_var unique_idx_pres temp_var_i
     
@@ -281,6 +314,9 @@ for n = 1:length(idx_folders) % for each DAC
 
         %% clean up
         clear float floatnum nan_idx n_prof n_param n_levels
+    
+    % increase conter
+    counter = counter + 1;
 
     end
 
@@ -340,6 +376,12 @@ save([param1 '/Data/processed_float_' param '_data_' file_date float_file_ext '.
 clear float_data
 close all
 
-% end
+% display information
+disp('Float data processed and saved.')
+
+end
+
+% display information
+disp('Float data already processed.')
 
 end

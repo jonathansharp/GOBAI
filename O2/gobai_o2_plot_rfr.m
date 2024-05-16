@@ -5,7 +5,7 @@ try
         float_file_ext;numtrees;minLeafSize});
     mod_type = 'RFR';
     %plot_gobai_mean;
-    plot_gobai_animation;
+    plot_gobai_animation('o2',dir_base,base_grid,num_clusters,mod_type)
     disp('success!');
 catch ME
     display_error_info(ME);

@@ -85,10 +85,17 @@ save(['Config/ffnn_config_' num2str(train_ratio*100) '_' ...
     num2str(val_ratio*100) '_' num2str(test_ratio*100) '.mat']);
 clear
 
-%% create GBM configuration files
+%% create GBM stumps configuration files
 clear
-for numstumps = [100 200 400 600 800 1000]
-    save(['Config/gbm_config_' num2str(numstumps) '.mat']);
+for numstumps = [100 200 400 600 800 1000 2000 5000]
+    save(['Config/gbm_config_stumps_' num2str(numstumps) '.mat']);
+end
+clear
+
+%% create GBM bins configuration files
+clear
+for numbins = [10:10:100 200 500 1000]
+    save(['Config/gbm_config_bins_' num2str(numbins) '.mat']);
 end
 clear
 

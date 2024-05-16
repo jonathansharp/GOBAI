@@ -7,8 +7,7 @@
 %
 % DATE: 3/20/2024
 
-function plot_data_by_cluster(param,base_grid,file_date,float_file_ext,...
-    clust_vars,num_clusters)
+function plot_data_by_cluster(param,base_grid,file_date,float_file_ext,num_clusters)
 
 %% process parameter name
 param1 = param_name(param);
@@ -23,10 +22,11 @@ load([param1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' 
 % define pressure axis
 pressures = sort(unique(all_data.pressure));
 % open parallel pool
-parpool;
+tic; parpool(8); fprintf('Pool initiation:'); toc;
 % make plots
 parfor p = 1:length(pressures)
-    h=figure('visible','off','Position',[100 100 800 400]); hold on;
+    % plot data by cluster
+    figure('visible','off','Position',[100 100 800 400]); hold on;
     idx = all_data.pressure == pressures(p);
     m_proj('robinson','lon',[20 380]);
     m_coast('patch',rgb('grey'));
@@ -35,7 +35,8 @@ parfor p = 1:length(pressures)
     lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
     title(['Data by Cluster (' num2str(pressures(p)) ' dbars)']);
     m_scatter(lon_temp(idx),all_data.latitude(idx),3,all_data_clusters.clusters(idx),'filled');
-    colormap([1,1,1;flipud(jet(num_clusters))]); % white then jet
+    mycolormap = [1,1,1;flipud(jet(num_clusters))]; % white then jet
+    colormap(mycolormap); % white then jet
     clim([-0.5 num_clusters+0.5]);
     c=colorbar;
     c.Limits = [0.5 num_clusters+0.5];
@@ -46,6 +47,31 @@ parfor p = 1:length(pressures)
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
     exportgraphics(gcf,[dname '/clustered_data_' num2str(pressures(p)) '.png']);
     close
+    % plot data by cluster probability
+    for clst = 1:num_clusters
+        figure('visible','off','Position',[100 100 800 400]); hold on;
+        idx = all_data.pressure == pressures(p);
+        m_proj('robinson','lon',[20 380]);
+        m_coast('patch',rgb('grey'));
+        m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
+        lon_temp = convert_lon(convert_lon(all_data.longitude));
+        lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
+        title(['Data by Cluster (' num2str(pressures(p)) ' dbars)']);
+        m_scatter(lon_temp(idx),all_data.latitude(idx),3,...
+            all_data_clusters.(['c' num2str(clst)])(idx),'filled');
+        colormap(customcolormap([0 1],[mycolormap(clst+1,:); 1 1 1]));
+        clim([0 1]);
+        c=colorbar;
+        c.Limits = [0 1];
+        c.Label.String = ['Cluster #' num2str(clst) ' Probability'];
+        c.TickLength = 0;
+        % save figure
+        dname = [param1 '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
+        if ~isfolder([pwd '/' dname]); mkdir(dname); end
+        exportgraphics(gcf,[dname '/clustered_data_probability_c' ...
+            num2str(clst) '_' num2str(pressures(p)) '.png']);
+        close
+    end
 end
 % end parallel session
 delete(gcp('nocreate'));

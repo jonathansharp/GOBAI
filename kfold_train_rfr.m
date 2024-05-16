@@ -57,7 +57,7 @@ fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numtrees) '_lf' num2str(min
 % define model parameters
 NumPredictors = ceil(sqrt(length(variables)));
 % set up parallel pool
-tic; parpool; fprintf('Pool initiation:'); toc;
+tic; parpool(num_clusters); fprintf('Pool initiation:'); toc;
 % evaluate test models for each fold
 for f = 1:num_folds
     % fit test models for each cluster
@@ -91,6 +91,9 @@ for f = 1:num_folds
         fprintf('\n');
         fprintf(['Run RFR - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
         fprintf('\n');
+        % save test output (NaNs) for each cluster
+        if ~isfolder([pwd '/' rfr_dir]); mkdir(rfr_dir);end
+        parsave([rfr_dir '/' rfr_fnames{f,c}],output,'output');
         [~]=toc;
       end
     end
