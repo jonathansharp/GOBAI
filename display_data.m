@@ -31,13 +31,33 @@ for z = 1:length(zi)
     float_std(z) = std(float_data.(param5)(idx_float));
 end
 figure; hold on;
-plot(float_mean,zi);
+title('Average Float Profile');
+plot(float_mean,zi,'linewidth',3);
+scatter(float_mean,zi,'.k');
 fill([float_mean+float_std;flipud(float_mean-float_std)],...
     [zi;flipud(zi)],clrs(1,:),'FaceAlpha',0.25,'LineStyle','none');
 set(gca,'YDir','reverse');
+ylabel('Depth (dbar)');
+xlabel('[O_{2}] (\mumol kg^{-1})');
 hold off;
 exportgraphics(gcf,[param1 '/Figures/Data/mean_float_profile_' file_date float_file_ext '.png']);
 close
+% floats (individual profiles)
+figure; hold on;
+title('5% of Float Profiles');
+profs = unique(float_data.PROF_ID);
+for z = 1:length(profs)/20
+    idx = float_data.PROF_ID == profs(z*20);
+    plot(float_data.(param5)(idx),float_data.PRES(idx));
+end
+set(gca,'YDir','reverse');
+ylabel('Depth (dbar)');
+xlabel('[O_{2}] (\mumol kg^{-1})');
+hold off;
+exportgraphics(gcf,[param1 '/Figures/Data/all_float_profiles_' file_date float_file_ext '.png']);
+close
+% clean up
+clear idx idx_float float_mean float_std profs z zi
 % glodap (depth average)
 zi = ([2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
 glodap_mean = nan(size(zi));
@@ -48,7 +68,8 @@ for z = 1:length(zi)
     glodap_std(z) = std(glodap_data.(param5)(idx_glodap),'omitnan');
 end
 figure; hold on;
-plot(glodap_mean,zi);
+plot(glodap_mean,zi,'linewidth',3);
+scatter(glodap_mean,zi,'.k');
 fill([glodap_mean+glodap_std;flipud(glodap_mean-glodap_std)],...
     [zi;flipud(zi)],clrs(1,:),'FaceAlpha',0.25,'LineStyle','none');
 set(gca,'YDir','reverse');
@@ -64,11 +85,10 @@ for z = 1:length(profs)
 end
 set(gca,'YDir','reverse');
 hold off;
-exportgraphics(gcf,[param1 '/Figures/Data/all_float_profiles_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param1 '/Figures/Data/all_glodap_profiles_' num2str(glodap_year) '.png']);
 close
 % clean up
-clear clrs idx idx_float idx_glodap float_mean float_std 
-clear glodap_mean glodap_std profs z zi
+clear clrs idx idx_glodap glodap_mean glodap_std profs z zi
 
 %% Display data distribution
 

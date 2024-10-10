@@ -85,7 +85,7 @@ if snap_download == 1
     if ~exist('BGC_Argo_Snapshots','dir'); mkdir('BGC_Argo_Snapshots'); end
     if exist(['BGC_Argo_Snapshots/' num2str(snap_date) '-BgcArgoSprof/'],'dir') ~= 7
         url = 'https://www.seanoe.org/data/00311/42182/data/';
-        websave(filename,[url filename]); % doenload zipped file
+        websave(filename,[url filename]); % download zipped file
         gunzip(filename,'BGC_Argo_Snapshots'); % unzip file
         % define tarball name
         tarname = regexp(filename, '\d+\.tar', 'match', 'once');
@@ -97,11 +97,14 @@ if snap_download == 1
         % clean up
         delete(filename);
         delete(['BGC_Argo_Snapshots/' tarname]);
+        disp('Float snapshot acquired.')
+    else
+        disp('Float snapshot already downloaded.')
     end
     clear url snap_url isnap filename tarname
-    disp('Float snapshot acquired.')
+    
 else
-    disp('Float snapshot already downloaded.')
+    disp('Float snapshot download not requested.')
 end
 
 %% Only do all this if downloaded float matlab file does not exist
@@ -206,7 +209,7 @@ for n = 1:length(idx_folders) % for each DAC
             m_scatter(lon_temp,float.(['F' floatnum]).LATITUDE,'.k');
             clear lon_temp
 
-            %% Loop trough floats, interpolate profiles, and log data
+            %% Loop through floats, interpolate profiles, and log data
             for k = 1:numel(vars) % for each variable
                 % index based on data mode
                 mode_idx = false(n_levels,n_prof);
@@ -239,16 +242,40 @@ for n = 1:length(idx_folders) % for each DAC
                             temp_var(temp_pres>1950) = [];
                             temp_pres(temp_pres>1950) = [];
                         end
+
                         % interpolate to edges (with extrapolation)
                         [~,unique_idx_pres] = unique(temp_pres);
                         temp_var_i = interp1(temp_pres(unique_idx_pres),...
                             temp_var(unique_idx_pres),zi,'linear','extrap');
+                        
                         % remove interpolated data more than 100m from a measurement
                         index_from = false(size(zi));
                         for z = 1:length(zi)
                             index_from(z) = any(abs(temp_pres-zi(z)) < 100);
                         end
                         temp_var_i(~index_from) = NaN;
+
+                        if str2double(floatnum)*1000 + float.(['F' floatnum]).CYCLE_NUMBER(p) == 5901464005
+                            keyboard
+                        end
+
+                        % if there is a greater than 0.5 % change per meter
+                        % at the bottom of the profile or 1% change per
+                        % meter at the top, remove extrapolated values
+                        pres_axis = temp_pres(unique_idx_pres);
+                        var_axis = temp_var(unique_idx_pres);
+                        % bottom
+                        bot_gradient = abs((100*((var_axis(end)-var_axis(end-1))./...
+                            var_axis(end)))./(pres_axis(end)-pres_axis(end-1)));
+                        if bot_gradient > 0.5
+                            temp_var_i(zi>max(pres_axis)) = NaN;
+                        end
+                        % top
+                        top_gradient = abs((100*((var_axis(2)-var_axis(1))./...
+                            var_axis(2)))./(pres_axis(2)-pres_axis(1)));
+                        if top_gradient > 5
+                            temp_var_i(zi<min(pres_axis)) = NaN;
+                        end
 
                         % log interpolated profile
                         float.(['F' floatnum]).([vars{k} '_ADJUSTEDi'])(:,p) = temp_var_i;
@@ -264,7 +291,7 @@ for n = 1:length(idx_folders) % for each DAC
                 % save a random profile every 100 floats
                 if k == 3 && mod(counter,100) == 0
                     prof_to_plot = randi(n_prof);
-                    figure('visible','on');
+                    figure('visible','off');
                     plot(float.(['F' floatnum]).([vars{k} '_ADJUSTED'])(:,prof_to_plot),...
                         float.(['F' floatnum]).PRES_ADJUSTED(:,prof_to_plot),'linewidth',2);
                     info = gcf; info.Position(4) = info.Position(4)*2;
@@ -277,6 +304,7 @@ for n = 1:length(idx_folders) % for each DAC
                         mkdir([param1 '/Figures/Data/Profiles']); end
                     exportgraphics(gcf,[param1 '/Figures/Data/Profiles/float_' ...
                         num2str(floatnum) '_prof' num2str(prof_to_plot) '.png']);
+                    close
                 end
  
             end
@@ -379,9 +407,11 @@ close all
 % display information
 disp('Float data processed and saved.')
 
-end
+else
 
 % display information
 disp('Float data already processed.')
+
+end
 
 end

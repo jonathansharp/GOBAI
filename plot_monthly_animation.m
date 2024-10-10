@@ -34,7 +34,8 @@ for y = 1:length(year)
         
         % O2 map
         figure(h1); clf;
-        m_proj('orthographic','lon',260,'lat',0)
+        % m_proj('orthographic','lon',260,'lat',0)
+        m_proj('orthographic','lon',260,'lat',0);
         m_pcolor(double(GOBAI.lon)-0.5,double(GOBAI.lat)-0.5,GOBAI.oxy(:,:,pres_idx)');
         m_coast('patch',rgb('grey'));
         m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);

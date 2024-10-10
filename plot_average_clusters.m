@@ -1,5 +1,5 @@
 %% Plot cluster averages
-pressures = [2.5 100 500 1000 1975];
+pressures = [10 100 500 1000 1975];
 parfor d = 1:length(pressures)
     % establish figure
     h=figure('visible','off','Position',[100 100 800 400]);

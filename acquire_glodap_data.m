@@ -104,6 +104,15 @@ for f = 1:length(stations) % for each unique station id
             temp_var_i = interp1(temp_pres(unique_idx_pres),...
                 temp_var(unique_idx_pres),zi,'linear');
 
+            % if there is a greater than 0.1 % change per meter
+            % at the bottom of the profile, remove extrapolated values
+            pres_axis = temp_pres(unique_idx_pres);
+            var_axis = temp_var(unique_idx_pres);
+            if abs((100*((var_axis(end)-var_axis(end-1))./var_axis(end)))./...
+                    (pres_axis(end)-pres_axis(end-1))) > 0.5
+                temp_var_i(zi>max(pres_axis)) = NaN;
+            end
+
             % log interpolated profiles in data structure
             glodap_data.(varsi{k}) = [glodap_data.(varsi{k});temp_var_i];
 

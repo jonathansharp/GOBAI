@@ -10,7 +10,7 @@
 
 function train_ffnn(param,dir_base,base_grid,file_date,...
         float_file_ext,glodap_only,num_clusters,variables,...
-        train_ratio,val_ratio,test_ratio,thresh)
+        train_ratio,val_ratio,test_ratio,thresh,numWorkers_train)
 
 %% process parameter name
 [param1,param2] = param_name(param);
@@ -44,7 +44,7 @@ end
 %% fit FFNNs using all data
 
 % set up parallel pool
-tic; parpool(num_clusters); fprintf('Pool initiation:'); toc;
+%tic; parpool(numWorkers_train); fprintf('Pool initiation:'); toc;
 
 % start timing training
 tic
@@ -54,7 +54,7 @@ nodes1 = [5 10 15];
 nodes2 = [15 10 5];
 
 % fit models for each cluster
-parfor c = 1:num_clusters
+for c = 1:num_clusters
 
   % start timing fit
   tic

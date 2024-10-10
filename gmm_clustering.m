@@ -7,17 +7,19 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 12/1/2023
+% DATE: 6/18/2024
 
 function gmm_clustering(base_grid,clust_vars,num_clusters,numWorkers_predict)
 
 % check for existence of model
 if exist(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model.mat'],'file') ~= 2
 
-%% load temperature and salinity climatological data
+%% load climatological data
 if strcmp(base_grid,'RG')
+    % load practical salinity and in situ temperature
     [TS,timesteps] = load_RG_dim([pwd '/Data/RG_CLIM/']);
     TS = load_RG_clim(TS,[pwd '/Data/RG_CLIM/']);
+    % calculate absolute salinity and conservative temperature
     TS = replicate_RG_dim(TS,12);
     idx = ~isnan(TS.salinity) & ~isnan(TS.temperature);
     TS.salinity_abs = nan(size(idx));
@@ -27,11 +29,28 @@ if strcmp(base_grid,'RG')
     TS.temperature_cns(idx) = ...
         gsw_CT_from_t(TS.salinity_abs(idx),TS.temperature(idx),TS.pressure(idx));
     TS = rmfield(TS,{'temperature' 'salinity'});
+    % load chlorophyll
+
 elseif strcmp(base_grid,'RFROM')
+    % load absolute salinity and conservative temperature
     [TS,timesteps] = load_RFROM_dim([pwd '/Data/RFROM/']);
     TS = load_RFROM_clim(TS,[pwd '/Data/RFROM/']);
     TS = replicate_RFROM_dim(TS,1);
+    % load chlorophyll 
 end
+
+%% load chlorophyll climatological data
+% if strcmp(base_grid,'RG')
+%     load_chl();
+% 
+% elseif strcmp(base_grid,'RFROM')
+%     fpath = 'Data/RFROM/RFROM_CHL_CMEMS_annual/';
+%     chl = ncread(fpath,'ocean_temperature');
+% 
+% end
+
+%% load basin mask file
+
 
 %% fit GMM from climatological mean temperature and salinity
 % Some replicates don't converge, investigate further...
@@ -44,13 +63,13 @@ for v = 1:length(clust_vars)
 end
 [X_norm,C,S] = normalize(predictor_matrix);
 clear TS
-% reduce inputs for model training to 1,000,000 random data points
-idx_rand = randperm(length(X_norm),1000000)';
+% reduce inputs for model training to 100,000 random data points
+idx_rand = randperm(length(X_norm),10000)';
 X_norm = X_norm(idx_rand,:);
 % fit GMM
 gmm = fitgmdist(X_norm,num_clusters,...
     'CovarianceType','full',...
-    'SharedCovariance',true,'Replicates',50);
+    'SharedCovariance',true,'Replicates',20);
 % save GMM model
 if ~isfolder(['Data/GMM_' base_grid '_' num2str(num_clusters)])
     mkdir(['Data/GMM_' base_grid '_' num2str(num_clusters)]);
@@ -69,16 +88,16 @@ tic
 load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model'],'gmm','C','S');
 
 % set up parallel pool
-p = setup_pool(numWorkers_predict);
+%p = setup_pool(numWorkers_predict);
 
 % for each month
-parfor m = 1:timesteps
+for m = 1%1:timesteps
     % load T/S grid
     if strcmp(base_grid,'RG')
         % load dimensions
         TS = load_RG_dim([pwd '/Data/RG_CLIM/']);
         TS = replicate_RG_dim(TS,1);
-        % get RG T/S
+        % get RG practical salinity and in situ temperature
         TS.temperature = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],...
             'Temperature',[1 1 1 m],[Inf Inf Inf 1]);
         TS.salinity = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Sal.nc'],...
@@ -109,7 +128,7 @@ parfor m = 1:timesteps
         nc_atts = ncinfo([pwd '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
         for w = 1:nc_atts.Dimensions(3).Length
-            % get RFROM T and S
+            % get RFROM absolute salinity and conservative temperature
             TS.temperature_cns = ncread([pwd '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                 'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
@@ -129,6 +148,7 @@ parfor m = 1:timesteps
         end
     end
 end
+
 % end parallel session
 delete(gcp('nocreate'));
 

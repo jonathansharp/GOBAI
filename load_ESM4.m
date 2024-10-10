@@ -1,63 +1,59 @@
-% load_GFDL_ESM4
-%
-% DESCRIPTION:
-% This function imports GFDL-ESM4 model data to use in an OSSE for
-% GOBAI-O2 if a processed data file for the .
-%
-% AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
-%
-% DATE: 10/05/2023
+function [ESM4,xdim,ydim,zdim,tdim] = load_ESM4(fpath,snap_date)
 
-function ESM4 = load_GFDL_ESM4(model_path)
+% process date
+start_year = 2004;
+start_month = 1;
+date_str = num2str(snap_date);
+end_year = str2double(date_str(1:4));
+end_month = str2double(date_str(5:6));
 
-%% import historical and projected GFDL-ESM4 data
 % define paths
-path1 = 'GFDL-ESM4/';
+path1_hist = [fpath 'historical/native_grid/'];
+path1_ssp = [fpath 'ssp245/native_grid/'];
 path2 = '_Omon_GFDL-ESM4_';
 path3 = '_r1i1p1f1_gr_';
 % load time
-time_hist = ncread([model_path path1 'historical/native_grid/o2' path2 'historical' path3 '185001-201412.nc'],'time');
+time_hist = ncread([path1_hist 'o2' path2 'historical' path3 '185001-201412.nc'],'time');
 time_hist = daynoleap2datenum(time_hist-1,1850);
-time_hist_sal = ncread([model_path path1 'historical/native_grid/so' path2 'historical' path3 '199001-200912.nc'],'time');
+time_hist_sal = ncread([path1_hist 'so' path2 'historical' path3 '199001-200912.nc'],'time');
 time_hist_sal = daynoleap2datenum(time_hist_sal-1,1850);
-time_ssp = ncread([model_path path1 'ssp245/native_grid/o2' path2 'ssp245' path3 '201501-210012.nc'],'time');
+time_ssp = ncread([path1_ssp 'o2' path2 'ssp245' path3 '201501-210012.nc'],'time');
 time_ssp = daynoleap2datenum(time_ssp-1,1850);
 % create time indices
-time_min = datenum([2004 1 15]);
+time_min = datenum([start_year start_month 15]);
 time_strt = find(abs(time_hist-time_min)==min(abs(time_hist-time_min)));
 time_strt_sal = find(abs(time_hist_sal-time_min)==min(abs(time_hist_sal-time_min)));
-time_max = datenum([2022 12 15]);
+time_max = datenum([end_year end_month 15]);
 time_end = find(abs(time_ssp-time_max)==min(abs(time_ssp-time_max)));
-ESM4.time = [time_hist(time_strt:end);time_ssp(1:time_end)];
+ESM4.time = single([time_hist(time_strt:end);time_ssp(1:time_end)]);
 % load other 1-D model variables
-ESM4.lon = ncread([model_path path1 'historical/native_grid/o2' path2 'historical' path3 '185001-201412.nc'],'lon');
-ESM4.lat = ncread([model_path path1 'historical/native_grid/o2' path2 'historical' path3 '185001-201412.nc'],'lat');
-ESM4.depth = ncread([model_path path1 'historical/native_grid/o2' path2 'historical' path3 '185001-201412.nc'],'lev');
+ESM4.lon = single(ncread([path1_hist 'o2' path2 'historical' path3 '185001-201412.nc'],'lon'));
+ESM4.lat = single(ncread([path1_hist 'o2' path2 'historical' path3 '185001-201412.nc'],'lat'));
+ESM4.depth = single(ncread([path1_hist 'o2' path2 'historical' path3 '185001-201412.nc'],'lev'));
 % load 4-D model variables
-inf = ncinfo([model_path path1 'historical/native_grid/o2' path2 'historical' path3 '185001-201412.nc']);
-ESM4.oxy = cat(4,ncread([model_path path1 'historical/native_grid/o2' path2 'historical' path3 '185001-201412.nc'],'o2',[1 1 1 time_strt],[360 180 35 inf.Dimensions(4).Length-time_strt+1]),...
-    ncread([model_path path1 'ssp245/native_grid/o2' path2 'ssp245' path3 '201501-210012.nc'],'o2',[1 1 1 1],[360 180 35 time_end]));
-ESM4.theta = cat(4,ncread([model_path path1 'historical/native_grid/thetao' path2 'historical' path3 '185001-201412.nc'],'thetao',[1 1 1 time_strt],[360 180 35 inf.Dimensions(4).Length-time_strt+1]),...
-    ncread([model_path path1 'ssp245/native_grid/thetao' path2 'ssp245' path3 '201501-210012.nc'],'thetao',[1 1 1 1],[360 180 35 time_end]));
-inf = ncinfo([model_path path1 'historical/native_grid/so' path2 'historical' path3 '199001-200912.nc']);
-ESM4.sal = cat(4,ncread([model_path path1 'historical/native_grid/so' path2 'historical' path3 '199001-200912.nc'],'so',[1 1 1 time_strt_sal],[360 180 35 inf.Dimensions(4).Length-time_strt_sal+1]),...
-    ncread([model_path path1 'historical/native_grid/so' path2 'historical' path3 '201001-201412.nc'],'so'),...
-    ncread([model_path path1 'ssp245/native_grid/so' path2 'ssp245' path3 '201501-203412.nc'],'so',[1 1 1 1],[360 180 35 time_end]));
-% ESM4.chl = cat(4,ncread([model_path path1 'historical/native_grid/chl' path2 'historical' path3 '199001-200912.nc'],'chl',[1 1 1 time_strt_sal],[360 180 35 inf.Dimensions(4).Length-time_strt_sal+1]),...
-%     ncread([model_path path1 'historical/native_grid/chl' path2 'historical' path3 '201001-201412.nc'],'chl'),...
-%     ncread([model_path path1 'ssp245/native_grid/chl' path2 'ssp245' path3 '201501-203412.nc'],'chl',[1 1 1 1],[360 180 35 time_end]));
+idx_depth = find(ESM4.depth < 2100); ESM4.depth = ESM4.depth(idx_depth);
+inf = ncinfo([path1_hist 'o2' path2 'historical' path3 '185001-201412.nc']);
+ESM4.oxy = single(cat(4,ncread([path1_hist 'o2' path2 'historical' path3 '185001-201412.nc'],'o2',[1 1 1 time_strt],[360 180 max(idx_depth) inf.Dimensions(4).Length-time_strt+1]),...
+    ncread([path1_ssp 'o2' path2 'ssp245' path3 '201501-210012.nc'],'o2',[1 1 1 1],[360 180 max(idx_depth) time_end])));
+ESM4.theta = single(cat(4,ncread([path1_hist 'thetao' path2 'historical' path3 '185001-201412.nc'],'thetao',[1 1 1 time_strt],[360 180 max(idx_depth) inf.Dimensions(4).Length-time_strt+1]),...
+    ncread([path1_ssp 'thetao' path2 'ssp245' path3 '201501-210012.nc'],'thetao',[1 1 1 1],[360 180 max(idx_depth) time_end])));
+inf = ncinfo([path1_hist 'so' path2 'historical' path3 '199001-200912.nc']);
+ESM4.sal = single(cat(4,ncread([path1_hist 'so' path2 'historical' path3 '199001-200912.nc'],'so',[1 1 1 time_strt_sal],[360 180 max(idx_depth) inf.Dimensions(4).Length-time_strt_sal+1]),...
+    ncread([path1_hist 'so' path2 'historical' path3 '201001-201412.nc'],'so',[1 1 1 1],[360 180 max(idx_depth) 60]),...
+    ncread([path1_ssp 'so' path2 'ssp245' path3 '201501-203412.nc'],'so',[1 1 1 1],[360 180 max(idx_depth) time_end])));
+% ESM4.chl = cat(4,ncread([path1_hist 'chl' path2 'historical' path3 '199001-200912.nc'],'chl',[1 1 1 time_strt_sal],[360 180 max(idx_depth) inf.Dimensions(4).Length-time_strt_sal+1]),...
+%     ncread([path1_hist 'chl' path2 'historical' path3 '201001-201412.nc'],'chl'),...
+%     ncread([path1_ssp 'chl' path2 'ssp245' path3 '201501-203412.nc'],'chl',[1 1 1 1],[360 180 max(idx_depth) time_end]));
+clear path1_hist path1_ssp path2 path3 time_hist time_hist_sal time_ssp
+clear inf time_min time_strt time_strt_sal time_max time_end
 
-%% process imported GFDL-ESM4 data
 % limit chlorophyll to only surface values (to match observations)
 % ESM4.chl = repmat(ESM4.chl(:,:,1,:),1,1,length(ESM4.depth),1);
 
 % convert longitude to -180 to 180
-% ESM4.lon(ESM4.lon>180) = ESM4.lon(ESM4.lon>180) - 360;
+ESM4.lon(ESM4.lon>180) = ESM4.lon(ESM4.lon>180) - 360;
 
-% index to above 2100 m
-idx_depth = ESM4.depth < 2100;
-
-% % mask grid cells outside the RG domain
+% mask grid cells outside the RG domain
 % load RG_surface_mask
 % RG_surface_mask.mask = ...
 %     [RG_surface_mask.mask(341:end,:);RG_surface_mask.mask(1:340,:)];
@@ -66,20 +62,8 @@ idx_depth = ESM4.depth < 2100;
 % ESM4.oxy(~RG_surface_mask.mask) = NaN;
 % ESM4.theta(~RG_surface_mask.mask) = NaN;
 % ESM4.sal(~RG_surface_mask.mask) = NaN;
-% % ESM4.chl(~RG_surface_mask.mask) = NaN;
+% ESM4.chl(~RG_surface_mask.mask) = NaN;
 % clear RG_surface_mask
-
-% convert to singles
-ESM4.lon = single(ESM4.lon);
-ESM4.lat = single(ESM4.lat);
-ESM4.depth = single(ESM4.depth(idx_depth));
-ESM4.time = single(ESM4.time);
-ESM4.oxy = single(ESM4.oxy(:,:,idx_depth,:));
-ESM4.sal = single(ESM4.sal(:,:,idx_depth,:));
-ESM4.theta = single(ESM4.theta(:,:,idx_depth,:));
-% ESM4.chl_log = single(log10(ESM4.chl(:,:,idx_depth,:)));
-% ESM4 = rmfield(ESM4,'chl');
-clear idx_depth
 
 % establish dimensions
 xdim = length(ESM4.lon);
@@ -95,35 +79,31 @@ ESM4.day = single(datenum(date) - datenum(date0));
 ESM4.year = single(date(:,1));
 clear date date0
 
-% expand coordinates to 4-D variables
-ESM4.lon = repmat(ESM4.lon,1,ydim,zdim,tdim);
-ESM4.lat = repmat(ESM4.lat',xdim,1,zdim,tdim);
-ESM4.depth = repmat(permute(ESM4.depth,[3 2 1]),xdim,ydim,1,tdim);
-ESM4.time = repmat(permute(ESM4.time,[4 3 2 1]),xdim,ydim,zdim,1);
-ESM4.day = repmat(permute(ESM4.day,[4 3 2 1]),xdim,ydim,zdim,1);
-ESM4.year = repmat(permute(ESM4.year,[4 3 2 1]),xdim,ydim,zdim,1);
+% expand coordinates to 3-D variables
+ESM4.lon = repmat(ESM4.lon,1,ydim,zdim);
+ESM4.lat = repmat(ESM4.lat',xdim,1,zdim);
+ESM4.depth = repmat(permute(ESM4.depth,[3 2 1]),xdim,ydim,1);
 
 % calculate pressure, absolute salinity, conservative temperature,
 % potential density, and distance from shore
-ESM4.pres = single(nan(size(ESM4.sal)));
+ESM4.pres = -gsw_p_from_z(ESM4.depth,ESM4.lat);
 ESM4.abs_sal = single(nan(size(ESM4.sal)));
 ESM4.cns_tmp = single(nan(size(ESM4.sal)));
 ESM4.tmp = single(nan(size(ESM4.sal)));
 ESM4.sigma = single(nan(size(ESM4.sal)));
 ESM4.dens = single(nan(size(ESM4.sal)));
-for m = 1:size(ESM4.time,4)
-    ESM4.pres(:,:,:,m) = -gsw_p_from_z(ESM4.depth(:,:,:,m),ESM4.lat(:,:,:,m));
-    ESM4.abs_sal(:,:,:,m) = gsw_SA_from_SP(ESM4.sal(:,:,:,m),ESM4.pres(:,:,:,m),ESM4.lon(:,:,:,m),ESM4.lat(:,:,:,m));
+for m = 1:length(ESM4.time)
+    ESM4.abs_sal(:,:,:,m) = gsw_SA_from_SP(ESM4.sal(:,:,:,m),ESM4.pres,ESM4.lon,ESM4.lat);
     ESM4.cns_tmp(:,:,:,m) = gsw_CT_from_pt(ESM4.abs_sal(:,:,:,m),ESM4.theta(:,:,:,m));
-    ESM4.tmp(:,:,:,m) = gsw_t_from_pt0(ESM4.abs_sal(:,:,:,m),ESM4.theta(:,:,:,m),ESM4.pres(:,:,:,m));
+    ESM4.tmp(:,:,:,m) = gsw_t_from_pt0(ESM4.abs_sal(:,:,:,m),ESM4.theta(:,:,:,m),ESM4.pres);
     ESM4.sigma(:,:,:,m) = gsw_sigma0(ESM4.abs_sal(:,:,:,m),ESM4.cns_tmp(:,:,:,m));
-    ESM4.dens(:,:,:,m) = gsw_rho(ESM4.abs_sal(:,:,:,m),ESM4.cns_tmp(:,:,:,m),ESM4.pres(:,:,:,m));
+    ESM4.dens(:,:,:,m) = gsw_rho(ESM4.abs_sal(:,:,:,m),ESM4.cns_tmp(:,:,:,m),ESM4.pres);
 end
 
 % reduce coordinates back to 1-D variables
-ESM4.lon = squeeze(ESM4.lon(:,1,1,1));
-ESM4.lat = squeeze(ESM4.lat(1,:,1,1))';
-ESM4.depth = squeeze(ESM4.depth(1,1,:,1));
+ESM4.lon = squeeze(ESM4.lon(:,1,1));
+ESM4.lat = squeeze(ESM4.lat(1,:,1))';
+ESM4.depth = squeeze(ESM4.depth(1,1,:));
 ESM4.time = squeeze(ESM4.time(1,1,1,:));
 ESM4.day = squeeze(ESM4.day(1,1,1,:));
 ESM4.year = squeeze(ESM4.year(1,1,1,:));
@@ -154,9 +134,7 @@ ESM4.oxy_sat = o2satv2b(ESM4.sal,ESM4.tmp);
 ESM4 = rmfield(ESM4,{'day' 'theta'});
 
 % save processed ESM4 data
-save(['GFDL-ESM4/ESM4_processed'],'ESM4','-v7.3')
-
-%% Create plots
+save(['Data/ESM4_processed_' date_str],'ESM4','-v7.3')
 
 % Plot T at 20 m
 figure; worldmap([-90 90],[20 380]);
@@ -219,3 +197,4 @@ if ~exist('Figures/Surface_Plots','dir'); mkdir('Figures/Surface_Plots'); end
 exportgraphics(gcf,'Figures/Surface_Plots/oxy_20_m_ESM4.png');
 close
 
+end

@@ -1,14 +1,18 @@
 % create directory
 if ~isfolder('Config'); mkdir('Config'); end
 
-%% create number of workers configuration files
+%% create systemsconfiguration files
 numWorkers_train = 40;
 numWorkers_predict = 20;
-save('Config/workers_hercules.mat');
+model_path = 'TBD';
+snap_download = 0;
+save('Config/hercules.mat');
 clear
-numWorkers_train = 8;
-numWorkers_predict = 4;
-save('Config/workers_chinook.mat');
+numWorkers_train = 2;
+numWorkers_predict = 1;
+model_path = '/raid/Model/CMIP6/';
+snap_download = 1;
+save('Config/chinook.mat');
 clear
 
 %% create data download configuration file for adjusted and DMQC
@@ -16,7 +20,6 @@ clear
 snap_date = 202402;
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_year = 2023;
-snap_download = 0;
 data_modes = {'A' 'D'};
 float_file_ext = '_A_D';
 save(['Config/load_data_config' float_file_ext '.mat']);
@@ -47,11 +50,29 @@ clear
 glodap_only = false; % EDIT THIS TO 'true' TO TEST WITH GLODAP DATA ONLY
 thresh = 0.05;
 for num_folds = [5 10] % number of folds
-    variables = ... % variables for algorithms
-        {'latitude' 'lon_cos_1' 'lon_cos_2' 'pressure' 'sigma' ...
-        'temperature_cns' 'salinity_abs' 'day_sin' 'day_cos' 'year'};
     save(['Config/kfold_config_' num2str(num_folds) '.mat']);
 end
+clear
+
+%% create algorithm training files
+
+% all variables
+variables = ... % variables for algorithms
+    {'latitude' 'lon_cos_1' 'lon_cos_2' 'pressure' 'sigma' ...
+    'temperature_cns' 'salinity_abs' 'day_sin' 'day_cos' 'year'};
+save('Config/vars_config_all.mat');
+
+% no spatiotemporal coordinates
+variables = ... % variables for algorithms
+    {'sigma' 'temperature_cns' 'salinity_abs'};
+save('Config/vars_config_no_coords.mat');
+
+% no time
+variables = ... % variables for algorithms
+    {'latitude' 'lon_cos_1' 'lon_cos_2' 'pressure' 'sigma' ...
+    'temperature_cns' 'salinity_abs'};
+save('Config/vars_config_no_time.mat');
+
 clear
 
 %% create RFR configuration files

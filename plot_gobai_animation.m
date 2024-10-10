@@ -1,3 +1,4 @@
+
 %% Plot GOBAI over time
 
 function plot_gobai_animation(param,dir_base,base_grid,num_clusters,mod_type)
@@ -9,9 +10,9 @@ param1 = param_name(param);
 pressures = [2.5 10 50 100 200 300 500 1000 1500 1975];
 
 % set up parallel pool
-tic; parpool(length(pressures)); fprintf('Pool initiation:'); toc;
+% p = setup_pool(numWorkers_train);
 
-parfor d = 1:length(pressures)
+for d = 4%1:length(pressures)
     % create folder
     dname = [param1 '/Figures/GOBAI/' base_grid '_' mod_type '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
@@ -45,10 +46,10 @@ parfor d = 1:length(pressures)
     % set counter
     cnt = 1;
     % establish fiugre
-    h = figure('color','w','visible','off');
+    h = figure('color','w','visible','on');
     axis tight manual
     % plot clusters each month/week
-    for m = 1:timesteps
+    for m = 121%1:timesteps
         if strcmp(base_grid,'RG')
             % clear frame
             clf
@@ -69,6 +70,12 @@ parfor d = 1:length(pressures)
             c.Limits = [0 350];
             c.Label.String = '[O_{2}] (\mumol kg^{-1})';
             c.TickLength = 0;
+            % save frame
+            if ~isfolder([dname '/' num2str(pressures(d)) 'dbars'])
+                mkdir([dname '/' num2str(pressures(d)) 'dbars']);
+            end
+            exportgraphics(h,[dname '/' num2str(pressures(d)) ...
+                'dbars/m' num2str(m) '_w1.png']);
             % capture frame
             frame = getframe(h);
             im = frame2im(frame);
@@ -102,6 +109,12 @@ parfor d = 1:length(pressures)
                 c.Limits = [0 350];
                 c.Label.String = '[O_{2}] (\mumol kg^{-1})';
                 c.TickLength = 0;
+                % save frame
+                if ~isfolder([dname '/' num2str(pressures(d)) 'dbars'])
+                    mkdir([dname '/' num2str(pressures(d)) 'dbars']);
+                end
+                exportgraphics(h,[dname '/' num2str(pressures(d)) ...
+                    'dbars/m' num2str(m) '_w' num2str(w) '.png']);
                 % capture frame
                 frame = getframe(h);
                 im = frame2im(frame);
@@ -119,7 +132,6 @@ parfor d = 1:length(pressures)
     end
     close
     % display information
-    dname
     disp(['GOBAI-' param1 ' (' mod_type ') animation at ' num2str(pressures(d)) ' dbar plotted'])
 end
 
