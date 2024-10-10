@@ -1,6 +1,5 @@
 % Runs all scripts to import and process data for GOBAI-O2
 
-addpath(genpath(pwd));
 try
     acquire_snapshot_data('o2',data_modes,float_file_ext,snap_date,snap_download);
     acquire_glodap_data('o2',glodap_year);
@@ -12,4 +11,3 @@ try
 catch ME
     display_error_info(ME);
 end
-exit

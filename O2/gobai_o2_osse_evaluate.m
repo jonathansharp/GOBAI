@@ -2,7 +2,7 @@
 
 addpath(genpath(pwd));
 try
-    load_GFDL_ESM4;
+    load_GFDL_ESM4(model_path);
     % train_osse_models;
     disp('success!');
 catch ME

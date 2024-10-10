@@ -1,6 +1,5 @@
 % Runs all scripts to cluster data for GOBAI-O2
 
-addpath(genpath(pwd));
 try
     assign_data_to_clusters('o2',base_grid,file_date,float_file_ext,...
         clust_vars,num_clusters);
@@ -13,4 +12,3 @@ try
 catch ME
     display_error_info(ME);
 end
-exit
