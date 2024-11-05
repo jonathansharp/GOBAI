@@ -1,8 +1,8 @@
 % startup.m
 
-% add chinook matlab path
+% add chinook utilities path
 if exist('/raid/sharp/matlab','dir') == 7
-    addpath('/raid/sharp/matlab');
+    addpath(genpath('/raid/sharp/matlab/utilities/'));
 end
 
 % add current path

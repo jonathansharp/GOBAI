@@ -17,7 +17,7 @@ clear
 
 %% create data download configuration file for adjusted and DMQC
 clear
-snap_date = 202402;
+snap_date = 202410;
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_year = 2023;
 data_modes = {'A' 'D'};
@@ -27,7 +27,7 @@ clear
 
 %% create data download configuration file for DMQC only
 clear
-snap_date = 202402;
+snap_date = 202410;
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_year = 2023;
 snap_download = 0; 

@@ -90,6 +90,9 @@ if ~isfolder([pwd '/' param1 '/Data']); mkdir([param1 '/Data']); end
 save([param1 '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) '_' num2str(num_folds) '_'...
     file_date float_file_ext '.mat'],'num_folds','train_idx','test_idx','-v7.3');
 
+%% display information
+disp(['data split into ' num2str(num_folds) ' folds']);
+
 end
 
 end

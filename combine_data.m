@@ -13,7 +13,7 @@ function combine_data(param,float_file_ext,file_date,glodap_year)
 %% process parameter name
 [param1,param2,param3,~,param5] = param_name(param);
 
-if exist([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],'file') ~= 2
+%if exist([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],'file') ~= 2
 
 %% load data after implementing float data adjustment
 load([param1 '/Data/processed_float_' param '_data_adjusted_' file_date float_file_ext '.mat'],...
@@ -76,6 +76,9 @@ all_data.day_sin = sin((2.*pi.*all_data.day)/365.25);
 all_data.day_cos = cos((2.*pi.*all_data.day)/365.25);
 all_data.year = date(:,1);
 
+% calculate depth
+all_data.depth = -gsw_z_from_p(all_data.pressure,all_data.latitude);
+
 %% plot gridded observations
 % determine bin number of each test data point on 1 degree grid
 lon_edges = -180:180; lon = -179.5:179.5;
@@ -120,6 +123,6 @@ save([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.ma
 
 clear
 
-end
+%end
 
 end

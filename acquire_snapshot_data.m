@@ -255,6 +255,7 @@ for n = 1:length(idx_folders) % for each DAC
                         end
                         temp_var_i(~index_from) = NaN;
 
+                        % not sure why this is here...
                         if str2double(floatnum)*1000 + float.(['F' floatnum]).CYCLE_NUMBER(p) == 5901464005
                             keyboard
                         end

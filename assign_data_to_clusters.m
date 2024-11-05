@@ -8,19 +8,27 @@
 %
 % DATE: 10/05/2023
 
-function assign_data_to_clusters(param,base_grid,file_date,float_file_ext,...
+function assign_data_to_clusters(param,base_grid,file_date,snap_date,float_file_ext,...
     clust_vars,num_clusters)
+
+%% process date
+date_str = num2str(snap_date);
 
 %% process parameter name
 param1 = param_name(param);
 
 %% load combined data
-load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
-     'all_data','file_date');
+if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+    load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
+         'all_data','file_date');
+else
+    load([param1 '/Data/' base_grid '_' param '_data_' file_date float_file_ext '.mat'],...
+         'all_data','file_date');
+end
 
 %% assign data points and probabilities to clusters
 % load GMM model
-load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model']);
+load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str]);
 % transform to normalized arrays
 predictor_matrix = [];
 for v = 1:length(clust_vars)
@@ -38,4 +46,5 @@ end
 if ~isfolder([pwd '/Data']); mkdir('Data'); end
 save([param1 '/Data/all_data_clusters_'  base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters','-v7.3');
-clear lon_cos X_norm c C S gmm p
+% display information
+disp(['data assigned to ' num2str(num_clusters) ' clusters on ' base_grid]);

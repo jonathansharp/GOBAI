@@ -7,33 +7,50 @@
 %
 % DATE: 3/20/2024
 
-function plot_data_by_cluster(param,base_grid,file_date,float_file_ext,num_clusters)
+function plot_data_by_cluster(param,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train)
 
 %% process parameter name
 param1 = param_name(param);
 
 %% plot data points by cluster
 % load combined data
-load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
-     'all_data','file_date');
+if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+    load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],'all_data');
+else
+    load([param1 '/Data/' base_grid '_' param '_data_' file_date float_file_ext '.mat'],'all_data');
+end
 % load cluster data
 load([param1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 % define pressure axis
-pressures = sort(unique(all_data.pressure));
+if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+    pressures = sort(unique(all_data.pressure));
+else
+    pressures = sort(unique(all_data.depth));
+end
 % open parallel pool
-tic; parpool(8); fprintf('Pool initiation:'); toc;
+tic; parpool(numWorkers_train); fprintf('Pool initiation:'); toc;
 % make plots
 parfor p = 1:length(pressures)
     % plot data by cluster
-    figure('visible','off','Position',[100 100 800 400]); hold on;
-    idx = all_data.pressure == pressures(p);
+    figure('visible','on','Position',[100 100 800 400]); hold on;
+    % use depth for CMIP models
+    if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+        idx = all_data.pressure == pressures(p);
+    else
+        idx = all_data.depth == pressures(p);
+    end
     m_proj('robinson','lon',[20 380]);
     m_coast('patch',rgb('grey'));
     m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
     lon_temp = convert_lon(convert_lon(all_data.longitude));
     lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
-    title(['Data by Cluster (' num2str(pressures(p)) ' dbars)']);
+    % use depth for CMIP models
+    if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+        title(['Data by Cluster (' num2str(pressures(p)) ' dbars)']);
+    else
+        title(['Data by Cluster (' num2str(pressures(p)) ' meters)']);
+    end
     m_scatter(lon_temp(idx),all_data.latitude(idx),3,all_data_clusters.clusters(idx),'filled');
     mycolormap = [1,1,1;flipud(jet(num_clusters))]; % white then jet
     colormap(mycolormap); % white then jet
@@ -50,13 +67,23 @@ parfor p = 1:length(pressures)
     % plot data by cluster probability
     for clst = 1:num_clusters
         figure('visible','off','Position',[100 100 800 400]); hold on;
-        idx = all_data.pressure == pressures(p);
+        % use depth for CMIP models
+        if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+            idx = all_data.pressure == pressures(p);
+        else
+            idx = all_data.depth == pressures(p);
+        end
         m_proj('robinson','lon',[20 380]);
         m_coast('patch',rgb('grey'));
         m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
         lon_temp = convert_lon(convert_lon(all_data.longitude));
         lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
-        title(['Data by Cluster (' num2str(pressures(p)) ' dbars)']);
+        % use depth for CMIP models
+        if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+            title(['Data by Cluster (' num2str(pressures(p)) ' dbars)']);
+        else
+            title(['Data by Cluster (' num2str(pressures(p)) ' meters)']);
+        end
         m_scatter(lon_temp(idx),all_data.latitude(idx),3,...
             all_data_clusters.(['c' num2str(clst)])(idx),'filled');
         colormap(customcolormap([0 1],[mycolormap(clst+1,:); 1 1 1]));
@@ -73,5 +100,6 @@ parfor p = 1:length(pressures)
         close
     end
 end
+
 % end parallel session
 delete(gcp('nocreate'));

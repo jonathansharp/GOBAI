@@ -8,3 +8,4 @@ load([pwd '/Config/ffnn_config_70_15_15.mat']);
 load([pwd '/Config/gbm_config_stumps_1000.mat']);
 load([pwd '/Config/gbm_config_bins_50.mat']);
 load([pwd '/Config/base_config_RFROM.mat']);
+load([pwd '/Config/vars_config_all.mat']);

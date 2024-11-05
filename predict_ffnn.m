@@ -8,9 +8,16 @@
 %
 % DATE: 1/31/2024
 
-function predict_ffnn(param,dir_base,base_grid,file_date,float_file_ext,...
-    num_clusters,variables,train_ratio,val_ratio,test_ratio,thresh,...
-    numWorkers_predict,years_to_predict)
+function predict_ffnn(param,fpath,base_grid,file_date,float_file_ext,...
+    num_clusters,variables,train_ratio,val_ratio,test_ratio,...
+    thresh,numWorkers_predict,start_year,snap_date,varargin)
+
+%% process date
+date_str = num2str(snap_date);
+
+%% directory base
+dir_base = create_dir_base('FFNN',{base_grid;num_clusters;file_date;...
+    float_file_ext;train_ratio;val_ratio;test_ratio});
 
 %% process parameter name
 [param1,param2,~,~,~,~,~,~,units,long_param_name] = param_name(param);
@@ -35,32 +42,31 @@ end
 
 %% determine timesteps
 % if strcmp(base_grid,'RG')
-%     [~,timesteps] = load_RG_dim([pwd '/Data/RG_CLIM/']);
+%     [~,timesteps] = load_RG_dim([fpath '/Data/RG_CLIM/']);
 % elseif strcmp(base_grid,'RFROM')
-%     [~,timesteps] = load_RFROM_dim([pwd '/Data/RFROM/']);
+%     [~,timesteps] = load_RFROM_dim([fpath '/Data/RFROM/']);
 % end
 
 %% predict property on grid
 
 % set up parallel pool
-tic; parpool(numWorkers_predict); fprintf('Pool initiation:'); toc;
+% tic; parpool(numWorkers_predict); fprintf('Pool initiation:'); toc;
 
 % start timing predictions
 tic
 
 % compute estimates for each month
-m1 = (years_to_predict(1)-2004)*12+1;
-m2 = (years_to_predict(end)-2004)*12+12;
-parfor m = m1:m2
+m_last = (str2num(date_str(1:4))-2004)*12+str2num(date_str(5:6));
+for m = 1:m_last
     if strcmp(base_grid,'RG')
         % load dimensions
-        TS = load_RG_dim([pwd '/Data/RG_CLIM/']);
-        TS = replicate_RG_dim(TS,1);
+        TS = load_RG_dim([fpath '/Data/RG_CLIM/']);
+        TS = replicate_dims(base_grid,TS,1);
         TS.longitude = convert_lon(TS.longitude);
         % get RG T and S
-        TS.temperature = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],'Temperature',...
+        TS.temperature = ncread([fpath '/Data/RG_CLIM/RG_Climatology_Temp.nc'],'Temperature',...
             [1 1 1 m],[Inf Inf Inf 1]);
-        TS.salinity = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Sal.nc'],'Salinity',...
+        TS.salinity = ncread([fpath '/Data/RG_CLIM/RG_Climatology_Sal.nc'],'Salinity',...
             [1 1 1 m],[Inf Inf Inf 1]);
         % covert RG T and S to conservative temperature and absolute salinity
         pres_3d = repmat(permute(TS.Pressure,[3 2 1]),length(TS.Longitude),length(TS.Latitude),1);
@@ -68,7 +74,7 @@ parfor m = m1:m2
         lat_3d = repmat(TS.Latitude',length(TS.Longitude),1,length(TS.Pressure));
         TS.salinity_abs = gsw_SA_from_SP(TS.salinity,pres_3d,convert_lon(lon_3d),lat_3d);
         TS.temperature_cns = gsw_CT_from_t(TS.salinity_abs,TS.temperature,pres_3d);
-        % get RG time variables
+        % get time variables for just this timestep
         TS.Time = ncread('Data/RG_CLIM/RG_Climatology_Temp.nc','Time',m,1);
         date_temp = datevec(datenum(2004,1,1+double(TS.Time)));
         date_temp0 = date_temp;
@@ -84,20 +90,20 @@ parfor m = m1:m2
             thresh,gobai_ffnn_dir,param,units,long_param_name);
     elseif strcmp(base_grid,'RFROM')
         % load dimensions
-        TS = load_RFROM_dim([pwd '/Data/RFROM/']);
-        TS = replicate_RFROM_dim(TS,1);
+        TS = load_RFROM_dim([fpath '/Data/RFROM/']);
+        TS = replicate_dims(base_grid,TS,1);
         % determine number of weeks in file
-        nc_atts = ncinfo([pwd '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
+        nc_atts = ncinfo([fpath '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
         for w = 1:nc_atts.Dimensions(3).Length
             % get RFROM T and S
-            TS.temperature_cns = ncread([pwd '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
+            TS.temperature_cns = ncread([fpath '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                 'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
-            TS.salinity_abs = ncread([pwd '/Data/RFROM/RFROM_SAL_v0.1/RFROM_SAL_STABLE_' ...
+            TS.salinity_abs = ncread([fpath '/Data/RFROM/RFROM_SAL_v0.1/RFROM_SAL_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                 'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
-            % get RFROM time variables
+            % get time variables for just this timestep
             date_temp = datevec(datenum(TS.years(m),TS.months(m),15));
             date_temp0 = date_temp;
             date_temp0(:,2:3) = 1; % Jan. 1 of each year
@@ -108,21 +114,47 @@ parfor m = m1:m2
             TS.day_cos = cos((2.*pi.*TS.day)/365.25);
             % apply ffnn model
             apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
-            base_grid,m,w,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-            thresh,gobai_ffnn_dir,param,units,long_param_name);
+                base_grid,m,w,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
+                thresh,gobai_ffnn_dir,param,units,long_param_name);
         end
+    else
+        % define paths
+        path2 = ['_Omon_' base_grid '_'];
+        path3 = '_r1i1p1f1_gr';
+        % define filepaths
+        nc_filepath_abs_sal = [fpath 'combined/regridded/abs_sal' path2 ...
+            'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+        nc_filepath_cns_tmp = [fpath 'combined/regridded/cns_tmp' path2 ...
+            'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+        % load dimensions
+        TS = load_model_dim(nc_filepath_abs_sal);
+        TS = replicate_dims(base_grid,TS,1);
+        % get practical salinity and in situ temperature from cmip model
+        TS.salinity_abs = ncread(nc_filepath_abs_sal,'abs_sal',[1 1 1 m],[Inf Inf Inf 1]);
+        TS.temperature_cns = ncread(nc_filepath_cns_tmp,'cns_tmp',[1 1 1 m],[Inf Inf Inf 1]);
+        % get time variables for just this timestep
+        TS.Time = ncread(nc_filepath_abs_sal,'time',m,1);
+        date_temp = datevec(datenum(0,0,double(TS.Time)));
+        date_temp0 = date_temp;
+        date_temp0(:,2:3) = 1; % Jan. 1 of each year
+        TS.year = date_temp(:,1);
+        TS.day = datenum(date_temp) - datenum(date_temp0) + 1;
+        % transform day
+        TS.day_sin = sin((2.*pi.*TS.day)/365.25);
+        TS.day_cos = cos((2.*pi.*TS.day)/365.25);
+        % apply ffnn model
+        apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
+            base_grid,m,1,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
+            thresh,gobai_ffnn_dir,param,units,long_param_name);
     end
 end
-
 
 % end parallel session
 delete(gcp('nocreate'));
 
 % stop timing predictions
-fprintf(['FFNN Prediction (' num2str(years_to_predict(1)) ' to ' num2str(years_to_predict(end)) '): ']);
+fprintf(['FFNN Prediction (' num2str(start_year) ' to ' date_str(1:4) '): ']);
 toc
-
-% clean up
 
 end
 
@@ -198,8 +230,13 @@ function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
     filename = [gobai_ffnn_dir 'm' num2str(m) '_w' num2str(w) '.nc'];
     if isfile(filename); delete(filename); end % delete file if it exists
     % parameter
-    nccreate(filename,param,'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim},...
-        'DataType','single','FillValue',NaN);
+    if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+        nccreate(filename,param,'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim},...
+            'DataType','single','FillValue',NaN);
+    else
+        nccreate(filename,param,'Dimensions',{'lon',xdim,'lat',ydim,'depth',zdim},...
+            'DataType','single','FillValue',NaN);
+    end
     ncwrite(filename,param,gobai_3d);
     ncwriteatt(filename,param,'units',units);
     ncwriteatt(filename,param,'long_name',long_param_name);
@@ -219,17 +256,26 @@ function apply_ffnn_model(TS,num_clusters,ffnn_dir,ffnn_fnames,...
     ncwriteatt(filename,'lat','axis','Y');
     ncwriteatt(filename,'lat','long_name','latitude');
     ncwriteatt(filename,'lat','_CoordinateAxisType','Lat');
-    % pressure
-    nccreate(filename,'pres','Dimensions',{'pres',zdim},...
+    % pressure (or depth)
+    if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+        nccreate(filename,'pres','Dimensions',{'pres',zdim},...
+            'DataType','single','FillValue',NaN);
+        ncwrite(filename,'pres',TS.Pressure);
+        ncwriteatt(filename,'pres','units','decibars');
+        ncwriteatt(filename,'pres','axis','Z');
+        ncwriteatt(filename,'pres','long_name','pressure');
+        ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
+    else
+        nccreate(filename,'depth','Dimensions',{'depth',zdim},...
         'DataType','single','FillValue',NaN);
-    ncwrite(filename,'pres',TS.Pressure);
-    ncwriteatt(filename,'pres','units','decibars');
-    ncwriteatt(filename,'pres','axis','Z');
-    ncwriteatt(filename,'pres','long_name','pressure');
-    ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
+        ncwrite(filename,'depth',TS.Depth);
+        ncwriteatt(filename,'depth','units','meters');
+        ncwriteatt(filename,'depth','axis','Z');
+        ncwriteatt(filename,'depth','long_name','depth');
+        ncwriteatt(filename,'depth','_CoordinateAxisType','Depth');
+    end
 
     % display information
     fprintf(['FFNN Prediction (Month ' num2str(m) ', Week ' num2str(w) ')\n']);
 
-    
 end
