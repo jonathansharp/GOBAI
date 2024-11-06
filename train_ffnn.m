@@ -90,7 +90,7 @@ end
 tStart = tic;
 
 % set up parallel pool
-%tic; parpool(numWorkers_train); fprintf('Pool initiation:'); toc;
+% tic; parpool(numWorkers_train); fprintf('Pool initiation:'); toc;
 
 % define model parameters
 nodes1 = [5 10 15];
@@ -188,19 +188,19 @@ for f = 1:num_folds
 
         end
 
-            % save test model and output for each cluster
-            if ~isfolder([pwd '/' ffnn_dir]); mkdir(ffnn_dir); end
-            if any(all_data_clusters.clusters == c)
-                if num_folds > 1
-                    parsave([ffnn_dir '/' ffnn_fnames{f,c}],FFNN,'FFNN',output,'output');
-                else
-                    parsave([ffnn_dir '/' ffnn_fnames{f,c}],FFNN,'FFNN');
-                end
+        % save test model and output for each cluster
+        if ~isfolder([pwd '/' ffnn_dir]); mkdir(ffnn_dir); end
+        if any(all_data_clusters.clusters == c)
+            if num_folds > 1
+                parsave([ffnn_dir '/' ffnn_fnames{f,c}],FFNN,'FFNN',output,'output');
             else
-                if num_folds > 1
-                    parsave([ffnn_dir '/' ffnn_fnames{f,c}],output,'output');
-                end
+                parsave([ffnn_dir '/' ffnn_fnames{f,c}],FFNN,'FFNN');
             end
+        else
+            if num_folds > 1
+                parsave([ffnn_dir '/' ffnn_fnames{f,c}],output,'output');
+            end
+        end
     
     end
 
@@ -220,7 +220,7 @@ end
 tElapsed = toc(tStart);
 disp(['Elapsed time is ' num2str(min(tElapsed)) ' minutes.'])
 
-%% calculate statists for k-fold test
+%% calculate statistics for k-fold test
 if num_folds > 1
 
 % calculate weighted average over each cluster using probabilities
@@ -326,11 +326,6 @@ exportgraphics(gcf,[fig_dir '/' fig_name_2]);
 % clean up
 clear land cmap c
 close
-
-%% clean up
-clear ffnn_output ffnn_rmse ffnn_med_err ffnn_mean_err probs_matrix f c
-clear variables f c numtrees minLeafSize NumPredictors ffnn_dir ffnn_fnames
-clear ans all_data all_data_clusters num_folds train_idx test_idx train_sum
 
 end
 

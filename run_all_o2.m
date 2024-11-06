@@ -69,7 +69,8 @@ gobai_o2_plot_ens;
 
 %% run OSSEs
 run_osse('o2',file_date,snap_date,float_file_ext,glodap_only,num_clusters,...
-    variables,clust_vars,train_ratio,val_ratio,test_ratio,thresh,numWorkers_train,numWorkers_predict);
+    variables,clust_vars,train_ratio,val_ratio,test_ratio,numtrees,...
+    minLeafSize,numstumps,numbins,thresh,numWorkers_train,numWorkers_predict);
 
 %% determine uncertainty
 % calculate_gridding_uncertainty;

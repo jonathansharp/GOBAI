@@ -8,59 +8,51 @@
 %
 % DATE: 11/22/2023
 
-function combine_gobai(param,dir_base,base_grid,file_date,float_file_ext,...
-    num_clusters,variables,train_ratio,val_ratio,test_ratio,thresh,...
-    numWorkers_predict,years_to_predict)
+function combine_gobai(param,base_grid,file_date,float_file_ext,...
+    num_clusters,numWorkers_predict,start_year,snap_date,train_ratio,...
+    val_ratio,test_ratio,numtrees,minLeafSize,numstumps,numbins)
 
-% process parameter name
+%% process date
+date_str = num2str(snap_date);
+
+%% process parameter name
 param1 = param_name(param);
 
 %% create directory names
 gobai_ffnn_dir = ... % FFNN
     [param1 '/Data/GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/train' num2str(100*train_ratio) '_val' ...
-    num2str(100*val_ratio) '_test' num2str(100*val_ratio) '/'];
+    num2str(100*val_ratio) '_test' num2str(100*test_ratio) '/'];
 gobai_rfr_dir = ... % RFR
     [param1 '/Data/GOBAI/' base_grid '/RFR/c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize) '/'];
 gobai_gbm_dir = ... % GBM
     [param1 '/Data/GOBAI/' base_grid '/GBM/c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/tr' num2str(numstumps) '/'];
+    float_file_ext '/tr' num2str(numstumps) '_bn' num2str(numbins) '/'];
 gobai_dir = ... % final product
     [param1 '/Data/GOBAI/' base_grid '/' num2str(num_clusters) '_' file_date ...
     float_file_ext '/'];
 
-%% process time
-% start_year = 2004;
-% end_year = floor(snap_date/1e2);
-% end_month = mod(snap_date,1e2);
-% years = repelem(start_year:end_year,12)';
-% months = repmat(1:12,1,length(years)/12)';
-% years = years(1:end-(12-end_month));
-% months = months(1:end-(12-end_month));
-% clear start_year end_year end_month
-
-%% determine timesteps
-if strcmp(base_grid,'RG')
-    [~,timesteps] = load_RG_dim([pwd '/Data/RG_CLIM/']);
-elseif strcmp(base_grid,'RFROM')
-    [~,timesteps] = load_RFROM_dim([pwd '/Data/RFROM/']);
-end
-
 %% average over each time window
-parfor m = 1:length(years)
+cnt = 1;
+m_last = (str2num(date_str(1:4))-2004)*12+str2num(date_str(5:6));
+for m = 1:m_last
     
+    %% load monthly outputs
     % load monthly output (FFNN)
-    gobai_3d_ffnn = load([gobai_ffnn_dir 'm' num2str(m)],'x');
+    gobai_3d_ffnn = ncread([gobai_rfr_dir 'gobai-' param '.nc'],...
+        param,[1 1 1 cnt],[Inf Inf Inf 1]);
     % load monthly output (RFR)
-    gobai_3d_rfr = load([gobai_rfr_dir 'm' num2str(m)],'x');
+    gobai_3d_ffnn = ncread([gobai_rfr_dir 'gobai-' param '.nc'],...
+        param,[1 1 1 cnt],[Inf Inf Inf 1]);
     % load monthly output (GBM)
-    gobai_3d_gbm = load([gobai_gbm_dir 'm' num2str(m)],'x');
+    gobai_3d_ffnn = ncread([gobai_rfr_dir 'gobai-' param '.nc'],...
+        param,[1 1 1 cnt],[Inf Inf Inf 1]);
 
-    % average monthly outputs
+    %% average monthly outputs
     gobai_3d_ens = mean(cat(4,gobai_3d_ffnn,gobai_3d_rfr,gobai_3d_gbm));
 
-    % create folder and save monthly output
+    %% create folder and save monthly output
     if ~isfolder([pwd '/' gobai_dir]); mkdir(gobai_dir); end
     filename = [gobai_dir 'm' num2str(m) '_w' num2str(w) '.nc'];
     if isfile(filename); delete(filename); end % delete file if it exists
@@ -94,5 +86,8 @@ parfor m = 1:length(years)
     ncwriteatt(filename,'pres','axis','Z');
     ncwriteatt(filename,'pres','long_name','pressure');
     ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
+
+    % add to count
+    cnt =  + 1;
 
 end

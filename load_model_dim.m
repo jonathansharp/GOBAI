@@ -23,7 +23,7 @@ TS.zdim = length(TS.Depth);
 TS.Time = ncread(fpath,'time');
 timesteps = length(TS.Time);
 % process time
-dates = datevec(datenum(2004,1,1+double(TS.Time)));
+dates = datevec(datenum(0,0,1+double(TS.Time)));
 TS.years = dates(:,1);
 TS.months = dates(:,2);
 clear dates

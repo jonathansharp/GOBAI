@@ -12,5 +12,5 @@ elseif strcmp(model,'RFR')
         num2str(properties{5}) '_lf' num2str(properties{6})];
 elseif strcmp(model,'GBM')
     dir_base = [properties{1} '/GBM/c' num2str(properties{2}) '_' properties{3} ...
-        properties{4} '/tr' num2str(properties{5})];
+        properties{4} '/tr' num2str(properties{5}) '_bn' num2str(properties{6})];
 end
