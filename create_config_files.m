@@ -9,7 +9,7 @@ snap_download = 0;
 save('Config/hercules.mat');
 clear
 numWorkers_train = 2;
-numWorkers_predict = 1;
+numWorkers_predict = 2;
 model_path = '/raid/Model/CMIP6/';
 snap_download = 1;
 save('Config/chinook.mat');

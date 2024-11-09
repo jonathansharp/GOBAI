@@ -1,4 +1,4 @@
-function process_cmip_model(model,fpath,snap_date,start_year,grid_label,grid_type)
+function process_cmip_model(model,fpath,snap_date,start_year,rlz,grid_label,grid_type)
 
 %% process date
 start_month = 1;
@@ -10,7 +10,7 @@ end_month = str2double(date_str(5:6));
 path1_hist = [fpath 'historical/' grid_type '/'];
 path1_ssp = [fpath 'ssp245/' grid_type '/'];
 path2 = ['_Omon_' model '_'];
-path3 = ['_r1i1p1f1_' grid_label];
+path3 = ['_' rlz '_' grid_label];
 if ~isfolder([fpath 'combined/' grid_type '/']); mkdir([fpath 'combined/' grid_type '/']); end
 % time extensions for cmip model paths
 if strcmp(model,'GFDL-ESM4')
@@ -76,7 +76,7 @@ if l ~= length(time)
     % plot global mean timeseries
     thetao = ncread(nc_filepath,'thetao');
     plot_global_timeseries(lat,lon,depth,time,thetao,'thetao',...
-        'Potential Temperature',[char(176) 'C'],model,fpath,grid_type);
+        'Potential Temperature',[char(176) 'C'],model);
     clear thetao
 end
 
@@ -91,8 +91,7 @@ if l ~= length(time)
         depth,time,time_strt,grid_label,'so',idx_depth,'Sea Water Salinity','n/a');
     % plot global mean timeseries
     so = ncread(nc_filepath,'so');
-    plot_global_timeseries(lat,lon,depth,time,so,'so','Salinity',...
-        'n/a',model,fpath,grid_type);
+    plot_global_timeseries(lat,lon,depth,time,so,'so','Salinity','n/a',model);
     clear so
 end
 
@@ -140,7 +139,7 @@ if l ~= length(time)
     % plot global mean timeseries
     abs_sal = ncread(nc_filepath,'abs_sal');
     plot_global_timeseries(lat,lon,depth,time,abs_sal,'abs_sal',...
-        'Absolute Salinity','n/a',model,fpath,grid_type);
+        'Absolute Salinity','n/a',model);
     clear abs_sal
 end
 
@@ -167,7 +166,7 @@ if l ~= length(time)
     % plot global mean timeseries
     cns_tmp = ncread(nc_filepath,'cns_tmp');
     plot_global_timeseries(lat,lon,depth,time,cns_tmp,'cns_tmp',...
-        'Conservative Temperature',[char(176) 'C'],model,fpath,grid_type);
+        'Conservative Temperature',[char(176) 'C'],model);
     clear cns_tmp
 end
 
@@ -193,7 +192,7 @@ if l ~= length(time)
     % plot global mean timeseries
     tmp = ncread(nc_filepath,'tmp');
     plot_global_timeseries(lat,lon,depth,time,tmp,'tmp',...
-        'In Situ Temperature',[char(176) 'C'],model,fpath,grid_type);
+        'In Situ Temperature',[char(176) 'C'],model);
     clear tmp
 end
 
@@ -219,7 +218,7 @@ if l ~= length(time)
     % plot global mean timeseries
     sigma = ncread(nc_filepath,'sigma');
     plot_global_timeseries(lat,lon,depth,time,sigma,'sigma',...
-        'Potential Density','kg/m^3',model,fpath,grid_type);
+        'Potential Density','kg/m^3',model);
     clear sigma
 end
 
@@ -245,7 +244,7 @@ if l ~= length(time)
     % plot global mean timeseries
     dens = ncread(nc_filepath,'dens');
     plot_global_timeseries(lat,lon,depth,time,dens,'dens',...
-        'Density','kg/m^3',model,fpath,grid_type);
+        'Density','kg/m^3',model);
     clear dens
 end
 
@@ -271,7 +270,7 @@ if l ~= length(time)
     % plot global mean timeseries
     o2_sat = ncread(nc_filepath,'o2_sat');
     plot_global_timeseries(lat,lon,depth,time,o2_sat,'o2_sat',...
-        'Oxygen Saturation','umol/kg',model,fpath,grid_type);
+        'Oxygen Saturation','umol/kg',model);
     clear o2_sat
 end
 
@@ -296,7 +295,7 @@ if l ~= length(time)
     % plot global mean timeseries
     o2 = ncread(nc_filepath,'o2');
     plot_global_timeseries(lat,lon,depth,time,o2,'o2',...
-        'Oxygen Amount Content','umol/kg',model,fpath,grid_type);
+        'Oxygen Amount Content','umol/kg',model);
     clear o2
 end
 
@@ -503,17 +502,9 @@ end
 end
 
 %% plot global timeseries
-function plot_global_timeseries(lat,lon,depth,time,var,varname,var_label,units,model,fpath,grid_type)
-    % calculate weights
-    rE = 6.371e6; % radius of Earth (m)
-    dlat = lat(3) - lat(2); % spacing between latitudes
-    area_3d = single(nan(length(lon),length(lat),length(depth)));
-    depth_3d = repmat(permute(depth,[3 2 1]),length(lon),length(lat),1);
-    for i = 1:length(lat)
-        lat_area = 2*pi*rE^2*abs(sind(lat(i)-dlat/2)-sind(lat(i)+dlat/2));
-        area_3d(:,i,:) = lat_area/length(lon); % m^2
-    end
-    vol = area_3d.*depth_3d; % m^3
+function plot_global_timeseries(lat,lon,depth,time,var,varname,var_label,units,model)
+    % calculate volume
+    vol = single(calculate_volume(lat,lon,depth));
     % calculate gloabl mean
     var_mean = nan(length(time),1);
     for t = 1:length(time)

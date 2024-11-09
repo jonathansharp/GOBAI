@@ -1,15 +1,15 @@
 function subsample_cmip_model(param,param1,data,model,fpath,file_date,...
-    snap_date,float_file_ext,start_year,grid_label,grid_type)
+    snap_date,float_file_ext,start_year,rlz,grid_label,grid_type)
 
 %% process date
 date_str = num2str(snap_date);
 
-% check if processed file already exists
+%% check if processed file already exists
 if ~isfile([param1 '/Data/' model '_' param '_data_' file_date float_file_ext '.mat'])
 
 %% define paths
 path2 = ['_Omon_' model '_'];
-path3 = ['_r1i1p1f1_' grid_label];
+path3 = ['_' rlz '_' grid_label];
 
 %% load variables
 nc_filepath = [fpath 'combined/' grid_type '/o2' path2 ... % define filepath

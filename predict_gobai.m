@@ -6,40 +6,38 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 1/31/2024
+% DATE: 11/6/2024
 
 function predict_gobai(alg_type,param,fpath,base_grid,file_date,float_file_ext,...
     num_clusters,variables,thresh,numWorkers_predict,start_year,...
     snap_date,varargin)
 
 %% set defaults and process optional input arguments
-if strcmp(alg_type,'FFNN')
-    for i = 1:2:length(varargin)-1
-        if strcmpi(varargin{i}, 'train_ratio')
+for i = 1:2:length(varargin)-1
+    if strcmpi(varargin{i}, 'rlz')
+        rlz = varargin{i+1};
+    elseif strcmpi(varargin{i}, 'grid_label')
+        grid_label = varargin{i+1};
+    elseif strcmpi(varargin{i}, 'grid_type')
+        grid_type = varargin{i+1};
+    elseif strcmpi(varargin{i}, 'train_ratio')
             train_ratio = varargin{i+1};
-        elseif strcmpi(varargin{i}, 'val_ratio')
-            val_ratio = varargin{i+1};
-        elseif strcmpi(varargin{i}, 'test_ratio')
-            test_ratio = varargin{i+1};
-        end
+    elseif strcmpi(varargin{i}, 'val_ratio')
+        val_ratio = varargin{i+1};
+    elseif strcmpi(varargin{i}, 'test_ratio')
+        test_ratio = varargin{i+1};
+    elseif strcmpi(varargin{i}, 'numtrees')
+        numtrees = varargin{i+1};
+    elseif strcmpi(varargin{i}, 'minLeafSize')
+        minLeafSize = varargin{i+1};
+    elseif strcmpi(varargin{i}, 'numstumps')
+        numstumps = varargin{i+1};
+    elseif strcmpi(varargin{i}, 'numbins')
+        numbins = varargin{i+1};
     end
-elseif strcmp(alg_type,'RFR')
-    for i = 1:2:length(varargin)-1
-        if strcmpi(varargin{i}, 'numtrees')
-            numtrees = varargin{i+1};
-        elseif strcmpi(varargin{i}, 'minLeafSize')
-            minLeafSize = varargin{i+1};
-        end
-    end
-elseif strcmp(alg_type,'GBM')
-    for i = 1:2:length(varargin)-1
-        if strcmpi(varargin{i}, 'numstumps')
-            numstumps = varargin{i+1};
-        elseif strcmpi(varargin{i}, 'numbins')
-            numbins = varargin{i+1};
-        end
-    end
-else
+end
+% make sure alg_type is valid
+if ~strcmp(alg_type,'FFNN') | ~strcmp(alg_type,'RFR') | ~strcmp(alg_type,'GBM')
     disp('"alg_type" must be "FFNN", "RFR", or "GBM"')
 end
 
@@ -91,18 +89,42 @@ for v = 1:length(variables)
     variables_TS{v} = [variables{v} '_array'];
 end
 
-%% predict property on grid
-% set up parallel pool
-% tic; parpool(numWorkers_predict); fprintf('Pool initiation:'); toc;
+%% create netCDF file
+if strcmp(base_grid,'RG')
+    TS = load_RG_dim([fpath '/Data/RG_CLIM/']);
+   % create file
+   create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param,...
+        units,long_param_name);
+elseif strcmp(base_grid,'RFROM')
+    TS = load_RFROM_dim([fpath '/Data/RFROM/']);
+    % create file
+    create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param,...
+        units,long_param_name);
+else
+    % define paths
+    path2 = ['_Omon_' base_grid '_'];
+    path3 = ['_' rlz '_' grid_label];
+    % define filepaths
+    nc_filepath_abs_sal = [fpath 'combined/' grid_type '/abs_sal' path2 ...
+        'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+    % load dimensions
+    TS = load_model_dim(nc_filepath_abs_sal);
+    % create file
+    create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param,...
+        units,long_param_name);
+end
 
-% start timing predictions
-tic
+%% set up parallel pool
+tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
-% compute estimates for each month
-cnt = 1;
-m_last = (str2num(date_str(1:4))-2004)*12+str2num(date_str(5:6));
-for m = 1:m_last
+%% start timing predictions
+tStart = tic;
+
+%% compute and save estimates for each month
+parfor m = 1:length(TS.time)
     if strcmp(base_grid,'RG')
+        % counter 
+        cnt = m;
         % load dimensions
         TS = load_RG_dim([fpath '/Data/RG_CLIM/']);
         TS = replicate_dims(base_grid,TS,1);
@@ -133,6 +155,7 @@ for m = 1:m_last
             base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
             thresh,gobai_alg_dir,param,units,long_param_name);
     elseif strcmp(base_grid,'RFROM')
+        cnt = m;
         % load dimensions
         TS = load_RFROM_dim([fpath '/Data/RFROM/']);
         TS = replicate_dims(base_grid,TS,1);
@@ -140,6 +163,8 @@ for m = 1:m_last
         nc_atts = ncinfo([fpath '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
         for w = 1:nc_atts.Dimensions(3).Length
+            % counter 
+            cnt = cnt + 1;
             % get RFROM T and S
             TS.temperature_cns = ncread([fpath '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
@@ -162,13 +187,15 @@ for m = 1:m_last
                 thresh,gobai_alg_dir,param,units,long_param_name);
         end
     else
+        % counter 
+        cnt = m;
         % define paths
         path2 = ['_Omon_' base_grid '_'];
-        path3 = '_r1i1p1f1_gr';
+        path3 = ['_'  rlz '_' grid_label];
         % define filepaths
-        nc_filepath_abs_sal = [fpath 'combined/regridded/abs_sal' path2 ...
+        nc_filepath_abs_sal = [fpath 'combined/' grid_type '/abs_sal' path2 ...
             'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
-        nc_filepath_cns_tmp = [fpath 'combined/regridded/cns_tmp' path2 ...
+        nc_filepath_cns_tmp = [fpath 'combined/' grid_type '/cns_tmp' path2 ...
             'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
         % load dimensions
         TS = load_model_dim(nc_filepath_abs_sal);
@@ -191,7 +218,6 @@ for m = 1:m_last
             base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
             thresh,gobai_alg_dir,param,units,long_param_name);
     end
-    cnt = cnt+1;
 end
 
 % end parallel session
@@ -199,14 +225,21 @@ delete(gcp('nocreate'));
 
 % stop timing predictions
 fprintf([alg_type ' Prediction (' num2str(start_year) ' to ' date_str(1:4) '): ']);
-toc
+
+tElapsed = toc(tStart);
+disp(['Elapsed time is ' num2str(tElapsed/60) ' minutes.'])
 
 end
 
-%% embedded function for processing 3D grids and applying models
+%% embedded functions
+
+% for processing 3D grids and applying trained models to them
 function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     base_grid,m,w,cnt,xdim,ydim,zdim,variables_TS,thresh,gobai_alg_dir,...
     param,units,long_param_name)
+    
+    % define file name
+    filename = [gobai_alg_dir 'gobai-' param '.nc'];
 
     % convert to arrays
     TS_index = ~isnan(TS.temperature_cns);
@@ -250,20 +283,20 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         probs_matrix(:,c) = GMM_probs.probabilities_array; % add to probability matrix
 
         % load model for this cluster
-        alg = load([alg_dir '/' alg_fnames{c}],alg_type);
+        alg_struct = load([alg_dir '/' alg_fnames{c}],alg_type);
     
         % predict data for each cluster
         if strcmp(alg_type,'FFNN')
             gobai_matrix(:,c) = ...
-                run_FFNN(alg.FFNN,TS,GMM_probs.probabilities_array,...
+                run_FFNN(alg_struct.FFNN,TS,GMM_probs.probabilities_array,...
                 true(size(TS.temperature_cns_array)),variables_TS,thresh);
         elseif strcmp(alg_type,'RFR')
             gobai_matrix(:,c) = ...
-                run_RFR(alg.RFR,TS,GMM_probs.probabilities_array,...
+                run_RFR(alg_struct.RFR,TS,GMM_probs.probabilities_array,...
                 true(size(TS.temperature_cns_array)),variables_TS,thresh);
         elseif strcmp(alg_type,'GBM')
             gobai_matrix(:,c) = ...
-                run_GBM(alg.GBM,TS,GMM_probs.probabilities_array,...
+                run_GBM(alg_struct.GBM,TS,GMM_probs.probabilities_array,...
                 true(size(TS.temperature_cns_array)),variables_TS,thresh);
         end
 
@@ -279,65 +312,6 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     % convert back to 3D grid
     gobai_3d = nan(xdim,ydim,zdim);
     gobai_3d(TS_index) = gobai_array;
-    
-    %% create folder and NetCDF file
-    filename = [gobai_alg_dir 'gobai-' param '.nc'];
-    if m == 1 && w == 1
-        % create folder and file
-        if ~isfolder([pwd '/' gobai_alg_dir]); mkdir(gobai_alg_dir); end
-        if isfile(filename); delete(filename); end % delete file if it exists
-        % bgc parameter
-        if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-            nccreate(filename,param,'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
-                'DataType','single','FillValue',NaN);
-        else
-            nccreate(filename,param,'Dimensions',{'lon',xdim,'lat',ydim,'depth',zdim,'time',Inf},...
-                'DataType','single','FillValue',NaN);
-        end
-        ncwriteatt(filename,param,'units',units);
-        ncwriteatt(filename,param,'long_name',long_param_name);
-        % longitude
-        nccreate(filename,'lon','Dimensions',{'lon',xdim},...
-            'DataType','single','FillValue',NaN);
-        ncwrite(filename,'lon',TS.Longitude);
-        ncwriteatt(filename,'lon','units','degrees_east');
-        ncwriteatt(filename,'lon','axis','X');
-        ncwriteatt(filename,'lon','long_name','longitude');
-        ncwriteatt(filename,'lon','_CoordinateAxisType','Lon');
-        % latitude
-        nccreate(filename,'lat','Dimensions',{'lat',ydim},...
-            'DataType','single','FillValue',NaN);
-        ncwrite(filename,'lat',TS.Latitude);
-        ncwriteatt(filename,'lat','units','degrees_north');
-        ncwriteatt(filename,'lat','axis','Y');
-        ncwriteatt(filename,'lat','long_name','latitude');
-        ncwriteatt(filename,'lat','_CoordinateAxisType','Lat');
-        % pressure (or depth)
-        if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-            nccreate(filename,'pres','Dimensions',{'pres',zdim},...
-                'DataType','single','FillValue',NaN);
-            ncwrite(filename,'pres',TS.Pressure);
-            ncwriteatt(filename,'pres','units','decibars');
-            ncwriteatt(filename,'pres','axis','Z');
-            ncwriteatt(filename,'pres','long_name','pressure');
-            ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
-        else
-            nccreate(filename,'depth','Dimensions',{'depth',zdim},...
-            'DataType','single','FillValue',NaN);
-            ncwrite(filename,'depth',TS.Depth);
-            ncwriteatt(filename,'depth','units','meters');
-            ncwriteatt(filename,'depth','axis','Z');
-            ncwriteatt(filename,'depth','long_name','depth');
-            ncwriteatt(filename,'depth','_CoordinateAxisType','Depth');
-        end
-        % time
-        nccreate(filename,'time','Dimensions',{'time',Inf},...
-            'DataType','single','FillValue',NaN);
-        ncwriteatt(filename,'time','units','days since 0000-01-01');
-        ncwriteatt(filename,'time','axis','T');
-        ncwriteatt(filename,'time','long_name','time');
-        ncwriteatt(filename,'time','_CoordinateAxisType','Time');
-    end
 
     %% Write monthly output
     ncwrite(filename,'time',datenum(TS.years(cnt),TS.months(cnt),15),cnt);
@@ -345,5 +319,69 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
 
     % display information
     fprintf([alg_type ' Prediction (Month ' num2str(m) ', Week ' num2str(w) ')\n']);
+
+end
+
+% for creating netCDF file
+function create_nc_file(TS,base_grid,xdim,ydim,zdim,gobai_alg_dir,...
+    param,units,long_param_name)
+
+% define file name
+filename = [gobai_alg_dir 'gobai-' param '.nc'];
+
+% create folder and file
+if ~isfolder([pwd '/' gobai_alg_dir]); mkdir(gobai_alg_dir); end
+if isfile(filename); delete(filename); end % delete file if it exists
+% bgc parameter
+if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+    nccreate(filename,param,'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
+        'DataType','single','FillValue',NaN);
+else
+    nccreate(filename,param,'Dimensions',{'lon',xdim,'lat',ydim,'depth',zdim,'time',Inf},...
+        'DataType','single','FillValue',NaN);
+end
+ncwriteatt(filename,param,'units',units);
+ncwriteatt(filename,param,'long_name',long_param_name);
+% longitude
+nccreate(filename,'lon','Dimensions',{'lon',xdim},...
+    'DataType','single','FillValue',NaN);
+ncwrite(filename,'lon',TS.Longitude);
+ncwriteatt(filename,'lon','units','degrees_east');
+ncwriteatt(filename,'lon','axis','X');
+ncwriteatt(filename,'lon','long_name','longitude');
+ncwriteatt(filename,'lon','_CoordinateAxisType','Lon');
+% latitude
+nccreate(filename,'lat','Dimensions',{'lat',ydim},...
+    'DataType','single','FillValue',NaN);
+ncwrite(filename,'lat',TS.Latitude);
+ncwriteatt(filename,'lat','units','degrees_north');
+ncwriteatt(filename,'lat','axis','Y');
+ncwriteatt(filename,'lat','long_name','latitude');
+ncwriteatt(filename,'lat','_CoordinateAxisType','Lat');
+% pressure (or depth)
+if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+    nccreate(filename,'pres','Dimensions',{'pres',zdim},...
+        'DataType','single','FillValue',NaN);
+    ncwrite(filename,'pres',TS.Pressure);
+    ncwriteatt(filename,'pres','units','decibars');
+    ncwriteatt(filename,'pres','axis','Z');
+    ncwriteatt(filename,'pres','long_name','pressure');
+    ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
+else
+    nccreate(filename,'depth','Dimensions',{'depth',zdim},...
+    'DataType','single','FillValue',NaN);
+    ncwrite(filename,'depth',TS.Depth);
+    ncwriteatt(filename,'depth','units','meters');
+    ncwriteatt(filename,'depth','axis','Z');
+    ncwriteatt(filename,'depth','long_name','depth');
+    ncwriteatt(filename,'depth','_CoordinateAxisType','Depth');
+end
+% time
+nccreate(filename,'time','Dimensions',{'time',Inf},...
+    'DataType','single','FillValue',NaN);
+ncwriteatt(filename,'time','units','days since 0000-01-01');
+ncwriteatt(filename,'time','axis','T');
+ncwriteatt(filename,'time','long_name','time');
+ncwriteatt(filename,'time','_CoordinateAxisType','Time');
 
 end
