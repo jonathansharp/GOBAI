@@ -8,8 +8,8 @@ model_path = 'TBD';
 snap_download = 0;
 save('Config/hercules.mat');
 clear
-numWorkers_train = 2;
-numWorkers_predict = 2;
+numWorkers_train = 3;
+numWorkers_predict = 3;
 model_path = '/raid/Model/CMIP6/';
 snap_download = 1;
 save('Config/chinook.mat');
@@ -17,7 +17,7 @@ clear
 
 %% create data download configuration file for adjusted and DMQC
 clear
-snap_date = 202410;
+snap_date = 202501;
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_year = 2023;
 data_modes = {'A' 'D'};
@@ -27,7 +27,7 @@ clear
 
 %% create data download configuration file for DMQC only
 clear
-snap_date = 202410;
+snap_date = 202501;
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_year = 2023;
 snap_download = 0; 

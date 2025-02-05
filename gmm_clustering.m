@@ -7,90 +7,166 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 6/18/2024
+% DATE: 11/12/2024
 
-function gmm_clustering(fpath,base_grid,start_year,snap_date,clust_vars,num_clusters,numWorkers_predict)
+function gmm_clustering(param,fpath,base_grid,start_year,snap_date,file_date,...
+    float_file_ext,clust_vars,num_clusters,numWorkers_predict)
 
 %% process date
 date_str = num2str(snap_date);
 
+%% process parameter name
+param1 = param_name(param);
+
 % check for existence of model
-if exist(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str '.mat'],'file') ~= 2
+if exist([param1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str '.mat'],'file') ~= 2
 
-%% load climatological temperature and salinity data
-[TS,timesteps] = load_climatological_TS_data(fpath,base_grid,start_year,date_str);
+    %% load basin mask file
+    
+    
+    %% load data
+    if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+        load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
+             'all_data','file_date');
+    else
+        load([param1 '/Data/' base_grid '_' param '_data_' file_date float_file_ext '.mat'],...
+             'all_data','file_date');
+    end
+    
+    %% fit GMM from data points themselves
+    tic
+    % transform to normalized arrays
+    idx = false(length(all_data.temperature),1);
+    for v = 1:length(clust_vars)
+        idx = idx | ~isnan(all_data.(clust_vars{v}));
+    end
+    predictor_matrix = [];
+    for v = 1:length(clust_vars)
+        predictor_matrix = [predictor_matrix all_data.(clust_vars{v})];
+    end
+    [X_norm,C,S] = normalize(predictor_matrix);
+    % reduce inputs for model training to 100,000 random data points
+    idx_rand = randperm(length(X_norm),100000)';
+    X_norm = X_norm(idx_rand,:);
+    % fit GMM
+    options = statset('MaxIter',1000); % increase max iterations to ensure convergence
+    gmm = fitgmdist(X_norm,num_clusters,...
+        'Options',options,...
+        'CovarianceType','diagonal',...
+        'SharedCovariance',true,'Replicates',10);
+    % save GMM model
+    if ~isfolder([param1 '/Data/GMM_' base_grid '_' num2str(num_clusters)])
+        mkdir([param1 '/Data/GMM_' base_grid '_' num2str(num_clusters)]);
+    end
+    save([param1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str],...
+        'gmm','num_clusters','C','S','-v7.3');
+    clear gmm C S
+    toc
+    
+    %% fit GMM from climatological mean temperature and salinity
+    
+    % load climatological temperature and salinity data
+    % TS = load_climatological_TS_data(fpath,base_grid,start_year,date_str);
+    % 
+    % % Some replicates don't converge, investigate further...
+    % tic
+    % % transform to normalized arrays
+    % idx = ~isnan(TS.temperature_cns) & ~isnan(TS.salinity_abs);
+    % predictor_matrix = [];
+    % for v = 1:length(clust_vars)
+    %     predictor_matrix = [predictor_matrix TS.(clust_vars{v})(idx)];
+    % end
+    % [X_norm,C,S] = normalize(predictor_matrix);
+    % clear TS
+    % % reduce inputs for model training to 100,000 random data points
+    % idx_rand = randperm(length(X_norm),100000)';
+    % X_norm = X_norm(idx_rand,:);
+    % % fit GMM
+    % options = statset('MaxIter',1000); % increase max iterations to ensure convergence
+    % gmm = fitgmdist(X_norm,num_clusters,...
+    %     'Options',options,...
+    %     'CovarianceType','diagonal',...
+    %     'SharedCovariance',true,'Replicates',10);
+    % % save GMM model
+    % if ~isfolder(['Data/GMM_' base_grid '_' num2str(num_clusters)])
+    %     mkdir(['Data/GMM_' base_grid '_' num2str(num_clusters)]);
+    % end
+    % save(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str],...
+    %     'gmm','num_clusters','C','S','-v7.3');
+    % clear gmm C S
+    % toc
 
-%% load chlorophyll climatological data
-% if strcmp(base_grid,'RG')
-%     load_chl();
-% 
-% elseif strcmp(base_grid,'RFROM')
-%     fpath = 'Data/RFROM/RFROM_CHL_CMEMS_annual/';
-%     chl = ncread(fpath,'ocean_temperature');
-% 
-% end
+else
 
-%% load basin mask file
+    % display information
+    disp(['already trained GMM for ' num2str(num_clusters) ...
+        ' clusters for ' date_str(5:6) '/' date_str(1:4)]);
 
-
-%% fit GMM from climatological mean temperature and salinity
-% Some replicates don't converge, investigate further...
-tic
-% transform to normalized arrays
-idx = ~isnan(TS.temperature_cns) & ~isnan(TS.salinity_abs);
-predictor_matrix = [];
-for v = 1:length(clust_vars)
-    predictor_matrix = [predictor_matrix TS.(clust_vars{v})(idx)];
 end
-[X_norm,C,S] = normalize(predictor_matrix);
-clear TS
-% reduce inputs for model training to 100,000 random data points
-idx_rand = randperm(length(X_norm),10000)';
-X_norm = X_norm(idx_rand,:);
-% fit GMM
-gmm = fitgmdist(X_norm,num_clusters,...
-    'CovarianceType','full',...
-    'SharedCovariance',true,'Replicates',20);
-% save GMM model
-if ~isfolder(['Data/GMM_' base_grid '_' num2str(num_clusters)])
-    mkdir(['Data/GMM_' base_grid '_' num2str(num_clusters)]);
-end
-save(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str],...
-    'gmm','num_clusters','C','S','-v7.3');
-clear gmm C S
-toc
+
 
 %% assign grid cells and probabilities to clusters
+folder_name = [pwd '/' param1 '/Data/GMM_' base_grid '_' num2str(num_clusters)];
+% determine length of cluster file if it exists
+if exist([folder_name '/clusters.nc'],'file') == 2
+    inf = ncinfo([folder_name '/clusters.nc']);
+    for n = 1:length(inf.Dimensions)
+        if strcmp(inf.Dimensions(n).Name,'time')
+            time_idx = n;
+        end
+    end
+end
+% determine expected length
+year = str2double(date_str(1:4));
+month = str2double(date_str(5:6));
+length_expt = (year-start_year)*12 + month;
 
-% start timing cluster assignment
-tic
+% check for existence of cluster file and length of cluster grids
+if exist([folder_name '/clusters.nc'],'file') ~= 2 || ...
+        inf.Dimensions(time_idx).Length ~= length_expt
 
-% load GMM model
-load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' ...
-    date_str],'gmm','C','S');
-
-% set up parallel pool
-% tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
-
-% for each month
-for m = 1:timesteps
-
-    % parse number of weeks in each month for RFROM
-    if strcmp(base_grid,'RFROM')
-        % load dimensions
-        TS = load_RFROM_dim([fpath '/Data/RFROM/']);
-        % determine number of weeks in file
-        nc_atts = ncinfo([fpath '/Data/RFROM/RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
-            num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
-        max_w = nc_atts.Dimensions(3).Length;
-    else
-        max_w = 1;
+    % delete file if it exists
+    if exist([folder_name '/clusters.nc'],'file') == 2
+        delete([folder_name '/clusters.nc']);
     end
 
-    for w = 1:max_w
-
+    % start timing cluster assignment
+    tic
+    
+    %% create netCDF files
+    if strcmp(base_grid,'RG')
+       [TS,months,weeks,timesteps] = load_RG_dim([fpath '/Data/RG_CLIM/']);
+       % create file
+       create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
+    elseif strcmp(base_grid,'RFROM')
+        [TS,months,weeks,timesteps] = load_RFROM_dim([fpath '/Data/RFROM/']);
+        % create file
+        create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
+    else
+        % define paths
+        path2 = ['_Omon_' base_grid '_'];
+        path3 = ['_' rlz '_gr'];
+        % define filepaths
+        nc_filepath_abs_sal = [fpath 'combined/regridded/abs_sal' path2 ...
+            'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+        % load dimensions
+        [TS,months,weeks,timesteps] = load_model_dim(nc_filepath_abs_sal);
+        % create file
+        create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
+    end
+    
+    % load GMM model
+    load([param1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' ...
+        date_str],'gmm','C','S');
+    
+    % set up parallel pool
+    tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+    
+    % for each timestep
+    parfor t = 1:timesteps
+    
         % load T/S grid
-        TS = load_monthly_TS_data(fpath,base_grid,m,w,start_year,date_str);
+        TS = load_monthly_TS_data(fpath,base_grid,months(t),weeks(t),start_year,date_str);
 
         % transform to normalized arrays
         idx = ~isnan(TS.temperature_cns) & ~isnan(TS.salinity_abs);
@@ -99,52 +175,121 @@ for m = 1:timesteps
             predictor_matrix = [predictor_matrix TS.(clust_vars{v})(idx)];
         end
         X_norm = normalize(predictor_matrix,'Center',C,'Scale',S);
+        
         % assign data points to clusters
-        assign_to_gmm_clusters(gmm,num_clusters,idx,X_norm,TS.xdim,...
-            TS.ydim,TS.zdim,m,1,base_grid);
-
+        assign_to_gmm_clusters(TS,gmm,num_clusters,idx,X_norm,t,folder_name);
+    
     end
-
-end
-
-% end parallel session
-delete(gcp('nocreate'));
-
-toc
-
-% display information
-disp([num2str(num_clusters) ' clusters formed using ' base_grid ' grid']);
+    
+    % end parallel session
+    delete(gcp('nocreate'));
+    
+    toc
+    
+    % display information
+    disp([num2str(num_clusters) ' clusters formed using ' base_grid ' grid']);
 
 else
 
-% display information
-disp(['already used ' base_grid ' grid to form ' num2str(num_clusters) ...
-    ' clusters for ' date_str(5:6) '/' date_str(1:4)]);
+    % display information
+    disp(['already used ' base_grid ' grid to form ' num2str(num_clusters) ...
+        ' clusters for ' date_str(5:6) '/' date_str(1:4)]);
 
 end
 
 end
 
 %% embedded function to assign points to GMM clusters
-function assign_to_gmm_clusters(gmm,num_clusters,idx,X_norm,xdim,ydim,zdim,m,w,base_grid)
+function assign_to_gmm_clusters(TS,gmm,num_clusters,idx,X_norm,t,folder_name)
     % assign to clusters and obtain probabilities
     [clusters,~,p] = cluster(gmm,X_norm);
     % fill 3D clusters (highest probability cluster)
-    GMM_clusters = nan(xdim,ydim,zdim);
+    GMM_clusters = nan(TS.xdim,TS.ydim,TS.zdim);
     GMM_clusters(idx) = clusters;
     % save clusters
-    folder_name = [pwd '/Data/GMM_' base_grid '_' num2str(num_clusters)];
-    if ~isfolder(folder_name); mkdir(folder_name); end
-    save([folder_name '/m' num2str(m) '_w' num2str(w)],'GMM_clusters','-v7.3');
-    clear GMM_clusters
+    filename = [folder_name '/clusters.nc'];
+    % try/catch to make sure write errors don't interrupt script
+    err = 0; err_cnt = 1;
+    while err == 0 && err_cnt < 100
+        try ncwrite(filename,'time',TS.time(t),t);
+            err = 1; catch; err_cnt = err_cnt + 1; end
+    end
+    err = 0; err_cnt = 1;
+    while err == 0 && err_cnt < 100
+        try ncwrite(filename,'clusters',GMM_clusters,[1 1 1 t]);
+            err = 1; catch; err_cnt = err_cnt + 1; end
+    end
     % fill 3D probabilities (for each cluster)
     for c = 1:num_clusters
-        GMM_cluster_probs = nan(xdim,ydim,zdim);
+        GMM_cluster_probs = nan(TS.xdim,TS.ydim,TS.zdim);
         GMM_cluster_probs(idx) = p(:,c);
         % save probabilities
-        folder_name = [pwd '/Data/GMM_' base_grid '_' num2str(num_clusters) '/c' num2str(c)];
-        if ~isfolder(folder_name); mkdir(folder_name); end
-        save([folder_name '/m' num2str(m) '_w' num2str(w)],'GMM_cluster_probs','-v7.3');
-        clear GMM_cluster_probs
+        err = 0; err_cnt = 1;
+        while err == 0 && err_cnt < 100
+            try ncwrite(filename,['cluster_probs_c' num2str(c)],GMM_cluster_probs,[1 1 1 t]);
+                err = 1; catch; err_cnt = err_cnt + 1; end
+        end
     end
+end
+
+% for creating netCDF file
+function create_nc_files(TS,num_clusters,base_grid,xdim,ydim,zdim,folder_name)
+
+    % define file name and create file
+    if ~isfolder(folder_name); mkdir(folder_name); end
+    filename = [folder_name '/clusters.nc'];
+
+    % longitude
+    nccreate(filename,'lon','Dimensions',{'lon',xdim},...
+        'DataType','single','FillValue',NaN);
+    ncwrite(filename,'lon',TS.Longitude);
+    ncwriteatt(filename,'lon','units','degrees_east');
+    ncwriteatt(filename,'lon','axis','X');
+    ncwriteatt(filename,'lon','long_name','longitude');
+    ncwriteatt(filename,'lon','_CoordinateAxisType','Lon');
+    
+    % latitude
+    nccreate(filename,'lat','Dimensions',{'lat',ydim},...
+        'DataType','single','FillValue',NaN);
+    ncwrite(filename,'lat',TS.Latitude);
+    ncwriteatt(filename,'lat','units','degrees_north');
+    ncwriteatt(filename,'lat','axis','Y');
+    ncwriteatt(filename,'lat','long_name','latitude');
+    ncwriteatt(filename,'lat','_CoordinateAxisType','Lat');
+    
+    % pressure (or depth)
+    if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+        nccreate(filename,'pres','Dimensions',{'pres',zdim},...
+            'DataType','single','FillValue',NaN);
+        ncwrite(filename,'pres',TS.Pressure);
+        ncwriteatt(filename,'pres','units','decibars');
+        ncwriteatt(filename,'pres','axis','Z');
+        ncwriteatt(filename,'pres','long_name','pressure');
+        ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
+    else
+        nccreate(filename,'depth','Dimensions',{'depth',zdim},...
+        'DataType','single','FillValue',NaN);
+        ncwrite(filename,'depth',TS.Depth);
+        ncwriteatt(filename,'depth','units','meters');
+        ncwriteatt(filename,'depth','axis','Z');
+        ncwriteatt(filename,'depth','long_name','depth');
+        ncwriteatt(filename,'depth','_CoordinateAxisType','Depth');
+    end
+    
+    % time
+    nccreate(filename,'time','Dimensions',{'time',Inf},...
+        'DataType','single','FillValue',NaN);
+    ncwriteatt(filename,'time','units','days since 0000-01-01');
+    ncwriteatt(filename,'time','axis','T');
+    ncwriteatt(filename,'time','long_name','time');
+    ncwriteatt(filename,'time','_CoordinateAxisType','Time');
+
+    % clusters
+    nccreate(filename,'clusters','Dimensions',{'lon',xdim,'lat',ydim,...
+        'depth',zdim,'time',Inf},'DataType','single','FillValue',NaN);
+    for c = 1:num_clusters
+        nccreate(filename,['cluster_probs_c' num2str(c)],'Dimensions',{'lon',xdim,'lat',ydim,...
+            'depth',zdim,'time',Inf},'DataType','single','FillValue',NaN);
+    end
+
 end

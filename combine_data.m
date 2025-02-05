@@ -8,7 +8,7 @@
 %
 % DATE: 12/1/2023
 
-function combine_data(param,float_file_ext,file_date,glodap_year)
+function combine_data(param,float_file_ext,file_date,glodap_year,colorbar_lims,cmocean_type)
 
 %% process parameter name
 [param1,param2,param3,~,param5] = param_name(param);
@@ -96,7 +96,7 @@ all_data.(['gridded_' param2]) = accumarray(subs(~idx_subs,:),...
     abs(all_data.(param2)(~idx_subs)),sz,@nanmean);
 clear subs sz
 % plot map
-figure('visible','off'); hold on
+figure('visible','on'); hold on
 m_proj('robinson','lon',[20 380]);
 %lon = convert_lon(lon);
 [lon_temp,z] = reformat_lon(lon,all_data.(['gridded_' param2])(:,:,2),20);
@@ -104,14 +104,14 @@ set(gcf,'units','inches','position',[0 5 20 10]);
 m_pcolor([lon_temp lon_temp(end)+1],lat,[z;z(end,:)]');
 m_coast('patch',rgb('grey'));
 m_grid('linestyle','-','linewidth',0.5,'xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
-cmap = cmocean('ice'); cmap(1,:) = 1; colormap(cmap);
-caxis([0 400]);
+cmap = cmocean(cmocean_type); cmap(1,:) = 1; colormap(cmap);
+caxis(colorbar_lims);
 c=colorbar('location','southoutside');
 c.Label.String = ['Average Gridded ' param3];
 c.FontSize = 22;
 c.TickLength = 0;
 if ~isfolder([pwd '/' param1 '/Figures/Surface_Plots']); mkdir([param1 '/Figures/Surface_Plots']); end
-exportgraphics(gcf,[pwd '/' param1 '/Figures/Surface_Plots/Gridded_' param1 '_10dbar_' file_date float_file_ext '.png']);
+export_fig(gcf,[pwd '/' param1 '/Figures/Surface_Plots/Gridded_' param1 '_10dbar_' file_date float_file_ext '.png'],'-transparent');
 % clean up
 clear land cmap c
 close

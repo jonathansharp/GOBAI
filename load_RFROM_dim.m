@@ -9,7 +9,7 @@
 %
 % DATE: 1/23/2024
 
-function [TS,timesteps] = load_RFROM_dim(fpath)
+function [TS,months,weeks,timesteps] = load_RFROM_dim(fpath)
 
 % load RFROM climatological temp and salinity
 TS.Longitude = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'longitude');
@@ -21,8 +21,22 @@ TS.ydim = length(TS.Latitude);
 TS.zdim = length(TS.Pressure);
 % determine number of monthly timesteps
 files = dir([fpath 'RFROM_TEMP_v0.1/*.nc']);
-timesteps = length(files);
+num_months = length(files);
 % process time
+months = [];
+weeks = [];
+timesteps = 0;
+TS.time = [];
+for m = 1:num_months
+    % determine number of weeks in each monthly file
+    nc_atts = ncinfo([files(m).folder '/' files(m).name]);
+    num_weeks = nc_atts.Dimensions(3).Length;
+    months = [months;repmat(m,num_weeks,1)];
+    weeks = [weeks;(1:num_weeks)'];
+    timesteps = timesteps + num_weeks;
+    TS.time = [TS.time;double(ncread([files(m).folder '/' files(m).name],'time'))];
+end
+% add years and months
 TS.years = nan(length(files),1);
 TS.months = nan(length(files),1);
 for n = 1:length(files)

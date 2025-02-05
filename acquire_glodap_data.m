@@ -42,7 +42,11 @@ clear lon_temp
 %% indices for glodap
 idx_nans = ~isnan(glodap_data.G2temperature) & ~isnan(glodap_data.G2pressure) & ...
           ~isnan(glodap_data.G2salinity) & ~isnan(glodap_data.(param6));
-idx_qc = glodap_data.G2salinityqc == 1 & glodap_data.([param6 'qc']) == 1;
+if strcmp(param,'ph')
+    idx_qc = glodap_data.G2salinityqc == 1 & glodap_data.G2phtsqc == 1;
+else
+    idx_qc = glodap_data.G2salinityqc == 1 & glodap_data.([param6 'qc']) == 1;
+end
 idx_flags = glodap_data.G2salinityf == 2 & glodap_data.([param6 'f']) == 2;
 idx_lims = glodap_data.G2pressure <= 2500 & glodap_data.time > datenum(2004,1,0);
 idx = idx_nans & idx_qc & idx_flags & idx_lims;
@@ -175,8 +179,8 @@ figure(1); hold on;
 lon_temp = convert_lon(convert_lon(glodap_data.LON));
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,glodap_data.LAT,'.g'); hold off;
-if ~exist('Figures','dir'); mkdir('Figures'); end
-exportgraphics(gcf,[param1 '/Figures/Data/processed_glodap_' year '.png']);
+if ~exist([param1 '/Figures/Data'],'dir'); mkdir([param1 '/Figures/Data']); end
+export_fig(gcf,[param1 '/Figures/Data/processed_glodap_' year '.png'],'-transparent');
 clear lon_temp
 
 %% clean up
@@ -190,7 +194,7 @@ glodap_data = rmfield(glodap_data,vars(idx));
 clear idx
 
 %% save glodap data
-if ~exist([pwd '/' param1 '/Data'],'dir'); mkdir(['/' param1 '/Data']); end
+if ~exist([param1 '/Data'],'dir'); mkdir([param1 '/Data']); end
 save([param1 '/Data/processed_glodap_' param '_data_' year '.mat'],'glodap_data');
 
 %% clean up
@@ -200,9 +204,11 @@ close all
 % display information
 disp('GLODAP data processed and saved.')
 
-end
+else
 
 % display information
 disp('GLODAP data already processed.')
+
+end
 
 end

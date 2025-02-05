@@ -1,26 +1,74 @@
 
 %% Plot GOBAI over time
 
-function plot_gobai_animation(param,dir_base,base_grid,num_clusters,mod_type)
+function plot_gobai_animation(param_props,base_grid,num_clusters,...
+    alg_type,file_date,float_file_ext,numWorkers_predict,varargin)
 
-% process parameter name
-param1 = param_name(param);
-
-% set pressures
+%% set pressures
 pressures = [2.5 10 50 100 200 300 500 1000 1500 1975];
 
-% set up parallel pool
-% p = setup_pool(numWorkers_train);
+%% process necessary input arguments for model parameters
+% pre-allocate
+train_ratio = NaN;
+val_ratio = NaN;
+test_ratio = NaN;
+numtrees = NaN;
+minLeafSize = NaN;
+numstumps = NaN;
+numbins = NaN;
+% process based on algorithm type
+if strcmp(alg_type,'FFNN')
+    for i = 1:2:length(varargin)-1
+        if strcmpi(varargin{i}, 'train_ratio')
+            train_ratio = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'val_ratio')
+            val_ratio = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'test_ratio')
+            test_ratio = varargin{i+1};
+        end
+    end
+elseif strcmp(alg_type,'RFR')
+    for i = 1:2:length(varargin)-1
+        if strcmpi(varargin{i}, 'numtrees')
+            numtrees = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'minLeafSize')
+            minLeafSize = varargin{i+1};
+        end
+    end
+elseif strcmp(alg_type,'GBM')
+    for i = 1:2:length(varargin)-1
+        if strcmpi(varargin{i}, 'numstumps')
+            numstumps = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'numbins')
+            numbins = varargin{i+1};
+        end
+    end
+else
+    disp('"alg_type" must be "FFNN", "RFR", or "GBM"')
+end
 
-for d = 4%1:length(pressures)
-    % create folder
-    dname = [param1 '/Figures/GOBAI/' base_grid '_' mod_type '_c' num2str(num_clusters)];
+%% set up parallel pool
+tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+
+%% plot frames
+parfor d = 1:length(pressures)
+    % create folder for figures
+    dname = [param_props.p1 '/Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
+    % define directory for file
+    dir_base = create_dir_base(alg_type,{base_grid;num_clusters;file_date;...
+        float_file_ext;train_ratio;val_ratio;test_ratio});
     % establish file name
     fname = ['gobai_animation_' num2str(pressures(d)) 'dbar.gif'];
     % determine number of monthly timesteps
-    ds = dir([param1 '/Data/GOBAI/' dir_base '/*.nc']);
-    timesteps = length(ds);
+    gobai_fname = [param_props.p1 '/Data/GOBAI/' dir_base '/gobai-' param_props.p2 '.nc'];
+    gobai_inf = ncinfo(gobai_fname);
+    for dims = 1:length(gobai_inf.Dimensions)
+        if strcmp(gobai_inf.Dimensions(dims).Name,'time')
+            t_idx = dims;
+        end
+    end
+    timesteps = gobai_inf.Dimensions(t_idx).Length;
     % load dimensions
     if strcmp(base_grid,'RG')
         % file path
@@ -49,33 +97,34 @@ for d = 4%1:length(pressures)
     h = figure('color','w','visible','on');
     axis tight manual
     % plot clusters each month/week
-    for m = 121%1:timesteps
+    for m = 1:timesteps
         if strcmp(base_grid,'RG')
             % clear frame
             clf
             % load monthly gobai
-            gobai = ncread([param1 '/Data/GOBAI/' dir_base '/m' num2str(m) '_w1.nc'],param);
+            gobai = ncread([param_props.p1 '/Data/GOBAI/' dir_base ...
+                '/gobai-' param_props.p2 '.nc'],param_props.p2,[1 1 depth_idx m],[Inf Inf 1 1]);
             % establish figure
             figure(h);
             % make plot
             m_proj('robinson','lon',[20 380]);
-            z = [gobai(~idx_20,:,depth_idx);gobai(idx_20,:,depth_idx)];
+            z = [gobai(~idx_20,:);gobai(idx_20,:)];
             m_pcolor(double(Longitude),double(Latitude),double(z)');
             title(gca,extractAfter(datestr(datenum(2004,m,1)),'-'));
-            colormap(cmocean('ice'));
+            colormap(param_props.cmap);
             m_coast('patch',rgb('grey'));
             m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
-            clim([0 350]);
+            clim([param_props.edges(1) param_props.edges(end)]);
             c=colorbar;
-            c.Limits = [0 350];
-            c.Label.String = '[O_{2}] (\mumol kg^{-1})';
+            c.Limits = [param_props.edges(1) param_props.edges(end)];
+            c.Label.String = [param_props.p3 ' ' param_props.units];
             c.TickLength = 0;
             % save frame
             if ~isfolder([dname '/' num2str(pressures(d)) 'dbars'])
                 mkdir([dname '/' num2str(pressures(d)) 'dbars']);
             end
-            exportgraphics(h,[dname '/' num2str(pressures(d)) ...
-                'dbars/m' num2str(m) '_w1.png']);
+            export_fig(h,[dname '/' num2str(pressures(d)) ...
+                'dbars/m' num2str(m) '_w1.png'],'-transparent');
             % capture frame
             frame = getframe(h);
             im = frame2im(frame);
@@ -93,7 +142,7 @@ for d = 4%1:length(pressures)
                 % clear frame
                 clf
                 % load weekly gobai
-                gobai = ncread([param1 '/Data/GOBAI/' dir_base '/m' num2str(m) '_w' num2str(w) '.nc'],param);
+                gobai = ncread([param_props.p1 '/Data/GOBAI/' dir_base '/m' num2str(m) '_w' num2str(w) '.nc'],param_props.p2);
                 % establish figure
                 figure(h);
                 % make plot
@@ -113,8 +162,8 @@ for d = 4%1:length(pressures)
                 if ~isfolder([dname '/' num2str(pressures(d)) 'dbars'])
                     mkdir([dname '/' num2str(pressures(d)) 'dbars']);
                 end
-                exportgraphics(h,[dname '/' num2str(pressures(d)) ...
-                    'dbars/m' num2str(m) '_w' num2str(w) '.png']);
+                export_fig(h,[dname '/' num2str(pressures(d)) ...
+                    'dbars/m' num2str(m) '_w' num2str(w) '.png'],'-transparent');
                 % capture frame
                 frame = getframe(h);
                 im = frame2im(frame);
@@ -132,7 +181,7 @@ for d = 4%1:length(pressures)
     end
     close
     % display information
-    disp(['GOBAI-' param1 ' (' mod_type ') animation at ' num2str(pressures(d)) ' dbar plotted'])
+    disp(['GOBAI-' param_props.p1 ' (' alg_type ') animation at ' num2str(pressures(d)) ' dbar plotted'])
 end
 
 % end parallel session

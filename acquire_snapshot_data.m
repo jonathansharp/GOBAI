@@ -303,8 +303,8 @@ for n = 1:length(idx_folders) % for each DAC
                         'northoutside','NumColumns',2);
                     if ~exist([pwd '/' param1 '/Figures/Data/Profiles'],'dir')
                         mkdir([param1 '/Figures/Data/Profiles']); end
-                    exportgraphics(gcf,[param1 '/Figures/Data/Profiles/float_' ...
-                        num2str(floatnum) '_prof' num2str(prof_to_plot) '.png']);
+                    export_fig(gcf,[param1 '/Figures/Data/Profiles/float_' ...
+                        num2str(floatnum) '_prof' num2str(prof_to_plot) '.png'],'-transparent');
                     close
                 end
  
@@ -374,7 +374,8 @@ lon_temp = convert_lon(convert_lon(float_data.LON));
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,float_data.LAT,'.g');
 if ~exist([pwd '/' param1 '/Figures/Data'],'dir'); mkdir([param1 '/Figures/Data']); end
-exportgraphics(gcf,[param1 '/Figures/Data/processed_float_'  file_date float_file_ext '.png']);
+export_fig(gcf,[param1 '/Figures/Data/processed_float_'  ...
+    file_date float_file_ext '.png'],'-transparent');
 close
 clear lon_temp
 

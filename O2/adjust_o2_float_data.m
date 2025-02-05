@@ -16,6 +16,8 @@ load(['O2/Data/processed_float_o2_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date');
 load(['O2/Data/processed_glodap_o2_data_' num2str(glodap_year) '.mat'],...
     'glodap_data');
+load(['O2/Data/processed_wod_ctd_o2_data_' num2str(glodap_year) '.mat'],...
+    'wod_data');
 
 %% import WOA climatologies
 temp_path = [pwd '/Data/WOA/TEMPERATURE/'];
@@ -176,6 +178,9 @@ clear x_edges x_bins y_bins z_edges z_bins t_bins
 pres_levels = [2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975]';
 float_profile_IDs = unique(float_data.PROF_ID);
 % pre-allocate
+crossover.id = [];
+crossover.lon = [];
+crossover.lat = [];
 crossover.pres = [];
 crossover.oxy_float = [];
 crossover.temp_float = [];
@@ -190,8 +195,8 @@ for p = 1:length(float_profile_IDs)
     lat = mean(float_data.LAT(float_data.PROF_ID==float_profile_IDs(p)));
     time = mean(float_data.TIME(float_data.PROF_ID==float_profile_IDs(p)));
     % match index
-    idx_lon = abs(glodap_data.LON - lon) < 0.25;
-    idx_lat = abs(glodap_data.LAT - lat) < 0.25;
+    idx_lon = abs(glodap_data.LON - lon) < 1;
+    idx_lat = abs(glodap_data.LAT - lat) < 1;
     idx_time = abs(glodap_data.TIME - time) < 30;
     idx_all = idx_lon & idx_lat & idx_time;
     % if there is a matching glodap profile
@@ -199,31 +204,47 @@ for p = 1:length(float_profile_IDs)
         % float oxygen and depth
         oxy_float = float_data.OXY(float_data.PROF_ID==float_profile_IDs(p));
         pres_float = float_data.PRES(float_data.PROF_ID==float_profile_IDs(p));
+        lon_float = float_data.LON(float_data.PROF_ID==float_profile_IDs(p));
+        lat_float = float_data.LAT(float_data.PROF_ID==float_profile_IDs(p));
         temp_float = float_data.TEMP(float_data.PROF_ID==float_profile_IDs(p));
         sal_float = float_data.SAL(float_data.PROF_ID==float_profile_IDs(p));
         % combine float profiles if there are more than one
         if length(oxy_float) > 58
             oxy_temp = nan(length(pres_levels),1);
             pres_temp = nan(length(pres_levels),1);
+            lon_temp = nan(length(pres_levels),1);
+            lat_temp = nan(length(pres_levels),1);
             temp_temp = nan(length(pres_levels),1);
             sal_temp = nan(length(pres_levels),1);
             for z = 1:length(pres_levels)
                 idx = pres_float == pres_levels(z);
                 oxy_temp(z) = mean(oxy_float(idx),'omitnan');
                 pres_temp(z) = mean(pres_float(idx),'omitnan');
+                lon_temp(z) = mean(lon_float(idx),'omitnan');
+                lat_temp(z) = mean(lat_float(idx),'omitnan');
                 temp_temp(z) = mean(temp_float(idx),'omitnan');
                 sal_temp(z) = mean(sal_float(idx),'omitnan');
             end
             oxy_float = oxy_temp(~isnan(oxy_temp));
             pres_float = pres_temp(~isnan(pres_temp));
+            lon_float = lon_temp(~isnan(lon_temp));
+            lat_float = lat_temp(~isnan(lat_temp));
             temp_float = temp_temp(~isnan(temp_temp));
             sal_float = sal_temp(~isnan(sal_temp));
         end
         % pressure index
         idx_pres = ismember(pres_levels,pres_float);
         % extract glodap data
-        oxy_glodap = glodap_data.OXY(idx_all);
+        oxy_glodap_temp = glodap_data.OXY(idx_all);
+        % take average of all matching glodap profiles (helps if there are multiple)
+        oxy_glodap = nan(58,1);
+        for gld_z = 1:58
+            oxy_glodap(gld_z) = mean(oxy_glodap_temp(gld_z:58:end),'omitnan');
+        end
         % log matched data
+        crossover.id = [crossover.id;repmat(float_profile_IDs(p),length(pres_float),1)];
+        crossover.lon = [crossover.lon;lon_float];
+        crossover.lat = [crossover.lat;lat_float];
         crossover.pres = [crossover.pres;pres_float];
         crossover.oxy_float = [crossover.oxy_float;oxy_float];
         crossover.temp_float = [crossover.temp_float;temp_float];
@@ -335,7 +356,7 @@ exportgraphics(gcf,['O2/Figures/Data/delta_vs_float_300_uncorr_' file_date float
 close
 % histogram
 figure; hold on
-histogram(crossover.oxy_delta(idx),'Normalization','pdf');
+histogram(crossover.oxy_delta(idx),'Normalization','probability');
 ylim('manual');
 xlim([-30 30]);
 set(gca,'fontsize',16);
@@ -377,7 +398,7 @@ exportgraphics(gcf,['O2/Figures/Data/delta_vs_float_300_corr_' file_date float_f
 close
 % histogram
 figure; hold on
-histogram(crossover.oxy_delta_corr(idx),'Normalization','pdf');
+histogram(crossover.oxy_delta_corr(idx),'Normalization','probability');
 ylim('manual');
 xlim([-30 30]);
 set(gca,'fontsize',16);
@@ -397,6 +418,55 @@ exportgraphics(gcf,[pwd '/O2/Figures/Data/GLODAP_comp_histogram_corr_' file_date
 close
 % clean up
 clear crossover
+
+%% plot mapped crossover data by profile mean delta
+load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx');
+lon_temp = convert_lon(crossover.lon,'0-360');
+lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
+% set up figure for uncorrected data
+figure(1); hold on;
+set(gcf,'visible','on','position',[100 100 1600 800]);
+m_proj('robinson','lon',[20 380]);
+m_coast('patch',rgb('gray'));
+m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
+clim([-30 30]);
+colormap(cmocean('balance','pivot',0));
+% for each crossover profile
+float_profs = unique(crossover.id);
+for p = 1:length(float_profs)
+    idx = crossover.id == float_profs(p) & crossover.pres >= 300;
+    m_scatter(mean(lon_temp(idx),'omitnan'),...
+        mean(crossover.lat(idx),'omitnan'),50,...
+        mean(crossover.o2_delta_uncorr(idx),'omitnan'),'filled',...
+        'markeredgecolor','k');
+end
+colorbar;
+if ~exist(['O2/Figures/Data'],'dir'); mkdir('pH/Figures/Data'); end
+export_fig(gcf,'O2/Figures/Data/mapped_comparison_uncorr.png','-transparent');
+close
+% set up figure for uncorrected data
+figure(1); hold on;
+set(gcf,'visible','on','position',[100 100 1600 800]);
+m_proj('robinson','lon',[20 380]);
+m_coast('patch',rgb('gray'));
+m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
+clim([-30 30]);
+colormap(cmocean('balance','pivot',0));
+% for each crossover profile
+float_profs = unique(crossover.id);
+for p = 1:length(float_profs)
+    idx = crossover.id == float_profs(p) & crossover.pres >= 300;
+    m_scatter(mean(lon_temp(idx),'omitnan'),...
+        mean(crossover.lat(idx),'omitnan'),50,...
+        mean(crossover.o2_delta_corr(idx),'omitnan'),'filled',...
+        'markeredgecolor','k');
+end
+colorbar;
+if ~exist(['O2/Figures/Data'],'dir'); mkdir('pH/Figures/Data'); end
+export_fig(gcf,['O2/Figures/Data/mapped_comparison_corr.png'],'-transparent');
+close
+% clean up
+clear crossover lon_temp
 
 %% adjust and save float data
 load(['O2/Data/float_corr_' file_date float_file_ext],'slp','int');
@@ -428,6 +498,7 @@ for v = 1:length(vars)
         float_data_adjusted.(vars{v}) = float_data.(vars{v});
     end
 end
+
 % save
 if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
 save(['O2/Data/processed_float_o2_data_adjusted_' file_date float_file_ext '.mat'],...

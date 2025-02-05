@@ -29,11 +29,12 @@ else
     pressures = sort(unique(all_data.depth));
 end
 % open parallel pool
-tic; parpool(numWorkers_train); fprintf('Pool initiation:'); toc;
+tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
 % make plots
 parfor p = 1:length(pressures)
     % plot data by cluster
     figure('visible','on','Position',[100 100 800 400]); hold on;
+    set(gca,'fontsize',12);
     % use depth for CMIP models
     if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
         idx = all_data.pressure == pressures(p);
@@ -47,9 +48,9 @@ parfor p = 1:length(pressures)
     lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
     % use depth for CMIP models
     if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-        title(['Data by Cluster (' num2str(pressures(p)) ' dbars)']);
+        title(['Data by Cluster at ' num2str(pressures(p)) ' dbars (in situ data)'],'fontsize',16);
     else
-        title(['Data by Cluster (' num2str(pressures(p)) ' meters)']);
+        title(['Data by Cluster at ' num2str(pressures(p)) ' m (' base_grid ')'],'fontsize',16);
     end
     m_scatter(lon_temp(idx),all_data.latitude(idx),3,all_data_clusters.clusters(idx),'filled');
     mycolormap = [1,1,1;flipud(jet(num_clusters))]; % white then jet
@@ -58,15 +59,17 @@ parfor p = 1:length(pressures)
     c=colorbar;
     c.Limits = [0.5 num_clusters+0.5];
     c.Label.String = 'Cluster';
+    c.FontSize = 12;
     c.TickLength = 0;
     % save figure
     dname = [param1 '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
-    exportgraphics(gcf,[dname '/clustered_data_' num2str(pressures(p)) '.png']);
+    export_fig(gcf,[dname '/clustered_data_' num2str(pressures(p)) '.png'],'-transparent');
     close
     % plot data by cluster probability
     for clst = 1:num_clusters
         figure('visible','off','Position',[100 100 800 400]); hold on;
+        set(gca,'fontsize',12);
         % use depth for CMIP models
         if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
             idx = all_data.pressure == pressures(p);
@@ -80,9 +83,9 @@ parfor p = 1:length(pressures)
         lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
         % use depth for CMIP models
         if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-            title(['Data by Cluster (' num2str(pressures(p)) ' dbars)']);
+            title(['Data by Cluster at ' num2str(pressures(p)) ' dbars (in situ data)'],'fontsize',16);
         else
-            title(['Data by Cluster (' num2str(pressures(p)) ' meters)']);
+            title(['Data by Cluster at ' num2str(pressures(p)) ' m (' base_grid ')'],'fontsize',16);
         end
         m_scatter(lon_temp(idx),all_data.latitude(idx),3,...
             all_data_clusters.(['c' num2str(clst)])(idx),'filled');
@@ -91,12 +94,13 @@ parfor p = 1:length(pressures)
         c=colorbar;
         c.Limits = [0 1];
         c.Label.String = ['Cluster #' num2str(clst) ' Probability'];
+        c.FontSize = 12;
         c.TickLength = 0;
         % save figure
         dname = [param1 '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
         if ~isfolder([pwd '/' dname]); mkdir(dname); end
-        exportgraphics(gcf,[dname '/clustered_data_probability_c' ...
-            num2str(clst) '_' num2str(pressures(p)) '.png']);
+        export_fig([dname '/clustered_data_probability_c' ...
+            num2str(clst) '_' num2str(pressures(p)) '.png'],'-transparent');
         close
     end
 end

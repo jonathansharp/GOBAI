@@ -1,19 +1,18 @@
-function subsample_cmip_model(param,param1,data,model,fpath,file_date,...
-    snap_date,float_file_ext,start_year,rlz,grid_label,grid_type)
+function subsample_cmip_model(param,data,model,fpath,file_date,...
+    snap_date,float_file_ext,start_year,rlz)
 
 %% process date
 date_str = num2str(snap_date);
 
+%% process parameter name
+[param1,param2,param3] = param_name(param);
+
 %% check if processed file already exists
 if ~isfile([param1 '/Data/' model '_' param '_data_' file_date float_file_ext '.mat'])
 
-%% define paths
-path2 = ['_Omon_' model '_'];
-path3 = ['_' rlz '_' grid_label];
-
 %% load variables
-nc_filepath = [fpath 'combined/' grid_type '/o2' path2 ... % define filepath
-    'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+nc_filepath = [fpath 'combined/regridded/' param '_Omon_' model ... % define filepath
+    '_combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 lat = ncread(nc_filepath,'lat');
 lon = ncread(nc_filepath,'lon');
 time = ncread(nc_filepath,'time');
@@ -66,8 +65,8 @@ for v = 1:length(vars)
     if strcmp(var_name,'skip')
         % do nothing
     else
-        nc_filepath = [fpath 'combined/' grid_type '/' var_name path2 ... % define filepath
-            'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+        nc_filepath = [fpath 'combined/regridded/' var_name '_Omon_' model ... % define filepath
+            '_combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
         var = ncread(nc_filepath,var_name);
         % zero trap for oxygen
         if strcmp(var_name,'o2'); var(var<0) = 0; end
@@ -107,6 +106,46 @@ all_data.lon_cos_2 = cosd(all_data.longitude-110);
 % calculate bottom depth
 % [lat_2d,lon_2d] = meshgrid(lat,lon);
 % z = single(bottom_depth(lat_2d,lon_2d));
+
+%% bin to lat/lon grid cells and plot gridded observations
+load([param1 '/Data/' model '_' param '_data_' file_date float_file_ext '.mat'],...
+    'all_data','file_date');
+% determine bin number of each test data point on 1 degree grid
+lon_edges = -180:180; lon = -179.5:179.5;
+lat_edges = -90:90; lat = -89.5:89.5;
+pres_edges = ([0 5:10:175 190:20:450 475:50:1375 1450:100:1950 2000])';
+pres = ([2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
+[~,~,Xnum] = histcounts(all_data.longitude,lon_edges);
+[~,~,Ynum] = histcounts(all_data.latitude,lat_edges);
+[~,~,Znum] = histcounts(all_data.pressure,pres_edges);
+% accumulate 3D grid of test data point errors
+subs = [Xnum, Ynum, Znum];
+idx_subs = any(subs==0,2);
+sz = [length(lon),length(lat),length(pres)];
+all_data.(['gridded_' param2]) = accumarray(subs(~idx_subs,:),...
+    abs(all_data.(param2)(~idx_subs)),sz,@nanmean);
+clear subs sz
+% make plot
+idx_depth = find(min(abs(all_data.depth-20))==abs(all_data.depth-20));
+figure('visible','off'); hold on
+worldmap([-90 90],[20 380]);
+title('model');
+title(['Annual mean at ' num2str(all_data.depth(idx_depth(1))) ' m (' model ')'],'fontsize',16)
+set(gcf,'Position',[617, 599, 820, 420])
+setm(gca,'ffacecolor','w');
+setm(gca,'fontsize',12);
+[lon_temp,z] = reformat_lon(lon,all_data.(['gridded_' param2])(:,:,2),20);
+pcolorm(lat,[lon_temp lon_temp(end)+1],[z;z(end,:)]');
+land = shaperead('landareas', 'UseGeoCoords', true);
+geoshow(land,'FaceColor',rgb('grey'));
+c=colorbar; caxis([150 350]);
+cmap = cmocean('ice'); cmap(1,:) = 1; colormap(cmap)
+c.Label.String = ['Average Gridded ' param3];
+c.FontSize = 12;
+mlabel off; plabel off;
+if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
+export_fig(['Figures/' model '/subsampled_oxy_20m.png'],'-transparent');
+close
 
 %% save data
 save([param1 '/Data/' model '_' param '_data_' file_date float_file_ext '.mat'],...

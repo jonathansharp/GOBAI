@@ -6,38 +6,59 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 11/6/2024
+% DATE: 2/4/2025
 
 function predict_gobai(alg_type,param,fpath,base_grid,file_date,float_file_ext,...
-    num_clusters,variables,thresh,numWorkers_predict,start_year,...
+    num_clusters,variables,param_props,thresh,numWorkers_predict,start_year,...
     snap_date,varargin)
 
-%% set defaults and process optional input arguments
+%% process optional input arguments
+% pre-allocate
+rlz = NaN;
+% process inputs
 for i = 1:2:length(varargin)-1
     if strcmpi(varargin{i}, 'rlz')
         rlz = varargin{i+1};
-    elseif strcmpi(varargin{i}, 'grid_label')
-        grid_label = varargin{i+1};
-    elseif strcmpi(varargin{i}, 'grid_type')
-        grid_type = varargin{i+1};
-    elseif strcmpi(varargin{i}, 'train_ratio')
-            train_ratio = varargin{i+1};
-    elseif strcmpi(varargin{i}, 'val_ratio')
-        val_ratio = varargin{i+1};
-    elseif strcmpi(varargin{i}, 'test_ratio')
-        test_ratio = varargin{i+1};
-    elseif strcmpi(varargin{i}, 'numtrees')
-        numtrees = varargin{i+1};
-    elseif strcmpi(varargin{i}, 'minLeafSize')
-        minLeafSize = varargin{i+1};
-    elseif strcmpi(varargin{i}, 'numstumps')
-        numstumps = varargin{i+1};
-    elseif strcmpi(varargin{i}, 'numbins')
-        numbins = varargin{i+1};
     end
 end
-% make sure alg_type is valid
-if ~strcmp(alg_type,'FFNN') | ~strcmp(alg_type,'RFR') | ~strcmp(alg_type,'GBM')
+
+%% process necessary input arguments for model parameters
+% pre-allocate
+train_ratio = NaN;
+val_ratio = NaN;
+test_ratio = NaN;
+numtrees = NaN;
+minLeafSize = NaN;
+numstumps = NaN;
+numbins = NaN;
+% process based on algorithm type
+if strcmp(alg_type,'FFNN')
+    for i = 1:2:length(varargin)-1
+        if strcmpi(varargin{i}, 'train_ratio')
+            train_ratio = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'val_ratio')
+            val_ratio = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'test_ratio')
+            test_ratio = varargin{i+1};
+        end
+    end
+elseif strcmp(alg_type,'RFR')
+    for i = 1:2:length(varargin)-1
+        if strcmpi(varargin{i}, 'numtrees')
+            numtrees = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'minLeafSize')
+            minLeafSize = varargin{i+1};
+        end
+    end
+elseif strcmp(alg_type,'GBM')
+    for i = 1:2:length(varargin)-1
+        if strcmpi(varargin{i}, 'numstumps')
+            numstumps = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'numbins')
+            numbins = varargin{i+1};
+        end
+    end
+else
     disp('"alg_type" must be "FFNN", "RFR", or "GBM"')
 end
 
@@ -56,29 +77,26 @@ elseif strcmp(alg_type,'GBM')
         float_file_ext;numstumps;numbins});
 end
 
-%% process parameter name
-[param1,param2,~,~,~,~,~,~,units,long_param_name] = param_name(param);
-
 %% create directory and file names
-alg_dir = [param1 '/Models/' dir_base];
+alg_dir = [param_props.p1 '/Models/' dir_base];
 alg_fnames = cell(num_clusters,1);
 for c = 1:num_clusters
     alg_fnames(c) = ...
-        {[alg_type '_' param2 '_C' num2str(c)]};
+        {[alg_type '_' param_props.p2 '_C' num2str(c)]};
 end
 if strcmp(alg_type,'FFNN')
     gobai_alg_dir = ...
-        [param1 '/Data/GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) ...
+        [param_props.p1 '/Data/GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) ...
         '_' file_date float_file_ext '/train' num2str(100*train_ratio) ...
         '_val' num2str(100*val_ratio) '_test' num2str(100*test_ratio) '/'];
 elseif strcmp(alg_type,'RFR')
     gobai_alg_dir = ...
-        [param1 '/Data/GOBAI/' base_grid '/RFR/c' num2str(num_clusters) ...
+        [param_props.p1 '/Data/GOBAI/' base_grid '/RFR/c' num2str(num_clusters) ...
         '_' file_date float_file_ext '/tr' num2str(numtrees) '_lf' ...
         num2str(minLeafSize) '/'];
 elseif strcmp(alg_type,'GBM')
     gobai_alg_dir = ...
-        [param1 '/Data/GOBAI/' base_grid '/GBM/c' num2str(num_clusters) ...
+        [param_props.p1 '/Data/GOBAI/' base_grid '/GBM/c' num2str(num_clusters) ...
         '_' file_date float_file_ext '/tr' num2str(numstumps) ...
         '_bin' num2str(numbins) '/'];
 end
@@ -94,24 +112,24 @@ if strcmp(base_grid,'RG')
     TS = load_RG_dim([fpath '/Data/RG_CLIM/']);
    % create file
    create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param,...
-        units,long_param_name);
+        param_props.units,param_props.long_param_name);
 elseif strcmp(base_grid,'RFROM')
     TS = load_RFROM_dim([fpath '/Data/RFROM/']);
     % create file
     create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param,...
-        units,long_param_name);
+        param_props.units,param_props.long_param_name);
 else
     % define paths
     path2 = ['_Omon_' base_grid '_'];
-    path3 = ['_' rlz '_' grid_label];
+    path3 = ['_' rlz '_gr'];
     % define filepaths
-    nc_filepath_abs_sal = [fpath 'combined/' grid_type '/abs_sal' path2 ...
+    nc_filepath_abs_sal = [fpath 'combined/regridded/abs_sal' path2 ...
         'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
     % load dimensions
     TS = load_model_dim(nc_filepath_abs_sal);
     % create file
     create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param,...
-        units,long_param_name);
+        param_props.units,param_props.long_param_name);
 end
 
 %% set up parallel pool
@@ -121,7 +139,7 @@ tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 tStart = tic;
 
 %% compute and save estimates for each month
-parfor m = 1:length(TS.time)
+parfor m = 1:length(TS.Time)
     if strcmp(base_grid,'RG')
         % counter 
         cnt = m;
@@ -153,7 +171,7 @@ parfor m = 1:length(TS.time)
         % apply model
         apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
             base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-            thresh,gobai_alg_dir,param,units,long_param_name);
+            thresh,gobai_alg_dir,param_props);
     elseif strcmp(base_grid,'RFROM')
         cnt = m;
         % load dimensions
@@ -184,18 +202,18 @@ parfor m = 1:length(TS.time)
             % apply model
             apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
                 base_grid,m,w,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-                thresh,gobai_alg_dir,param,units,long_param_name);
+                thresh,gobai_alg_dir,param_props);
         end
     else
         % counter 
         cnt = m;
         % define paths
         path2 = ['_Omon_' base_grid '_'];
-        path3 = ['_'  rlz '_' grid_label];
+        path3 = ['_'  rlz '_gr'];
         % define filepaths
-        nc_filepath_abs_sal = [fpath 'combined/' grid_type '/abs_sal' path2 ...
+        nc_filepath_abs_sal = [fpath 'combined/regridded/abs_sal' path2 ...
             'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
-        nc_filepath_cns_tmp = [fpath 'combined/' grid_type '/cns_tmp' path2 ...
+        nc_filepath_cns_tmp = [fpath 'combined/regridded/cns_tmp' path2 ...
             'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
         % load dimensions
         TS = load_model_dim(nc_filepath_abs_sal);
@@ -216,7 +234,7 @@ parfor m = 1:length(TS.time)
         % apply model
         apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
             base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-            thresh,gobai_alg_dir,param,units,long_param_name);
+            thresh,gobai_alg_dir,param_props);
     end
 end
 
@@ -236,10 +254,11 @@ end
 % for processing 3D grids and applying trained models to them
 function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     base_grid,m,w,cnt,xdim,ydim,zdim,variables_TS,thresh,gobai_alg_dir,...
-    param,units,long_param_name)
+    param_props)
     
     % define file name
-    filename = [gobai_alg_dir 'gobai-' param '.nc'];
+    filename = [gobai_alg_dir 'gobai-' param_props.p2 '.nc'];
+    folder_name = [param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters)];
 
     % convert to arrays
     TS_index = ~isnan(TS.temperature_cns);
@@ -274,13 +293,11 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
       if isfile([alg_dir '/' alg_fnames{c} '.mat'])
 
         % load GMM cluster probabilities for this cluster and month, and convert to array
-        GMM_probs = ...
-            load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/c' num2str(c) ...
-            '/m' num2str(m) '_w' num2str(w)],'GMM_cluster_probs');
-        GMM_probs.probabilities_array = GMM_probs.GMM_cluster_probs(TS_index); % convert to array
-        GMM_probs.probabilities_array(GMM_probs.probabilities_array < thresh) = NaN; % remove probabilities below thresh
-        GMM_probs = rmfield(GMM_probs,{'GMM_cluster_probs'}); % remove 3D matrix
-        probs_matrix(:,c) = GMM_probs.probabilities_array; % add to probability matrix
+        GMM_probs = ncread([folder_name '/clusters.nc'],['cluster_probs_c' num2str(c)],...
+            [1 1 1 cnt],[Inf Inf Inf 1]);
+        probabilities_array = GMM_probs(TS_index); % convert to array
+        probabilities_array(probabilities_array < thresh) = NaN; % remove probabilities below thresh
+        probs_matrix(:,c) = probabilities_array; % add to probability matrix
 
         % load model for this cluster
         alg_struct = load([alg_dir '/' alg_fnames{c}],alg_type);
@@ -288,15 +305,15 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         % predict data for each cluster
         if strcmp(alg_type,'FFNN')
             gobai_matrix(:,c) = ...
-                run_FFNN(alg_struct.FFNN,TS,GMM_probs.probabilities_array,...
+                run_FFNN(alg_struct.FFNN,TS,probabilities_array,...
                 true(size(TS.temperature_cns_array)),variables_TS,thresh);
         elseif strcmp(alg_type,'RFR')
             gobai_matrix(:,c) = ...
-                run_RFR(alg_struct.RFR,TS,GMM_probs.probabilities_array,...
+                run_RFR(alg_struct.RFR,TS,probabilities_array,...
                 true(size(TS.temperature_cns_array)),variables_TS,thresh);
         elseif strcmp(alg_type,'GBM')
             gobai_matrix(:,c) = ...
-                run_GBM(alg_struct.GBM,TS,GMM_probs.probabilities_array,...
+                run_GBM(alg_struct.GBM,TS,probabilities_array,...
                 true(size(TS.temperature_cns_array)),variables_TS,thresh);
         end
 
@@ -314,8 +331,17 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     gobai_3d(TS_index) = gobai_array;
 
     %% Write monthly output
-    ncwrite(filename,'time',datenum(TS.years(cnt),TS.months(cnt),15),cnt);
-    ncwrite(filename,param,gobai_3d,[1 1 1 cnt]);
+    % try/catch to make sure write errors don't interrupt script
+    err = 0; err_cnt = 1;
+    while err == 0 && err_cnt < 100
+        try ncwrite(filename,'time',datenum(TS.years(cnt),TS.months(cnt),15),cnt);
+            err = 1; catch; err_cnt = err_cnt + 1; end
+    end
+    err = 0; err_cnt = 1;
+    while err == 0 && err_cnt < 100
+        try ncwrite(filename,param_props.p2,gobai_3d,[1 1 1 cnt]);
+            err = 1; catch; err_cnt = err_cnt + 1; end
+    end
 
     % display information
     fprintf([alg_type ' Prediction (Month ' num2str(m) ', Week ' num2str(w) ')\n']);

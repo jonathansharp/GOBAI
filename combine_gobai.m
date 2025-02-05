@@ -16,10 +16,6 @@ function combine_gobai(param,fpath,base_grid,file_date,float_file_ext,...
 for i = 1:2:length(varargin)-1
     if strcmpi(varargin{i}, 'rlz')
         rlz = varargin{i+1};
-    elseif strcmpi(varargin{i}, 'grid_label')
-        grid_label = varargin{i+1};
-    elseif strcmpi(varargin{i}, 'grid_type')
-        grid_type = varargin{i+1};
     end
 end
 
@@ -59,7 +55,7 @@ else
     % define paths
     path2 = ['_Omon_' base_grid '_']; path3 = '_r1i1p1f1_gr';
     % define filepaths
-    nc_filepath_abs_sal = [fpath 'combined/' grid_type '/abs_sal' path2 ...
+    nc_filepath_abs_sal = [fpath 'combined/regridded/abs_sal' path2 ...
         'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
     % load dimensions
     TS = load_model_dim(nc_filepath_abs_sal);
@@ -69,8 +65,7 @@ else
 end
 
 %% average over each time window
-m_last = (str2num(date_str(1:4))-2004)*12+str2num(date_str(5:6));
-for m = 1:12%m_last
+for m = 1:length(TS.Time)
 
     %% set counter
     cnt = m;

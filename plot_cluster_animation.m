@@ -9,11 +9,18 @@ date_str = num2str(snap_date);
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
     pressures = [2.5 10 50 100 200 300 500 1000 1500 1975];
 else
-    pressures = [2.5 10 50 100 200 300 500 1000 1500 1975];
+    % define paths
+    path2 = ['_Omon_' base_grid '_'];
+    path3 = '_r1i1p1f1_gr';
+    % define filename
+    filename = [fpath 'combined/regridded/abs_sal' path2 ...
+        'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+    % load pressures
+    pressures = ncread(filename,'depth');
 end
 
 % set up parallel pool
-p = setup_pool(numWorkers_train);
+tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
 
 for d = 1:length(pressures)
     % create folder
@@ -23,7 +30,7 @@ for d = 1:length(pressures)
     fname = ['cluster_animation_' num2str(pressures(d)) 'dbar.gif'];
     % determine number of monthly timesteps
     ds = dir(['Data/GMM_' base_grid '_' num2str(num_clusters) '/*.mat']);
-    timesteps = length(ds);
+    timesteps = length(ds)-1;
     % load dimensions
     if strcmp(base_grid,'RG')
         % load

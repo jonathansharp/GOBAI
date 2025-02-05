@@ -9,7 +9,7 @@
 %
 % DATE: 11/1/2024
 
-function [TS,timesteps] = load_model_dim(fpath)
+function [TS,months,weeks,timesteps] = load_model_dim(fpath)
 
 % load dimensions
 TS.Latitude = ncread(fpath,'lat');
@@ -22,7 +22,9 @@ TS.zdim = length(TS.Depth);
 % determine number of monthly timesteps
 TS.Time = ncread(fpath,'time');
 timesteps = length(TS.Time);
-% process time
+months = 1:timesteps;
+weeks = ones(timesteps,1);
+% add years and months
 dates = datevec(datenum(0,0,1+double(TS.Time)));
 TS.years = dates(:,1);
 TS.months = dates(:,2);

@@ -19,7 +19,11 @@ if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
     TS.pressure = repmat(permute(TS.Pressure,[3 2 1]),TS.xdim,TS.ydim,1,tdim);
 else
     TS.depth = repmat(permute(TS.Depth,[3 2 1]),TS.xdim,TS.ydim,1,tdim);
-    TS.pressure = -gsw_p_from_z(TS.depth,TS.latitude);
+    if strcmp(base_grid,'MPI-ESM1-2-LR')
+       TS.pressure = gsw_p_from_z(-TS.depth,TS.latitude); 
+    else
+        TS.pressure = -gsw_p_from_z(TS.depth,TS.latitude);
+    end
 end
 if strcmp(base_grid,'RG')
     TS.time = repmat(permute(TS.Time,[4 3 2 1]),TS.xdim,TS.ydim,TS.zdim,1);

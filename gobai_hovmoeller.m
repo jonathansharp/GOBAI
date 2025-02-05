@@ -54,5 +54,6 @@ colormap(cmocean('balance',15,'pivot',0));
 
 % save figure
 exportgraphics(gcf,['Figures/global_O2_hovmoeller_GOBAI_' ver '.png']);
+export_fig(['Figures/global_O2_hovmoeller_GOBAI_' ver '.png'],'-transparent');
 close
 clear

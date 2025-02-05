@@ -9,7 +9,7 @@
 %
 % DATE: 1/23/2024
 
-function [TS,timesteps] = load_RG_dim(fpath)
+function [TS,months,weeks,timesteps] = load_RG_dim(fpath)
 
 % load temperature and salinity
 TS.Longitude = ncread([fpath 'RG_Climatology_Temp.nc'],'Longitude');
@@ -22,7 +22,9 @@ TS.zdim = length(TS.Pressure);
 % determine number of monthly timesteps
 TS.Time = ncread('Data/RG_CLIM/RG_Climatology_Temp.nc','Time');
 timesteps = length(TS.Time);
-% process time
+months = 1:timesteps;
+weeks = ones(timesteps,1);
+% add years and months
 dates = datevec(datenum(2004,1,1+double(TS.Time)));
 TS.years = dates(:,1);
 TS.months = dates(:,2);

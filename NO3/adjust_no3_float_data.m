@@ -316,7 +316,7 @@ exportgraphics(gcf,['NO3/Figures/Data/delta_vs_float_300_uncorr_' file_date floa
 close
 % histogram
 figure; hold on
-histogram(crossover.nit_delta(idx),'Normalization','pdf');
+histogram(crossover.nit_delta(idx),'Normalization','probability');
 ylim('manual');
 xlim([-3 3]);
 set(gca,'fontsize',16);
@@ -358,7 +358,7 @@ exportgraphics(gcf,['NO3/Figures/Data/delta_vs_float_300_corr_' file_date float_
 close
 % histogram
 figure; hold on
-histogram(crossover.nit_delta_corr(idx),'Normalization','pdf');
+histogram(crossover.nit_delta_corr(idx),'Normalization','probability');
 ylim('manual');
 xlim([-3 3]);
 set(gca,'fontsize',16);
