@@ -20,9 +20,9 @@ else
 end
 
 % set up parallel pool
-%tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
 
-for d = 1:length(pressures)
+parfor d = 1:length(pressures)
     % create folder
     dname = [param_props.p1 '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end

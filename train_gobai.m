@@ -7,8 +7,8 @@
 %
 % DATE: 2/3/2025
 
-function train_gobai(alg_type,param,base_grid,file_date,...
-    float_file_ext,num_clusters,variables,param_props,...
+function train_gobai(alg_type,param_props,base_grid,file_date,...
+    float_file_ext,num_clusters,variables,...
     thresh,numWorkers_train,snap_date,varargin)
 
 %% set defaults and process optional input arguments
@@ -148,10 +148,10 @@ end
 tStart = tic;
 
 % set up parallel pool
-%tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
 
 % fit models for each fold (if applicable)
-for f = 1:num_folds
+parfor f = 1:num_folds
 
     %% define index for observations
     if num_folds > 1
