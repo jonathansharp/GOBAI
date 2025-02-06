@@ -118,7 +118,7 @@ year = str2double(date_str(1:4));
 month = str2double(date_str(5:6));
 length_expt = (year-start_year)*12 + month;
 
-% check for existence of cluster file and length of cluster grids
+%% check for existence of cluster file and length of cluster grids
 if exist([folder_name '/clusters.nc'],'file') ~= 2 || ...
         inf.Dimensions(time_idx).Length ~= length_expt
 
@@ -130,7 +130,7 @@ if exist([folder_name '/clusters.nc'],'file') ~= 2 || ...
     % start timing cluster assignment
     tic
     
-    %% create netCDF files
+    %% create netCDF file that will be end result
     if strcmp(base_grid,'RG')
        [TS,months,weeks,timesteps] = load_RG_dim([fpath '/Data/RG_CLIM/']);
        % create file
@@ -157,10 +157,10 @@ if exist([folder_name '/clusters.nc'],'file') ~= 2 || ...
         date_str],'gmm','C','S');
     
     % set up parallel pool
-    %tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+    tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
     
-    % for each timestep
-    for t = 1:timesteps
+    %% assign clusters for each timestep
+    parfor t = 1:timesteps
     
         % load T/S grid
         TS = load_monthly_TS_data(fpath,base_grid,months(t),weeks(t),start_year,date_str);
@@ -180,10 +180,29 @@ if exist([folder_name '/clusters.nc'],'file') ~= 2 || ...
     
     % end parallel session
     delete(gcp('nocreate'));
-    
-    toc
+
+    %% concatenate cluster information in main file
+    for t = 1:timesteps
+        % define file names
+        filename = [folder_name '/clusters.nc'];
+        filename_temp = [folder_name '/clust_' num2str(t) '.nc'];
+        % read information from temporary file and write it to main file
+        time = ncread(filename_temp,'time'); % read
+        ncwrite(filename,'time',time,t); % write
+        GMM_clusters = ncread(filename_temp,'GMM_clusters'); % read
+        ncwrite(filename,'clusters',GMM_clusters,[1 1 1 t]); % write
+        for c = 1:num_clusters
+            GMM_cluster_probs = ncread(filename_temp,...
+                ['GMM_cluster_probs_' num2str(c)]); % read
+            ncwrite(filename,['cluster_probs_c' num2str(c)],...
+                GMM_cluster_probs,[1 1 1 t]); % write
+        end
+        % delete temporary file
+        delete(filename_temp);
+    end
     
     % display information
+    toc
     disp([num2str(num_clusters) ' clusters formed using ' base_grid ' grid']);
 
 else
@@ -203,29 +222,22 @@ function assign_to_gmm_clusters(TS,gmm,num_clusters,idx,X_norm,t,folder_name)
     % fill 3D clusters (highest probability cluster)
     GMM_clusters = nan(TS.xdim,TS.ydim,TS.zdim);
     GMM_clusters(idx) = clusters;
-    % save clusters
-    filename = [folder_name '/clusters.nc'];
-    % try/catch to make sure write errors don't interrupt script
-    err = 0; err_cnt = 1;
-    while err == 0 && err_cnt < 100
-        try ncwrite(filename,'time',TS.time(t),t);
-            err = 1; catch; err_cnt = err_cnt + 1; end
-    end
-    err = 0; err_cnt = 1;
-    while err == 0 && err_cnt < 100
-        try ncwrite(filename,'clusters',GMM_clusters,[1 1 1 t]);
-            err = 1; catch; err_cnt = err_cnt + 1; end
-    end
+    % save cluster properties in temporary files
+    filename = [folder_name '/clust_' num2str(t) '.nc'];
+    if exist('filename'); delete(filename); end
+    nccreate(filename,'time','Dimensions',{'time' 1});
+    ncwrite(filename,'time',TS.time(t));
+    nccreate(filename,'GMM_clusters','Dimensions',{'lon' size(GMM_clusters,1) ...
+        'lat' size(GMM_clusters,2) 'pres' size(GMM_clusters,3)});
+    ncwrite(filename,'GMM_clusters',GMM_clusters);
     % fill 3D probabilities (for each cluster)
     for c = 1:num_clusters
         GMM_cluster_probs = nan(TS.xdim,TS.ydim,TS.zdim);
         GMM_cluster_probs(idx) = p(:,c);
-        % save probabilities
-        err = 0; err_cnt = 1;
-        while err == 0 && err_cnt < 100
-            try ncwrite(filename,['cluster_probs_c' num2str(c)],GMM_cluster_probs,[1 1 1 t]);
-                err = 1; catch; err_cnt = err_cnt + 1; end
-        end
+        nccreate(filename,['GMM_cluster_probs_' num2str(c)],...
+            'Dimensions',{'lon' size(GMM_cluster_probs,1) 'lat' ...
+            size(GMM_cluster_probs,2) 'pres' size(GMM_cluster_probs,3)});
+        ncwrite(filename,['GMM_cluster_probs_' num2str(c)],GMM_cluster_probs);
     end
 end
 
