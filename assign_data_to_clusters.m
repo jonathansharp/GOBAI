@@ -8,21 +8,18 @@
 %
 % DATE: 10/05/2023
 
-function assign_data_to_clusters(param,base_grid,file_date,snap_date,float_file_ext,...
+function assign_data_to_clusters(param_props,base_grid,file_date,snap_date,float_file_ext,...
     clust_vars,num_clusters)
 
 %% process date
 date_str = num2str(snap_date);
 
-%% process parameter name
-param1 = param_name(param);
-
 %% load combined data
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
+    load([param_props.p1 '/Data/processed_all_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
          'all_data','file_date');
 else
-    load([param1 '/Data/' base_grid '_' param '_data_' file_date float_file_ext '.mat'],...
+    load([param_props.p1 '/Data/' base_grid '_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
          'all_data','file_date');
 end
 
@@ -44,7 +41,7 @@ for c = 1:size(p,2)
 end
 % save data clusters
 if ~isfolder([pwd '/Data']); mkdir('Data'); end
-save([param1 '/Data/all_data_clusters_'  base_grid '_' num2str(num_clusters) '_' ...
+save([param_props.p1 '/Data/all_data_clusters_'  base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters','-v7.3');
 % display information
 disp(['data assigned to ' num2str(num_clusters) ' clusters on ' base_grid]);

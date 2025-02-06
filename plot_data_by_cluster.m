@@ -7,20 +7,17 @@
 %
 % DATE: 3/20/2024
 
-function plot_data_by_cluster(param,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train)
-
-%% process parameter name
-param1 = param_name(param);
+function plot_data_by_cluster(param_props,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train)
 
 %% plot data points by cluster
 % load combined data
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],'all_data');
+    load([param_props.p1 '/Data/processed_all_' param_props.p2 '_data_' file_date float_file_ext '.mat'],'all_data');
 else
-    load([param1 '/Data/' base_grid '_' param '_data_' file_date float_file_ext '.mat'],'all_data');
+    load([param_props.p1 '/Data/' base_grid '_' param_props.p2 '_data_' file_date float_file_ext '.mat'],'all_data');
 end
 % load cluster data
-load([param1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param_props.p1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 % define pressure axis
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
@@ -62,7 +59,7 @@ parfor p = 1:length(pressures)
     c.FontSize = 12;
     c.TickLength = 0;
     % save figure
-    dname = [param1 '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
+    dname = [param_props.p1 '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
     export_fig(gcf,[dname '/clustered_data_' num2str(pressures(p)) '.png'],'-transparent');
     close
@@ -97,7 +94,7 @@ parfor p = 1:length(pressures)
         c.FontSize = 12;
         c.TickLength = 0;
         % save figure
-        dname = [param1 '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
+        dname = [param_props.p1 '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
         if ~isfolder([pwd '/' dname]); mkdir(dname); end
         export_fig([dname '/clustered_data_probability_c' ...
             num2str(clst) '_' num2str(pressures(p)) '.png'],'-transparent');

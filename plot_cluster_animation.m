@@ -1,6 +1,6 @@
 %% Plot clusters over time
 
-function plot_cluster_animation(fpath,base_grid,num_clusters,start_year,snap_date,numWorkers_train)
+function plot_cluster_animation(param_props,fpath,base_grid,num_clusters,start_year,snap_date,numWorkers_train)
 
 % process date
 date_str = num2str(snap_date);
@@ -20,17 +20,23 @@ else
 end
 
 % set up parallel pool
-tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+%tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
 
 for d = 1:length(pressures)
     % create folder
-    dname = ['Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
+    dname = [param_props.p1 '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
     % establish file name
     fname = ['cluster_animation_' num2str(pressures(d)) 'dbar.gif'];
     % determine number of monthly timesteps
-    ds = dir(['Data/GMM_' base_grid '_' num2str(num_clusters) '/*.mat']);
-    timesteps = length(ds)-1;
+    folder_name = [param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters)];
+    cluster_inf = ncinfo([folder_name '/clusters.nc']);
+    for dims = 1:length(cluster_inf.Dimensions)
+        if strcmp(cluster_inf.Dimensions(dims).Name,'time')
+            t_idx = dims;
+        end
+    end
+    timesteps = cluster_inf.Dimensions(t_idx).Length;
     % load dimensions
     if strcmp(base_grid,'RG')
         % load
@@ -63,7 +69,7 @@ for d = 1:length(pressures)
     % set counter
     cnt = 1;
     % establish fiugre
-    h = figure('color','w','visible','off');
+    h = figure('color','w','visible','on');
     axis tight manual
     % plot clusters each month/week
     for m = 1:timesteps
@@ -74,8 +80,8 @@ for d = 1:length(pressures)
                 % clear frame
                 clf
                 % load monthly clusters
-                GMM_clusters = load(['Data/GMM_' base_grid '_' num2str(num_clusters) ...
-                    '/m' num2str(m) '_w' num2str(w)],'GMM_clusters');
+                GMM_clusters = ncread([folder_name '/clusters.nc'],...
+                'clusters',[1 1 1 cnt],[Inf Inf Inf 1]);
                 % make plot
                 m_proj('robinson','lon',[20 380]);
                 z = [GMM_clusters.GMM_clusters(~idx_20,:,depth_idx);...
@@ -112,12 +118,11 @@ for d = 1:length(pressures)
             % clear frame
             clf
             % load monthly clusters
-            GMM_clusters = load(['Data/GMM_' base_grid '_' num2str(num_clusters) ...
-                '/m' num2str(m) '_w1'],'GMM_clusters');
+            GMM_clusters = ncread([folder_name '/clusters.nc'],...
+                'clusters',[1 1 1 cnt],[Inf Inf Inf 1]);
             % make plot
             m_proj('robinson','lon',[20 380]);
-            z = [GMM_clusters.GMM_clusters(~idx_20,:,depth_idx);...
-                GMM_clusters.GMM_clusters(idx_20,:,depth_idx)];
+            z = [GMM_clusters(~idx_20,:,depth_idx);GMM_clusters(idx_20,:,depth_idx)];
             m_pcolor(double(Longitude),double(Latitude),double(z)');
             title(gca,extractAfter(datestr(datenum(2004,m,1)),'-'));
             colormap([1,1,1;flipud(jet(num_clusters))]); % white then jet
@@ -143,6 +148,8 @@ for d = 1:length(pressures)
             else
                 imwrite(imind,cm,[dname '/' fname],'gif','WriteMode','append','DelayTime',0.1);
             end
+            % increase counter
+            cnt = cnt + 1;
         end
     end
     close

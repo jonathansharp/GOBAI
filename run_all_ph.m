@@ -8,25 +8,26 @@ param = 'ph'; param_props = param_config(param);
 
 %% load and process data
 % acquire data
-acquire_snapshot_data(param,data_modes,float_file_ext,snap_date,snap_download);
-acquire_glodap_data(param,glodap_year);
+acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
+acquire_glodap_data(param_props,glodap_year);
 % display data
-display_data(param,float_file_ext,file_date,glodap_year);
+display_data(param_props,float_file_ext,file_date,glodap_year);
 % adjust and combine data
 adjust_ph_float_data(float_file_ext,file_date,glodap_year);
-combine_data(param,float_file_ext,file_date,glodap_year,[7.95 8.1],'solar');
+combine_data(param_props,float_file_ext,file_date,glodap_year);
 
 %% create time-varying clusters and assign data points to them
 % form clusters
-gmm_clustering(param,pwd,base_grid,2004,snap_date,file_date,...
-    float_file_ext,clust_vars,num_clusters,numWorkers_predict); %%%%% looked like this worked (12/9/24)
+gmm_clustering(param_props,pwd,base_grid,2004,snap_date,file_date,...
+    float_file_ext,clust_vars,num_clusters,numWorkers_predict);
 % plot cluster animations
-plot_cluster_animation([pwd ''],base_grid,start_year,date_str,num_clusters);
+plot_cluster_animation(param_props,pwd,base_grid,num_clusters,2004,...
+    snap_date,numWorkers_train);
 plot_probability_animation(base_grid,num_clusters);
 % cluster data
-assign_data_to_clusters(param,base_grid,file_date,snap_date,float_file_ext,clust_vars,num_clusters);
+assign_data_to_clusters(param_props,base_grid,file_date,snap_date,float_file_ext,clust_vars,num_clusters);
 % plot clustered data points
-plot_data_by_cluster(param,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train);
+plot_data_by_cluster(param_props,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train);
 plot_data_over_clusters(param,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train);
 % develop k-fold evaluation indices
 kfold_split_data(param,base_grid,file_date,float_file_ext,glodap_only,num_clusters,num_folds,thresh);

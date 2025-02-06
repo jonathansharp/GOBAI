@@ -9,27 +9,24 @@
 %
 % DATE: 11/12/2024
 
-function gmm_clustering(param,fpath,base_grid,start_year,snap_date,file_date,...
+function gmm_clustering(param_props,fpath,base_grid,start_year,snap_date,file_date,...
     float_file_ext,clust_vars,num_clusters,numWorkers_predict)
 
 %% process date
 date_str = num2str(snap_date);
 
-%% process parameter name
-param1 = param_name(param);
-
-% check for existence of model
-if exist([param1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str '.mat'],'file') ~= 2
+%% check for existence of model
+if exist([param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str '.mat'],'file') ~= 2
 
     %% load basin mask file
     
     
     %% load data
     if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-        load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
+        load([param_props.p1 '/Data/processed_all_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
              'all_data','file_date');
     else
-        load([param1 '/Data/' base_grid '_' param '_data_' file_date float_file_ext '.mat'],...
+        load([param_props.p1 '/Data/' base_grid '_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
              'all_data','file_date');
     end
     
@@ -55,10 +52,10 @@ if exist([param1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date
         'CovarianceType','diagonal',...
         'SharedCovariance',true,'Replicates',10);
     % save GMM model
-    if ~isfolder([param1 '/Data/GMM_' base_grid '_' num2str(num_clusters)])
-        mkdir([param1 '/Data/GMM_' base_grid '_' num2str(num_clusters)]);
+    if ~isfolder([param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters)])
+        mkdir([param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters)]);
     end
-    save([param1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str],...
+    save([param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str],...
         'gmm','num_clusters','C','S','-v7.3');
     clear gmm C S
     toc
@@ -106,7 +103,7 @@ end
 
 
 %% assign grid cells and probabilities to clusters
-folder_name = [pwd '/' param1 '/Data/GMM_' base_grid '_' num2str(num_clusters)];
+folder_name = [pwd '/' param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters)];
 % determine length of cluster file if it exists
 if exist([folder_name '/clusters.nc'],'file') == 2
     inf = ncinfo([folder_name '/clusters.nc']);
@@ -156,14 +153,14 @@ if exist([folder_name '/clusters.nc'],'file') ~= 2 || ...
     end
     
     % load GMM model
-    load([param1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' ...
+    load([param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' ...
         date_str],'gmm','C','S');
     
     % set up parallel pool
-    tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+    %tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
     
     % for each timestep
-    parfor t = 1:timesteps
+    for t = 1:timesteps
     
         % load T/S grid
         TS = load_monthly_TS_data(fpath,base_grid,months(t),weeks(t),start_year,date_str);
