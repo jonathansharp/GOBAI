@@ -3,7 +3,7 @@ create_config_files; % creates configuration files used by GOBAI code
 load_standard_config_files; % loads the 'standard' set of configuration files
 load('Config/chinook.mat'); % change 'workers' configuration to chinook
 load('Config/base_config_RG.mat'); % change 'base_grid' to Roemmich and Gilson
-data_per = 0.05; % set data reduction to 5%
+data_per = 0.1; % set data reduction to 10%
 param = 'ph'; param_props = param_config(param);
 
 %% load and process data
@@ -23,14 +23,14 @@ gmm_clustering(param_props,pwd,base_grid,2004,snap_date,file_date,...
 % plot cluster animations
 plot_cluster_animation(param_props,pwd,base_grid,num_clusters,2004,...
     snap_date,numWorkers_train);
-plot_probability_animation(base_grid,num_clusters);
+%plot_probability_animation(base_grid,num_clusters);
 % cluster data
 assign_data_to_clusters(param_props,base_grid,file_date,snap_date,float_file_ext,clust_vars,num_clusters);
 % plot clustered data points
 plot_data_by_cluster(param_props,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train);
-plot_data_over_clusters(param,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train);
+%plot_data_over_clusters(param,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train);
 % develop k-fold evaluation indices
-kfold_split_data(param,base_grid,file_date,float_file_ext,glodap_only,num_clusters,num_folds,thresh);
+kfold_split_data(param_props,base_grid,file_date,float_file_ext,glodap_only,num_clusters,num_folds,thresh);
 
 %% k-fold train models for evaluation statistics
 % feed-forward neural networks
@@ -87,17 +87,17 @@ plot_gobai_animation(param_props,base_grid,num_clusters,'RFR',...
     file_date,float_file_ext,numWorkers_predict,'numstumps',numstumps,'numbins',numbins);
 
 %% assemble ensemble mean GOBAI
-combine_gobai(param,pwd,base_grid,file_date,float_file_ext,...
-        num_clusters,2004,snap_date,train_ratio,...
-        val_ratio,test_ratio,numtrees,minLeafSize,...
-        numstumps,numbins);
-plot_gobai_animation(param_props,base_grid,num_clusters,'ENS',...
-    file_date,float_file_ext);
+% combine_gobai(param,pwd,base_grid,file_date,float_file_ext,...
+%         num_clusters,2004,snap_date,train_ratio,...
+%         val_ratio,test_ratio,numtrees,minLeafSize,...
+%         numstumps,numbins);
+% plot_gobai_animation(param_props,base_grid,num_clusters,'ENS',...
+%     file_date,float_file_ext);
 
 %% run OSSEs
-run_osse(param,file_date,snap_date,float_file_ext,num_clusters,...
-    variables,clust_vars,train_ratio,val_ratio,test_ratio,numtrees,...
-    minLeafSize,numstumps,numbins,thresh,numWorkers_train,numWorkers_predict);
+% run_osse(param,file_date,snap_date,float_file_ext,num_clusters,...
+%     variables,clust_vars,train_ratio,val_ratio,test_ratio,numtrees,...
+%     minLeafSize,numstumps,numbins,thresh,numWorkers_train,numWorkers_predict);
 
 %% determine uncertainty
 % calculate_gridding_uncertainty;

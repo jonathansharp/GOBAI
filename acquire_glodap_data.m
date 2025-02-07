@@ -39,13 +39,18 @@ clear lon_temp
 %% indices for glodap
 idx_nans = ~isnan(glodap_data.G2temperature) & ~isnan(glodap_data.G2pressure) & ...
           ~isnan(glodap_data.G2salinity) & ~isnan(glodap_data.(param_props.p6));
-if strcmp(param,'ph')
+% check for secondary QC
+if strcmp(param_props.p2,'ph')
     idx_qc = glodap_data.G2salinityqc == 1 & glodap_data.G2phtsqc == 1;
 else
     idx_qc = glodap_data.G2salinityqc == 1 & glodap_data.([param_props.p6 'qc']) == 1;
 end
+% check for good flags
 idx_flags = glodap_data.G2salinityf == 2 & glodap_data.([param_props.p6 'f']) == 2;
-idx_lims = glodap_data.G2pressure <= 2500 & glodap_data.time > datenum(2004,1,0);
+% check depth and/or time range
+idx_lims = glodap_data.G2pressure <= 2500;
+%idx_lims = glodap_data.G2pressure <= 2500 & glodap_data.time > datenum(2004,1,0);
+% combine indices
 idx = idx_nans & idx_qc & idx_flags & idx_lims;
 clear idx_nans idx_qc idx_flags idx_lims
 

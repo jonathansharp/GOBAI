@@ -5,23 +5,20 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 3/18/2023
+% DATE: 2/7/2025
 
-function kfold_split_data(param,base_grid,file_date,float_file_ext,...
+function kfold_split_data(param_props,base_grid,file_date,float_file_ext,...
     glodap_only,num_clusters,num_folds,thresh)
 
-%% process parameter name
-param1 = param_name(param);
-
-if ~exist([param1 '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
+if ~exist([param_props.p1 '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
         '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],'file')
 
 %% load combined data
-load([param1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],...
+load([param_props.p1 '/Data/processed_all_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
-load([param1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param_props.p1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% remove float data for GLODAP only test
@@ -79,15 +76,15 @@ training_data_points_table = array2table(training_data_points,...
     'RowNames',sprintfc('%d',1:num_folds),'VariableNames',clusters);
 test_data_points_table = array2table(test_data_points,...
     'RowNames',sprintfc('%d',1:num_folds),'VariableNames',clusters);
-if ~isfolder([pwd '/' param1 '/Data']); mkdir([param1 '/Data']); end
-writetable(training_data_points_table,[param1 '/Data/training_data_points_' datestr(date) '.csv']);
-writetable(test_data_points_table,[param1 '/Data/test_data_points_' datestr(date) '.csv']);
+if ~isfolder([pwd '/' param_props.p1 '/Data']); mkdir([param_props.p1 '/Data']); end
+writetable(training_data_points_table,[param_props.p1 '/Data/training_data_points_' datestr(date) '.csv']);
+writetable(test_data_points_table,[param_props.p1 '/Data/test_data_points_' datestr(date) '.csv']);
 clear training_data_points training_data_points_table idx_train
 clear test_data_points test_data_points_table idx_test
 
 %% save k-fold evaluation indices
-if ~isfolder([pwd '/' param1 '/Data']); mkdir([param1 '/Data']); end
-save([param1 '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) '_' num2str(num_folds) '_'...
+if ~isfolder([pwd '/' param_props.p1 '/Data']); mkdir([param_props.p1 '/Data']); end
+save([param_props.p1 '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) '_' num2str(num_folds) '_'...
     file_date float_file_ext '.mat'],'num_folds','train_idx','test_idx','-v7.3');
 
 %% display information
