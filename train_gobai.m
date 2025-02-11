@@ -82,9 +82,9 @@ end
 
 %% load data
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    load([param_props.p1 '/Data/processed_all_' param '_data_' file_date float_file_ext '.mat'],'all_data');
+    load([param_props.p1 '/Data/processed_all_' param_props.p2 '_data_' file_date float_file_ext '.mat'],'all_data');
 else
-    load([param_props.p1 '/Data/' base_grid '_' param '_data_' file_date float_file_ext '.mat'],'all_data');
+    load([param_props.p1 '/Data/' base_grid '_' param_props.p2 '_data_' file_date float_file_ext '.mat'],'all_data');
 end
 
 %% load data clusters
