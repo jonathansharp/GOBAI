@@ -1,4 +1,4 @@
-t_whole_script=tic;
+t_whole_script=tic; % time entire script
 
 %% Run all scripts to make GOBAI-O2
 create_config_files; % creates configuration files used by GOBAI code

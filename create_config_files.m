@@ -1,7 +1,7 @@
 % create directory
 if ~isfolder('Config'); mkdir('Config'); end
 
-%% create systemsconfiguration files
+%% create systems configuration files
 numWorkers_train = 40;
 numWorkers_predict = 20;
 model_path = 'TBD';
@@ -13,6 +13,12 @@ numWorkers_predict = 3;
 model_path = '/raid/Model/CMIP6/';
 snap_download = 1;
 save('Config/chinook.mat');
+clear
+numWorkers_train = 8;
+numWorkers_predict = 4;
+model_path = '';
+snap_download = 1;
+save('Config/sockeye.mat');
 clear
 
 %% create data download configuration file for adjusted and DMQC
