@@ -119,7 +119,7 @@ month = str2double(date_str(5:6));
 length_expt = (year-start_year)*12 + month;
 
 %% check for existence of cluster file and length of cluster grids
-if exist([folder_name '/clusters.nc'],'file') ~= 2 || ...
+if ~isfile([folder_name '/clusters.nc']) || ...
         inf.Dimensions(time_idx).Length ~= length_expt
 
     % delete file if it exists
@@ -221,10 +221,10 @@ function assign_to_gmm_clusters(TS,gmm,num_clusters,idx,X_norm,t,folder_name)
     [clusters,~,p] = cluster(gmm,X_norm);
     % fill 3D clusters (highest probability cluster)
     GMM_clusters = nan(TS.xdim,TS.ydim,TS.zdim);
-    GMM_clusters(idx) = clusters;
+    GMM_clusters(idx) = uint8(clusters);
     % save cluster properties in temporary files
     filename = [folder_name '/clust_' num2str(t) '.nc'];
-    if exist('filename'); delete(filename); end
+    if isfile('filename'); delete(filename); end
     nccreate(filename,'time','Dimensions',{'time' 1});
     ncwrite(filename,'time',TS.time(t));
     nccreate(filename,'GMM_clusters','Dimensions',{'lon' size(GMM_clusters,1) ...
@@ -233,11 +233,12 @@ function assign_to_gmm_clusters(TS,gmm,num_clusters,idx,X_norm,t,folder_name)
     % fill 3D probabilities (for each cluster)
     for c = 1:num_clusters
         GMM_cluster_probs = nan(TS.xdim,TS.ydim,TS.zdim);
-        GMM_cluster_probs(idx) = p(:,c);
+        GMM_cluster_probs(idx) = int16(p(:,c)*10000);
         nccreate(filename,['GMM_cluster_probs_' num2str(c)],...
             'Dimensions',{'lon' size(GMM_cluster_probs,1) 'lat' ...
             size(GMM_cluster_probs,2) 'pres' size(GMM_cluster_probs,3)});
-        ncwrite(filename,['GMM_cluster_probs_' num2str(c)],GMM_cluster_probs);
+        ncwrite(filename,['GMM_cluster_probs_' num2str(c)],...
+            GMM_cluster_probs);
     end
 end
 
@@ -250,7 +251,7 @@ function create_nc_files(TS,num_clusters,base_grid,xdim,ydim,zdim,folder_name)
 
     % longitude
     nccreate(filename,'lon','Dimensions',{'lon',xdim},...
-        'DataType','single','FillValue',NaN);
+        'DataType','single','FillValue',NaN,'Format','netcdf4');
     ncwrite(filename,'lon',TS.Longitude);
     ncwriteatt(filename,'lon','units','degrees_east');
     ncwriteatt(filename,'lon','axis','X');
@@ -294,11 +295,20 @@ function create_nc_files(TS,num_clusters,base_grid,xdim,ydim,zdim,folder_name)
     ncwriteatt(filename,'time','_CoordinateAxisType','Time');
 
     % clusters
-    nccreate(filename,'clusters','Dimensions',{'lon',xdim,'lat',ydim,...
-        'depth',zdim,'time',Inf},'DataType','single','FillValue',NaN);
-    for c = 1:num_clusters
-        nccreate(filename,['cluster_probs_c' num2str(c)],'Dimensions',{'lon',xdim,'lat',ydim,...
-            'depth',zdim,'time',Inf},'DataType','single','FillValue',NaN);
+    if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+        nccreate(filename,'clusters','Dimensions',{'lon',xdim,'lat',ydim,...
+            'pres',zdim,'time',Inf},'DataType','uint8','FillValue',NaN);
+        for c = 1:num_clusters
+            nccreate(filename,['cluster_probs_c' num2str(c)],'Dimensions',{'lon',xdim,'lat',ydim,...
+                'pres',zdim,'time',Inf},'DataType','int16','FillValue',NaN);
+        end
+    else
+        nccreate(filename,'clusters','Dimensions',{'lon',xdim,'lat',ydim,...
+            'depth',zdim,'time',Inf},'DataType','uint8','FillValue',NaN);
+        for c = 1:num_clusters
+            nccreate(filename,['cluster_probs_c' num2str(c)],'Dimensions',{'lon',xdim,'lat',ydim,...
+                'depth',zdim,'time',Inf},'DataType','int16','FillValue',NaN);
+        end
     end
 
 end

@@ -7,3 +7,6 @@ end
 
 % add current path
 addpath(genpath(pwd));
+
+% suppress OpenGL warning
+warning('off','MATLAB:hg:AutoSoftwareOpenGL');

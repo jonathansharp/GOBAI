@@ -147,148 +147,20 @@ end
 % start timing training
 tStart = tic;
 
-% set up parallel pool
-tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
-
-% fit models for each fold (if applicable)
-parfor f = 1:num_folds
-
-    %% define index for observations
-    if num_folds > 1
-        obs_index_train = train_idx.(['f' num2str(f)]);
-    else
-        obs_index_train = true(size(all_data.temperature));
+% set up parallel pool and fit models for each fold (if applicable)
+if num_folds > 1 % for k-fold training
+    tic; parpool(num_folds); fprintf('Pool initiation: '); toc;
+    parfor f = 1:num_folds
+        train_models(param_props,num_folds,base_grid,num_clusters,...
+            alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
+            train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
+            numtrees,minLeafSize,numstumps,numbins,thresh,'no',f)
     end
-    % reduce data volume if applicable:
-    % number of observations marked to use for training
-    num_obs = length(obs_index_train);
-    % unique random numbers equal to observational index
-    numbers = randperm(num_obs);
-    % adjust observation index to fraction (i.e., 'data_per') its current sum
-    obs_index_train(numbers > (data_per.*num_obs)) = false;
-
-    %% define observations index for k-fold testing
-    if num_folds > 1
-        obs_index_test = test_idx.(['f' num2str(f)]);
-        % reduce data volume if applicable:
-        % number of observations marked to use for training
-        num_obs = length(obs_index_test);
-        % unique random numbers equal to observational index
-        numbers = randperm(num_obs)';
-        % adjust observation index to fraction (i.e., 'data_per') its current sum
-        obs_index_test(numbers > (data_per.*num_obs)) = false;
-    end
-    
-    % fit models for each cluster
-    for c = 1:num_clusters
-    
-        % check for data in cluster
-        if any(all_data_clusters.clusters(obs_index_train) == c)
-        
-            % start timing fit
-            tic
-            
-            %% fit model for each cluster
-            if strcmp(alg_type,'FFNN')
-                % define model parameters and train FFNN
-                nodes1 = [5 10 15]; nodes2 = [15 10 5];
-                alg = fit_FFNN(param_props.p2,all_data,all_data_clusters.(['c' num2str(c)]),...
-                    obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,thresh);
-            elseif strcmp(alg_type,'RFR')
-                % define model parameters and train RFR
-                NumPredictors = ceil(sqrt(length(variables)));
-                alg = fit_RFR(param_props.p2,all_data,all_data_clusters.(['c' num2str(c)]),...
-                    obs_index_train,variables,numtrees,minLeafSize,NumPredictors,0,thresh);
-                alg = compact(alg); % convert RFR to compact
-            elseif strcmp(alg_type,'GBM')
-                % train GBM
-                alg = fit_GBM(param_props.p2,all_data,all_data_clusters.(['c' num2str(c)]),...
-                    obs_index_train,variables,numstumps,numbins,thresh);
-            end
-            
-            %% stop timing fit
-            if num_folds > 1
-                fprintf(['Train ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
-            else
-                fprintf(['Train ' alg_type ' for ' base_grid ' - Cluster #' num2str(c) ': ']);
-            end
-            
-            toc
-
-            %% for k-fold test
-            if num_folds > 1
-
-                % start timing predictions
-                tic
-
-                %% predict data for each cluster
-                try
-                    if strcmp(alg_type,'FFNN')
-                        output = ...
-                            run_FFNN(alg,all_data,all_data_clusters.(['c' num2str(c)]),...
-                            obs_index_test,variables,thresh);
-                    elseif strcmp(alg_type,'RFR')
-                        output = ...
-                            run_RFR(alg,all_data,all_data_clusters.(['c' num2str(c)]),...
-                            obs_index_test,variables,thresh);
-                    elseif strcmp(alg_type,'GBM')
-                        output = ...
-                            run_GBM(alg,all_data,all_data_clusters.(['c' num2str(c)]),...
-                            obs_index_test,variables,thresh);
-                     end
-                catch
-                    % if there aren't enough test data points, use NaNs
-                    output = nan(sum(obs_index_test),1);
-                end
-        
-                % stop timing predictions
-                fprintf(['Run ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
-                toc
-
-            end
-
-        % add NaNs to structures if no data in cluster 
-        else
-
-            % print information
-            if num_folds > 1
-                fprintf(['Train ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
-                disp(' ');
-            else
-                fprintf(['Train ' alg_type ' for ' base_grid ' - Cluster #' num2str(c) ': N/A']);
-                disp(' ');
-            end
-
-            % start timing predictions
-            if num_folds > 1
-
-                % add NaNs if no model
-                % output = nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
-
-                % print information
-                fprintf(['Run ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
-                disp(' ');
-
-            end
-
-        end
-
-        % save test model and output for each cluster
-        if ~isfolder([pwd '/' alg_dir]); mkdir(alg_dir); end
-        if any(all_data_clusters.clusters(obs_index_train) == c)
-            if num_folds > 1
-                parsave([alg_dir '/' alg_fnames{f,c}],alg,alg_type,output,'output',obs_index_test,'obs_index_test');
-            else
-                parsave([alg_dir '/' alg_fnames{f,c}],alg,alg_type);
-            end
-        else
-            if num_folds > 1
-                parsave([alg_dir '/' alg_fnames{f,c}],output,'output',obs_index_test,'obs_index_test');
-            end
-        end
-
-    end
-
+else % for standard training
+    train_models(param_props,num_folds,base_grid,num_clusters,...
+        alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
+        train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
+        numtrees,minLeafSize,numstumps,numbins,thresh,'yes',f)
 end
 
 % end parallel session
@@ -318,6 +190,7 @@ for f = 1:num_folds
         alg_output.(['f' num2str(f)])(:,c) = output;
         % assemble matrix of probabilities greater than the threshold (5%)
         probs_array = all_data_clusters.(['c' num2str(c)])(obs_index_test);
+        probs_array = probs_array./10000;
         probs_array(probs_array < thresh) = NaN;
         probs_matrix = [probs_matrix,probs_array];
     end
@@ -413,6 +286,151 @@ exportgraphics(gcf,[fig_dir '/' fig_name_2]);
 % clean up
 clear land cmap c
 close
+
+end
+
+end
+
+%% function to train ML models
+function train_models(param_props,num_folds,base_grid,num_clusters,...
+    alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
+    train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
+    numtrees,minLeafSize,numstumps,numbins,thresh,par_use,f)
+
+%% define index for observations
+if num_folds > 1
+    obs_index_train = train_idx.(['f' num2str(f)]);
+else
+    obs_index_train = true(size(all_data.temperature));
+end
+% reduce data volume if applicable:
+% number of observations marked to use for training
+num_obs = length(obs_index_train);
+% unique random numbers equal to observational index
+numbers = randperm(num_obs);
+% adjust observation index to fraction (i.e., 'data_per') its current sum
+obs_index_train(numbers > (data_per.*num_obs)) = false;
+
+%% define observations index for k-fold testing
+if num_folds > 1
+    obs_index_test = test_idx.(['f' num2str(f)]);
+    % reduce data volume if applicable:
+    % number of observations marked to use for training
+    num_obs = length(obs_index_test);
+    % unique random numbers equal to observational index
+    numbers = randperm(num_obs)';
+    % adjust observation index to fraction (i.e., 'data_per') its current sum
+    obs_index_test(numbers > (data_per.*num_obs)) = false;
+end
+
+% fit models for each cluster
+for c = 1:num_clusters
+
+    % check for data in cluster
+    if any(all_data_clusters.clusters(obs_index_train) == c)
+    
+        % start timing fit
+        tic
+        
+        %% fit model for each cluster
+        if strcmp(alg_type,'FFNN')
+            % define model parameters and train FFNN
+            nodes1 = [5 10 15]; nodes2 = [15 10 5];
+            alg = fit_FFNN(param_props.p2,all_data,all_data_clusters.(['c' num2str(c)]),...
+                obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,...
+                thresh,par_use);
+        elseif strcmp(alg_type,'RFR')
+            % define model parameters and train RFR
+            NumPredictors = ceil(sqrt(length(variables)));
+            alg = fit_RFR(param_props.p2,all_data,all_data_clusters.(['c' num2str(c)]),...
+                obs_index_train,variables,numtrees,minLeafSize,NumPredictors,0,thresh);
+            alg = compact(alg); % convert RFR to compact
+        elseif strcmp(alg_type,'GBM')
+            % train GBM
+            alg = fit_GBM(param_props.p2,all_data,all_data_clusters.(['c' num2str(c)]),...
+                obs_index_train,variables,numstumps,numbins,thresh);
+        end
+        
+        %% stop timing fit
+        if num_folds > 1
+            fprintf(['Train ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
+        else
+            fprintf(['Train ' alg_type ' for ' base_grid ' - Cluster #' num2str(c) ': ']);
+        end
+        
+        toc
+
+        %% for k-fold test
+        if num_folds > 1
+
+            % start timing predictions
+            tic
+
+            %% predict data for each cluster
+            try
+                if strcmp(alg_type,'FFNN')
+                    output = ...
+                        run_FFNN(alg,all_data,all_data_clusters.(['c' num2str(c)]),...
+                        obs_index_test,variables,thresh);
+                elseif strcmp(alg_type,'RFR')
+                    output = ...
+                        run_RFR(alg,all_data,all_data_clusters.(['c' num2str(c)]),...
+                        obs_index_test,variables,thresh);
+                elseif strcmp(alg_type,'GBM')
+                    output = ...
+                        run_GBM(alg,all_data,all_data_clusters.(['c' num2str(c)]),...
+                        obs_index_test,variables,thresh);
+                 end
+            catch
+                % if there aren't enough test data points, use NaNs
+                output = nan(sum(obs_index_test),1);
+            end
+    
+            % stop timing predictions
+            fprintf(['Run ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
+            toc
+
+        end
+
+    % add NaNs to structures if no data in cluster 
+    else
+
+        % print information
+        if num_folds > 1
+            fprintf(['Train ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+            disp(' ');
+        else
+            fprintf(['Train ' alg_type ' for ' base_grid ' - Cluster #' num2str(c) ': N/A']);
+            disp(' ');
+        end
+
+        % start timing predictions
+        if num_folds > 1
+
+            % add NaNs if no model
+            % output = nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
+
+            % print information
+            fprintf(['Run ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+            disp(' ');
+
+        end
+
+    end
+
+    % save test model and output for each cluster
+    if ~isfolder([pwd '/' alg_dir]); mkdir(alg_dir); end
+    if any(all_data_clusters.clusters(obs_index_train) == c)
+        if num_folds > 1
+            parsave([alg_dir '/' alg_fnames{f,c}],alg,alg_type,output,'output',obs_index_test,'obs_index_test');
+        else
+            parsave([alg_dir '/' alg_fnames{f,c}],alg,alg_type);
+        end
+    else
+        if num_folds > 1
+            parsave([alg_dir '/' alg_fnames{f,c}],output,'output',obs_index_test,'obs_index_test');
+        end
+    end
 
 end
 

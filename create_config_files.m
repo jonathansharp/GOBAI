@@ -8,14 +8,14 @@ model_path = 'TBD';
 snap_download = 0;
 save('Config/hercules.mat');
 clear
-numWorkers_train = 3;
+numWorkers_train = 6;
 numWorkers_predict = 3;
 model_path = '/raid/Model/CMIP6/';
 snap_download = 1;
 save('Config/chinook.mat');
 clear
-numWorkers_train = 12;
-numWorkers_predict = 6;
+numWorkers_train = 50;
+numWorkers_predict = 30;
 model_path = '';
 snap_download = 1;
 save('Config/sockeye.mat');

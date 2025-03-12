@@ -1,7 +1,7 @@
 %% Run all scripts to make GOBAI-pH
 create_config_files; % creates configuration files used by GOBAI code
 load_standard_config_files; % loads the 'standard' set of configuration files
-load('Config/chinook.mat'); % change 'workers' configuration to chinook
+load('Config/sockeye.mat'); % change 'workers' configuration to chinook
 load('Config/base_config_RG.mat'); % change 'base_grid' to Roemmich and Gilson
 data_per = 0.1; % set data reduction to 10%
 param = 'ph'; param_props = param_config(param);

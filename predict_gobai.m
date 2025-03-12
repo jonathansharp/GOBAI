@@ -308,7 +308,7 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         % load GMM cluster probabilities for this cluster and month, and convert to array
         GMM_probs = ncread([folder_name '/clusters.nc'],['cluster_probs_c' num2str(c)],...
             [1 1 1 cnt],[Inf Inf Inf 1]);
-        probabilities_array = GMM_probs(TS_index); % convert to array
+        probabilities_array = GMM_probs(TS_index)./10000; % convert to array
         probabilities_array(probabilities_array < thresh) = NaN; % remove probabilities below thresh
         probs_matrix(:,c) = probabilities_array; % add to probability matrix
 

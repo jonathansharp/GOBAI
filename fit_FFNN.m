@@ -1,5 +1,5 @@
 function FFNN = fit_FFNN(target,data,probabilities,index,...
-    variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,thresh)
+    variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,thresh,par_use)
     
 % index for training based on input index and cluster probabilities
 idx_train = index & probabilities > thresh;
@@ -32,6 +32,6 @@ for n = 1:numNets
     net.divideParam.testRatio = test_ratio;
     % Train the Network
     FFNN.(['n' num2str(n)]) = ...
-        train(net,predictors',data.(target)(idx_train)','useParallel','no');
+        train(net,predictors',data.(target)(idx_train)','useParallel',par_use);
     % weird error was fixed by removing cpt_map toolbox from path 
 end

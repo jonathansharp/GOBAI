@@ -58,7 +58,7 @@ for d = 2%1:length(pressures)
                 % make plot
                 m_proj('robinson','lon',[20 380]);
                 z = [GMM_cluster_probs.GMM_cluster_probs(~idx_20,:,depth_idx);...
-                    GMM_cluster_probs.GMM_cluster_probs(idx_20,:,depth_idx)];
+                    GMM_cluster_probs.GMM_cluster_probs(idx_20,:,depth_idx)]./100;
                 m_pcolor(double(Longitude),double(Latitude),double(z)');
                 title(gca,extractAfter(datestr(datenum(2004,m,1)),'-'));
                 colormap(cmocean('amp'));
@@ -98,8 +98,8 @@ for d = 2%1:length(pressures)
                     figure(h);
                     % make plot
                     m_proj('robinson','lon',[20 380]);
-                    z = 100.*[GMM_cluster_probs.GMM_cluster_probs(~idx_20,:,depth_idx);...
-                        GMM_cluster_probs.GMM_cluster_probs(idx_20,:,depth_idx)];
+                    z = [GMM_cluster_probs.GMM_cluster_probs(~idx_20,:,depth_idx);...
+                        GMM_cluster_probs.GMM_cluster_probs(idx_20,:,depth_idx)]./100;
                     m_pcolor(double(Longitude),double(Latitude),double(z)');
                     title(gca,extractAfter(datestr(datenum(2004,m,1)),'-'));
                     clrs = flipud(jet(num_clusters)); % jet

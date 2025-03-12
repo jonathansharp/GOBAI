@@ -37,7 +37,10 @@ set(gca,'YDir','reverse');
 ylabel('Depth (dbar)');
 xlabel('[O_{2}] (\mumol kg^{-1})');
 hold off;
-exportgraphics(gcf,[param_props.p1 '/Figures/Data/mean_float_profile_' file_date float_file_ext '.png']);
+if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir')
+    mkdir([param_props.p1 '/Figures/Data']); end
+export_fig(gcf,[param_props.p1 '/Figures/Data/mean_float_profile_' ...
+    file_date float_file_ext '.png'],'-transparent');
 close
 % floats (individual profiles)
 figure; hold on;
@@ -51,7 +54,10 @@ set(gca,'YDir','reverse');
 ylabel('Depth (dbar)');
 xlabel('[O_{2}] (\mumol kg^{-1})');
 hold off;
-exportgraphics(gcf,[param_props.p1 '/Figures/Data/all_float_profiles_' file_date float_file_ext '.png']);
+if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir')
+    mkdir([param_props.p1 '/Figures/Data']); end
+export_fig(gcf,[param_props.p1 '/Figures/Data/all_float_profiles_' ...
+    file_date float_file_ext '.png'],'-transparent');
 close
 % clean up
 clear idx idx_float float_mean float_std profs z zi
@@ -71,7 +77,10 @@ fill([glodap_mean+glodap_std;flipud(glodap_mean-glodap_std)],...
     [zi;flipud(zi)],clrs(1,:),'FaceAlpha',0.25,'LineStyle','none');
 set(gca,'YDir','reverse');
 hold off;
-exportgraphics(gcf,[param_props.p1 '/Figures/Data/mean_glodap_profile_' num2str(glodap_year) '.png']);
+if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir')
+    mkdir([param_props.p1 '/Figures/Data']); end
+export_fig(gcf,[param_props.p1 '/Figures/Data/mean_glodap_profile_' ...
+    num2str(glodap_year) '.png'],'-transparent');
 close
 % glodap (individual profiles)
 figure; hold on;
@@ -82,12 +91,19 @@ for z = 1:length(profs)
 end
 set(gca,'YDir','reverse');
 hold off;
-exportgraphics(gcf,[param_props.p1 '/Figures/Data/all_glodap_profiles_' num2str(glodap_year) '.png']);
+if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir')
+    mkdir([param_props.p1 '/Figures/Data']); end
+export_fig(gcf,[param_props.p1 '/Figures/Data/all_glodap_profiles_' ...
+    num2str(glodap_year) '.png'],'-transparent');
 close
 % clean up
 clear clrs idx idx_glodap glodap_mean glodap_std profs z zi
 
 %% Display data distribution
+
+if ~isfile([param_props.p1 '/Figures/Data/data_by_year_' file_date float_file_ext '.png']) && ...
+   ~isfile([param_props.p1 '/Figures/Data/data_by_latitude_' file_date float_file_ext '.png']) && ...
+   ~isfile([param_props.p1 '/Figures/Data/data_by_longitude_' file_date float_file_ext '.png'])
 
 % float
 f_profiles = unique(float_data.PROF_ID);
@@ -120,7 +136,8 @@ datetick('x'); xlim([datenum([2003 1 1]) datenum([2024 1 1])]);
 ylabel('Profiles within each year');
 if ~exist([pwd '/' param_props.p1 '/Figures'],'dir'); mkdir([param_props.p1 '/Figures']); end
 if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir'); mkdir([param_props.p1 '/Figures/Data']); end
-exportgraphics(gcf,[param_props.p1 '/Figures/Data/data_by_year_' file_date float_file_ext '.png']);
+export_fig(gcf,[param_props.p1 '/Figures/Data/data_by_year_' file_date ...
+    float_file_ext '.png'],'-transparent');
 clear edges year_temp
 close
 
@@ -134,7 +151,8 @@ histogram(glodap_data.LAT(g_idx),edges,'FaceColor','b');
 legend({'Floats' 'GLODAP'})
 ylabel('Profiles within each latitude range');
 if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir'); mkdir([param_props.p1 '/Figures/Data']); end
-exportgraphics(gcf,[param_props.p1 '/Figures/Data/data_by_latitude_' file_date float_file_ext '.png']);
+export_fig(gcf,[param_props.p1 '/Figures/Data/data_by_latitude_' ...
+    file_date float_file_ext '.png'],'-transparent');
 clear edges
 close
 
@@ -148,8 +166,11 @@ histogram(glodap_data.LON(g_idx),edges,'FaceColor','b');
 legend({'Floats' 'GLODAP'})
 ylabel('Profiles within each longitude range');
 if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir'); mkdir([param_props.p1 '/Figures/Data']); end
-exportgraphics(gcf,[param_props.p1 '/Figures/Data/data_by_longitude_' file_date float_file_ext '.png']);
+export_fig(gcf,[param_props.p1 '/Figures/Data/data_by_longitude_' ...
+    file_date float_file_ext '.png'],'-transparent');
 clear edges
 close
+
+end
 
 end

@@ -568,6 +568,6 @@ end
 
 % save
 if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-save(['O2/Data/processed_float_o2_data_adjusted_' file_date float_file_ext '.mat'],...
+save(['O2/Data/processed_float_oxygen_data_adjusted_' file_date float_file_ext '.mat'],...
     'float_data_adjusted','file_date','-v7.3');
 clear slp int float_data float_data_adjusted v vars

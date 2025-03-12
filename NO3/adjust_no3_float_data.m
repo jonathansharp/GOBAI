@@ -7,14 +7,14 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 3/28/2024
+% DATE: 3/11/2025
 
 function adjust_no3_float_data(float_file_ext,file_date,glodap_year)
 
 %% load interpolated float and glodap data
-load(['NO3/Data/processed_float_no3_data_' file_date float_file_ext '.mat'],...
+load(['NO3/Data/processed_float_nitrate_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date');
-load(['NO3/Data/processed_glodap_no3_data_' num2str(glodap_year) '.mat'],...
+load(['NO3/Data/processed_glodap_nitrate_data_' num2str(glodap_year) '.mat'],...
     'glodap_data');
 
 %% import WOA climatologies
@@ -392,6 +392,6 @@ for v = 1:length(vars)
 end
 % save
 if ~exist([pwd '/NO3/Data'],'dir'); mkdir('NO3/Data'); end
-save(['NO3/Data/processed_float_no3_data_adjusted_' file_date float_file_ext '.mat'],...
+save(['NO3/Data/processed_float_nitrate_data_adjusted_' file_date float_file_ext '.mat'],...
     'float_data_adjusted','file_date','-v7.3');
 clear slp int float_data float_data_adjusted v vars

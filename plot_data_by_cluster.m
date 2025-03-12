@@ -7,7 +7,7 @@
 %
 % DATE: 3/20/2024
 
-function plot_data_by_cluster(param_props,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train)
+function plot_data_by_cluster(param_props,base_grid,file_date,float_file_ext,num_clusters,numWorkers_predict)
 
 %% plot data points by cluster
 % load combined data
@@ -26,11 +26,11 @@ else
     pressures = sort(unique(all_data.depth));
 end
 % open parallel pool
-tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 % make plots
 parfor p = 1:length(pressures)
     % plot data by cluster
-    figure('visible','on','Position',[100 100 800 400]); hold on;
+    figure('visible','off','Position',[100 100 800 400]); hold on;
     set(gca,'fontsize',12);
     % use depth for CMIP models
     if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
