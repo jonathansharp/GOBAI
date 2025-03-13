@@ -14,7 +14,7 @@ model_path = '/raid/Model/CMIP6/';
 snap_download = 1;
 save('Config/chinook.mat');
 clear
-numWorkers_train = 50;
+numWorkers_train = 30;
 numWorkers_predict = 30;
 model_path = '';
 snap_download = 1;
