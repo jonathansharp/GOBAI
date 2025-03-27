@@ -1,17 +1,14 @@
-function subsample_cmip_model(param,data,model,fpath,file_date,...
+function subsample_cmip_model(param_props,data,model,fpath,file_date,...
     snap_date,float_file_ext,start_year,rlz)
 
 %% process date
 date_str = num2str(snap_date);
 
-%% process parameter name
-[param1,param2,param3] = param_name(param);
-
 %% check if processed file already exists
-if ~isfile([param1 '/Data/' model '_' param '_data_' file_date float_file_ext '.mat'])
-
+if ~isfile([param_props.p1 '/Data/' model '_' param_props.p2 '_data_' file_date float_file_ext '.mat'])
+%%%%%%%%%% will have to replace param_props.p2 with a new parameter ('o2')
 %% load variables
-nc_filepath = [fpath 'combined/regridded/' param '_Omon_' model ... % define filepath
+nc_filepath = [fpath 'combined/regridded/' param_props.p2 '_Omon_' model ... % define filepath
     '_combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 lat = ncread(nc_filepath,'lat');
 lon = ncread(nc_filepath,'lon');
@@ -108,7 +105,7 @@ all_data.lon_cos_2 = cosd(all_data.longitude-110);
 % z = single(bottom_depth(lat_2d,lon_2d));
 
 %% bin to lat/lon grid cells and plot gridded observations
-load([param1 '/Data/' model '_' param '_data_' file_date float_file_ext '.mat'],...
+load([param_props.p1 '/Data/' model '_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
     'all_data','file_date');
 % determine bin number of each test data point on 1 degree grid
 lon_edges = -180:180; lon = -179.5:179.5;
@@ -122,8 +119,8 @@ pres = ([2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1
 subs = [Xnum, Ynum, Znum];
 idx_subs = any(subs==0,2);
 sz = [length(lon),length(lat),length(pres)];
-all_data.(['gridded_' param2]) = accumarray(subs(~idx_subs,:),...
-    abs(all_data.(param2)(~idx_subs)),sz,@nanmean);
+all_data.(['gridded_' param_props.p2]) = accumarray(subs(~idx_subs,:),...
+    abs(all_data.(param_props.p2)(~idx_subs)),sz,@nanmean);
 clear subs sz
 % make plot
 idx_depth = find(min(abs(all_data.depth-20))==abs(all_data.depth-20));
@@ -134,13 +131,13 @@ title(['Annual mean at ' num2str(all_data.depth(idx_depth(1))) ' m (' model ')']
 set(gcf,'Position',[617, 599, 820, 420])
 setm(gca,'ffacecolor','w');
 setm(gca,'fontsize',12);
-[lon_temp,z] = reformat_lon(lon,all_data.(['gridded_' param2])(:,:,2),20);
+[lon_temp,z] = reformat_lon(lon,all_data.(['gridded_' param_props.p2])(:,:,2),20);
 pcolorm(lat,[lon_temp lon_temp(end)+1],[z;z(end,:)]');
 land = shaperead('landareas', 'UseGeoCoords', true);
 geoshow(land,'FaceColor',rgb('grey'));
 c=colorbar; caxis([150 350]);
 cmap = cmocean('ice'); cmap(1,:) = 1; colormap(cmap)
-c.Label.String = ['Average Gridded ' param3];
+c.Label.String = ['Average Gridded ' param_props.p3];
 c.FontSize = 12;
 mlabel off; plabel off;
 if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
@@ -148,7 +145,7 @@ export_fig(['Figures/' model '/subsampled_oxy_20m.png'],'-transparent');
 close
 
 %% save data
-save([param1 '/Data/' model '_' param '_data_' file_date float_file_ext '.mat'],...
+save([param_props.p1 '/Data/' model '_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
     'all_data','file_date','-v7.3');
 
 else

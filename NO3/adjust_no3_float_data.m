@@ -9,9 +9,10 @@
 %
 % DATE: 3/11/2025
 
-function adjust_no3_float_data(float_file_ext,file_date,glodap_year)
+function adjust_no3_float_data(float_file_ext,glodap_year)
 
 %% load interpolated float and glodap data
+file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 load(['NO3/Data/processed_float_nitrate_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date');
 load(['NO3/Data/processed_glodap_nitrate_data_' num2str(glodap_year) '.mat'],...

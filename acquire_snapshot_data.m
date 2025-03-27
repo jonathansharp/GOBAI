@@ -8,7 +8,7 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 2/5/2025
+% DATE: 3/25/2025
 
 function acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download)
 
@@ -110,7 +110,7 @@ end
 
 %% Only do all this if downloaded float matlab file does not exist
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-if exist([param_props.p1 '/Data/processed_float_' param_props.p2 '_data_' file_date float_file_ext '.mat'],'file') ~= 2
+if exist([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'file') ~= 2
 
 %% Define file structure
 snapshot_path = ['BGC_Argo_Snapshots/' num2str(snap_date) '-BgcArgoSprof/dac']; % define file path
@@ -120,7 +120,7 @@ idx_folders = find(~contains(foldernames,'.')); % index to folders only
 clear today_date mnth folderinfo
 
 %% pre-allocate float data structure
-float_data.(param_props.p5) = [];
+float_data.(param_props.argo_name) = [];
 float_data.LAT = [];
 float_data.LON = [];
 float_data.PRES = [];
@@ -138,7 +138,7 @@ m_coast('patch',rgb('gray'));
 m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
 
 %% Define interpolation parameters
-vars = {'PSAL' 'TEMP' param_props.p4}; % define variables to interpolate
+vars = {'PSAL' 'TEMP' param_props.argo_name}; % define variables to interpolate
 zi = ([2.5 10:10:170 182.5 ... % construct depth axis on which to interpolate
     200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
 
@@ -172,7 +172,7 @@ for n = 1:length(idx_folders) % for each DAC
         clear temp m
         
         %% Continue if float has the relevant sensor
-        if any(strcmp(float.(['F' floatnum]).PARAMETER,param_props.p4))
+        if any(strcmp(float.(['F' floatnum]).PARAMETER,param_props.argo_name))
 
             %% Parse parameter data modes
             for m = 1:n_param
@@ -302,9 +302,9 @@ for n = 1:length(idx_folders) % for each DAC
                         zi,'linewidth',2);
                     legend({'Measurements' 'Interpolation'},'Location',...
                         'northoutside','NumColumns',2);
-                    if ~exist([pwd '/' param_props.p1 '/Figures/Data/Profiles'],'dir')
-                        mkdir([param_props.p1 '/Figures/Data/Profiles']); end
-                    export_fig(gcf,[param_props.p1 '/Figures/Data/Profiles/float_' ...
+                    if ~exist([param_props.dir_name '/Figures/Data/Profiles'],'dir')
+                        mkdir([param_props.dir_name '/Figures/Data/Profiles']); end
+                    export_fig(gcf,[param_props.dir_name '/Figures/Data/Profiles/float_' ...
                         num2str(floatnum) '_prof' num2str(prof_to_plot) '.png'],'-transparent');
                     close
                 end
@@ -316,7 +316,7 @@ for n = 1:length(idx_folders) % for each DAC
             float.(['F' floatnum]).TIME = datenum(1950,1,1+float.(['F' floatnum]).JULD);
     
             %% drop empty interpolated profiles
-            float.(['F' floatnum]).([param_props.p4 '_ADJUSTEDi'])(:,nan_idx) = [];
+            float.(['F' floatnum]).([param_props.argo_name '_ADJUSTEDi'])(:,nan_idx) = [];
             float.(['F' floatnum]).PSAL_ADJUSTEDi(:,nan_idx) = [];
             float.(['F' floatnum]).TEMP_ADJUSTEDi(:,nan_idx) = [];
     
@@ -329,7 +329,7 @@ for n = 1:length(idx_folders) % for each DAC
             float.(['F' floatnum]).FLOAT_NUMBERi = repmat(str2double(floatnum),length(zi),sum(~nan_idx));
     
             %% add interpolated data to float data structure
-            float_data.(param_props.p5) = [float_data.(param_props.p5);float.(['F' floatnum]).([param_props.p4 '_ADJUSTEDi'])(:)];
+            float_data.(param_props.argo_name) = [float_data.(param_props.argo_name);float.(['F' floatnum]).([param_props.argo_name '_ADJUSTEDi'])(:)];
             float_data.LAT = [float_data.LAT;float.(['F' floatnum]).LATITUDEi(:)];
             float_data.LON = [float_data.LON;float.(['F' floatnum]).LONGITUDEi(:)];
             float_data.PRES = [float_data.PRES;float.(['F' floatnum]).PRES_ADJUSTEDi(:)];
@@ -342,9 +342,6 @@ for n = 1:length(idx_folders) % for each DAC
 
         end
 
-        %% clean up
-        clear float floatnum nan_idx n_prof n_param_props.p2 n_levels
-    
     % increase conter
     counter = counter + 1;
 
@@ -359,7 +356,7 @@ end
 clear foldernames snapshot_path idx_folders n vars zi
 
 %% remove nan data points
-idx = isnan(float_data.(param_props.p5));
+idx = isnan(float_data.(param_props.argo_name));
 idx_sal = isnan(float_data.SAL);
 idx_temp = isnan(float_data.TEMP);
 idx_any = idx | idx_sal | idx_temp;
@@ -374,8 +371,9 @@ figure(1); hold on;
 lon_temp = convert_lon(convert_lon(float_data.LON));
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,float_data.LAT,'.g');
-if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir'); mkdir([param_props.p1 '/Figures/Data']); end
-export_fig(gcf,[param_props.p1 '/Figures/Data/processed_float_'  ...
+if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir')
+    mkdir([param_props.dir_name '/Figures/Data']); end
+export_fig(gcf,[param_props.dir_name '/Figures/Data/processed_float_'  ...
     file_date float_file_ext '.png'],'-transparent');
 close
 clear lon_temp
@@ -395,12 +393,13 @@ float_data.SIGMA = gsw_sigma0(float_data.ABSSAL,float_data.CNSTEMP);
 float_data.SPICE = gsw_spiciness0(float_data.ABSSAL,float_data.CNSTEMP);
 
 %% display the number of matching floats and profiles
-disp(['# of matching Argo profiles (' param_props.p5 '): ' num2str(length(unique(float_data.PROF_ID)))]);
-disp(['# of matching Argo floats (' param_props.p5 '): ' num2str(length(unique(float_data.FLOAT)))]);
+disp(['# of matching Argo profiles (' param_props.argo_name '): ' num2str(length(unique(float_data.PROF_ID)))]);
+disp(['# of matching Argo floats (' param_props.argo_name '): ' num2str(length(unique(float_data.FLOAT)))]);
 
 %% save processed float data
-if ~exist([pwd '/' param_props.p1 '/Data'],'dir'); mkdir([param_props.p1 '/Data']); end
-save([param_props.p1 '/Data/processed_float_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
+if ~exist([pwd '/' param_props.dir_name '/Data'],'dir')
+    mkdir([param_props.dir_name '/Data']); end
+save([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date','-v7.3');
 
 %% clean up

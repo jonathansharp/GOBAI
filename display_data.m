@@ -8,9 +8,10 @@
 %
 % DATE: 09/12/2023
 
-function display_data(param_props,float_file_ext,file_date,glodap_year)
+function display_data(param_props,float_file_ext,glodap_year)
 
 %% load interpolated float and glodap data
+file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 load([param_props.p1 '/Data/processed_float_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date');
 load([param_props.p1 '/Data/processed_glodap_' param_props.p2 '_data_' num2str(glodap_year) '.mat'],...

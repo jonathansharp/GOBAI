@@ -9,9 +9,10 @@
 %
 % DATE: 09/22/2023
 
-function adjust_o2_float_data(float_file_ext,file_date,glodap_year)
+function adjust_o2_float_data(float_file_ext,glodap_year)
 
 %% load interpolated float and glodap data
+file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 load(['O2/Data/processed_float_oxygen_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date');
 load(['O2/Data/processed_glodap_oxygen_data_' num2str(glodap_year) '.mat'],...

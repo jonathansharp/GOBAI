@@ -8,11 +8,12 @@
 %
 % DATE: 10/05/2023
 
-function assign_data_to_clusters(param_props,base_grid,file_date,snap_date,float_file_ext,...
+function assign_data_to_clusters(param_props,base_grid,snap_date,float_file_ext,...
     clust_vars,num_clusters)
 
 %% process date
 date_str = num2str(snap_date);
+file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 
 %% load combined data
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')

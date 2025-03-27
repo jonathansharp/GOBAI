@@ -268,10 +268,10 @@ end
 %% for processing 3D grids and applying trained models to them
 function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     base_grid,m,w,cnt,xdim,ydim,zdim,variables_TS,thresh,gobai_alg_dir,...
-    param_props)
+    param_props,param_path)
     
     % define folder name
-    folder_name = [param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters)];
+    folder_name = [param_path 'GMM_' base_grid '_' num2str(num_clusters)];
 
     % convert to arrays
     TS_index = ~isnan(TS.temperature_cns);

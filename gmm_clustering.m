@@ -7,27 +7,28 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 11/12/2024
+% DATE: 3/25/2025
 
-function gmm_clustering(param_props,fpath,base_grid,start_year,snap_date,file_date,...
-    float_file_ext,clust_vars,num_clusters,numWorkers_predict)
+function gmm_clustering(param_props,fpath,base_grid,start_year,snap_date,...
+    float_file_ext,clust_vars,num_clusters,numWorkers_predict,param_path)
 
 %% process date
 date_str = num2str(snap_date);
+file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 
 %% check for existence of model
-if exist([param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str '.mat'],'file') ~= 2
+if exist([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str '.mat'],'file') ~= 2
 
     %% load basin mask file
     
     
     %% load data
     if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-        load([param_props.p1 '/Data/processed_all_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
-             'all_data','file_date');
+        load([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
+             'all_data');
     else
         load([param_props.p1 '/Data/' base_grid '_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
-             'all_data','file_date');
+             'all_data');
     end
     
     %% fit GMM from data points themselves
@@ -103,7 +104,7 @@ end
 
 
 %% assign grid cells and probabilities to clusters
-folder_name = [pwd '/' param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters)];
+folder_name = [param_path 'GMM_' base_grid '_' num2str(num_clusters)];
 % determine length of cluster file if it exists
 if exist([folder_name '/clusters.nc'],'file') == 2
     inf = ncinfo([folder_name '/clusters.nc']);

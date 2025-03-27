@@ -11,21 +11,21 @@ param = 'ph'; param_props = param_config(param);
 acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
 acquire_glodap_data(param_props,glodap_year);
 % display data
-display_data(param_props,float_file_ext,file_date,glodap_year);
+display_data(param_props,float_file_ext,glodap_year);
 % adjust and combine data
-adjust_ph_float_data(float_file_ext,file_date,glodap_year);
-combine_data(param_props,float_file_ext,file_date,glodap_year);
+adjust_ph_float_data(float_file_ext,glodap_year);
+combine_data(param_props,float_file_ext,glodap_year);
 
 %% create time-varying clusters and assign data points to them
 % form clusters
-gmm_clustering(param_props,pwd,base_grid,2004,snap_date,file_date,...
+gmm_clustering(param_props,pwd,base_grid,2004,snap_date,...
     float_file_ext,clust_vars,num_clusters,numWorkers_predict);
 % plot cluster animations
 plot_cluster_animation(param_props,pwd,base_grid,num_clusters,2004,...
     snap_date,numWorkers_train);
 %plot_probability_animation(base_grid,num_clusters);
 % cluster data
-assign_data_to_clusters(param_props,base_grid,file_date,snap_date,float_file_ext,clust_vars,num_clusters);
+assign_data_to_clusters(param_props,base_grid,snap_date,float_file_ext,clust_vars,num_clusters);
 % plot clustered data points
 plot_data_by_cluster(param_props,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train);
 %plot_data_over_clusters(param,base_grid,file_date,float_file_ext,num_clusters,numWorkers_train);

@@ -8,11 +8,12 @@
 %
 % DATE: 2/5/2025
 
-function combine_data(param_props,float_file_ext,file_date,glodap_year)
+function combine_data(param_props,float_file_ext,glodap_year)
 
 % if exist([param_props.p1 '/Data/processed_all_' param_props.p2 '_data_' file_date float_file_ext '.mat'],'file') ~= 2
 
 %% load data after implementing float data adjustment
+file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 load([param_props.p1 '/Data/processed_float_' param_props.p2 '_data_adjusted_' file_date float_file_ext '.mat'],...
     'float_data_adjusted','file_date');
 load([param_props.p1 '/Data/processed_glodap_' param_props.p2 '_data_' num2str(glodap_year) '.mat'],...

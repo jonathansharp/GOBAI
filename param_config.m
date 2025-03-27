@@ -3,13 +3,14 @@
 function param_props = param_config(p)
 
 if strcmp(p,'o2')
-    param_props.p1 = 'O2'; % directory name
-    param_props.p2 = 'oxygen'; % for saving figures?
-    param_props.p3 = '[O_{2}]'; % axis labels
-    param_props.p4 = 'DOXY'; % Argo name
-    param_props.p5 = 'OXY'; % my name
-    param_props.p6 = 'G2oxygen'; % glodap name
-    param_props.p7 = 'OXYGEN'; % woa folder
+    param_props.dir_name = 'O2'; % directory name
+    param_props.file_name = 'o2'; % file name
+    % param_props.p2 = 'oxygen'; % for saving figures?
+    param_props.label = '[O_{2}]'; % axis labels
+    param_props.argo_name = 'DOXY'; % Argo name
+    % param_props.p5 = 'OXY'; % my name?
+    param_props.glodap_name = 'G2oxygen'; % glodap name
+    param_props.woa_name = 'OXYGEN'; % woa folder
     param_props.edges = 0:5:500;
     param_props.units = '(umol kg^{-1})';
     param_props.long_param_name = 'Dissolved Oxygen Amount Content';
@@ -23,7 +24,7 @@ elseif strcmp(p,'no3')
     param_props.p5 = 'NIT'; % my name
     param_props.p6 = 'G2nitrate'; % glodap name
     param_props.p7 = 'NITRATE'; % woa folder
-    param_props.edges = 0:0.4:40;
+    param_props.edges = 0:0.5:50;
     param_props.units = '(umol kg^{-1})';
     param_props.long_param_name = 'Dissolved Nitrate Amount Content';
     param_props.dec_points = 2;
