@@ -14,13 +14,13 @@ function run_osse(model_path,param_props,file_date,snap_date,float_file_ext,...
     numtrees,minLeafSize,numstumps,numbins,thresh,numWorkers_train,numWorkers_predict)
 
 %% load combined data
-load([param_props.p1 '/Data/processed_all_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
+load([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% define models
 model_types = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
 model_folders = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
-realizations = {'r1i1p1f1' 'r1i1p1f1' 'r1i1p1f1' 'r1i1p1f1' 'r1i1p1f1'};
+realizations = {'r1i1dir_namef1' 'r1i1dir_namef1' 'r1i1dir_namef1' 'r1i1dir_namef1' 'r1i1dir_namef1'};
 grid_labels = {'gr' 'gn' 'gn' 'gn' 'gn'};
 grid_types = {'regridded' 'native_grid' 'native_grid' 'native_grid' 'native_grid'};
 
