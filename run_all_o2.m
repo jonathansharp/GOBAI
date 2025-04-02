@@ -41,22 +41,24 @@ param = 'o2';
 param_props = param_config(param);
 model_path = '/fast7/sharp/model/';
 param_path = '/fast5/sharp/o2/';
+temp_path = '/fast2/sharp/temp/';
+sal_path = '/fast3/sharp/sal/';
 
 %% load and process data
-% % acquire data
-% acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
-% acquire_glodap_data(param_props,glodap_year);
-% %acquire_wod_ctd_data('o2',glodap_year);
-% % display data
-% display_data(param_props,float_file_ext,glodap_year);
-% % adjust and combine data
-% adjust_o2_float_data(float_file_ext,glodap_year);
-% combine_data(param_props,float_file_ext,glodap_year);
+% acquire data
+acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
+acquire_glodap_data(param_props,glodap_year);
+%acquire_wod_ctd_data('o2',glodap_year);
+% display data
+display_data(param_props,float_file_ext,glodap_year,snap_date);
+% adjust and combine data
+adjust_o2_float_data(float_file_ext,glodap_year,snap_date);
+combine_data(param_props,float_file_ext,glodap_year,snap_date);
 
 %% create time-varying clusters and assign data points to them
-% % form clusters
-% gmm_clustering(param_props,pwd,base_grid,2004,snap_date,...
-%     float_file_ext,clust_vars,num_clusters,numWorkers_predict);
+% form clusters
+gmm_clustering(param_props,pwd,base_grid,2004,snap_date,...
+    float_file_ext,clust_vars,num_clusters,numWorkers_predict,param_path);
 % % plot cluster animations
 % plot_cluster_animation(param_props,pwd,base_grid,num_clusters,2004,...
 %     snap_date,numWorkers_train);

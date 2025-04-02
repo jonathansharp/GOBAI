@@ -9,7 +9,7 @@
 %
 % DATE: 09/22/2023
 
-function adjust_o2_float_data(float_file_ext,glodap_year)
+function adjust_o2_float_data(float_file_ext,glodap_year,snap_date)
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
@@ -569,6 +569,6 @@ end
 
 % save
 if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-save(['O2/Data/processed_float_oxygen_data_adjusted_' file_date float_file_ext '.mat'],...
+save(['O2/Data/processed_float_o2_data_adjusted_' file_date float_file_ext '.mat'],...
     'float_data_adjusted','file_date','-v7.3');
 clear slp int float_data float_data_adjusted v vars

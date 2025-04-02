@@ -12,7 +12,7 @@
 function acquire_glodap_data(param_props,glodap_year)
 
 %% Only do all this if downloaded glodap matlab file does not exist
-if exist([param_props.p1 '/Data/processed_glodap_' param_props.p2 '_data_' num2str(glodap_year) '.mat'],'file') ~= 2
+if exist([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' num2str(glodap_year) '.mat'],'file') ~= 2
 
 %% load GLODAP data
 year = num2str(glodap_year);
@@ -38,15 +38,15 @@ clear lon_temp
 
 %% indices for glodap
 idx_nans = ~isnan(glodap_data.G2temperature) & ~isnan(glodap_data.G2pressure) & ...
-          ~isnan(glodap_data.G2salinity) & ~isnan(glodap_data.(param_props.p6));
+          ~isnan(glodap_data.G2salinity) & ~isnan(glodap_data.(param_props.glodap_name));
 % check for secondary QC
-if strcmp(param_props.p2,'ph')
+if strcmp(param_props.file_name,'ph')
     idx_qc = glodap_data.G2salinityqc == 1 & glodap_data.G2phtsqc == 1;
 else
-    idx_qc = glodap_data.G2salinityqc == 1 & glodap_data.([param_props.p6 'qc']) == 1;
+    idx_qc = glodap_data.G2salinityqc == 1 & glodap_data.([param_props.glodap_name 'qc']) == 1;
 end
 % check for good flags
-idx_flags = glodap_data.G2salinityf == 2 & glodap_data.([param_props.p6 'f']) == 2;
+idx_flags = glodap_data.G2salinityf == 2 & glodap_data.([param_props.glodap_name 'f']) == 2;
 % check depth and/or time range
 idx_lims = glodap_data.G2pressure <= 2500;
 %idx_lims = glodap_data.G2pressure <= 2500 & glodap_data.time > datenum(2004,1,0);
@@ -55,7 +55,7 @@ idx = idx_nans & idx_qc & idx_flags & idx_lims;
 clear idx_nans idx_qc idx_flags idx_lims
 
 %% remove extraneous data points
-glodap_data.(param_props.p6) = glodap_data.(param_props.p6)(idx);
+glodap_data.(param_props.glodap_name) = glodap_data.(param_props.glodap_name)(idx);
 glodap_data.G2latitude = glodap_data.G2latitude(idx);
 glodap_data.G2longitude = glodap_data.G2longitude(idx);
 glodap_data.G2pressure = glodap_data.G2pressure(idx);
@@ -69,7 +69,7 @@ glodap_data.G2station = glodap_data.G2station(idx);
 glodap_data.G2id = glodap_data.G2cruise.*100000+glodap_data.G2station;
 
 %% pre-allocate glodap data structure
-glodap_data.(param_props.p5) = [];
+glodap_data.(param_props.temp_name) = [];
 glodap_data.LAT = [];
 glodap_data.LON = [];
 glodap_data.PRES = [];
@@ -84,8 +84,8 @@ glodap_data.ID = [];
 %% construct depth axis on which to interpolate
 zi = ([2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
 % define variables to interpolate
-vars = {'G2salinity' 'G2temperature' param_props.p6};
-varsi = {'SAL' 'TEMP' param_props.p5};
+vars = {'G2salinity' 'G2temperature' param_props.glodap_name};
+varsi = {'SAL' 'TEMP' param_props.temp_name};
 % define station ids
 stations = unique(glodap_data.G2id);
 
@@ -136,7 +136,7 @@ for f = 1:length(stations) % for each unique station id
 
     end
 
-    if any(glodap_data.(param_props.p5)(:)>1000)
+    if any(glodap_data.(param_props.temp_name)(:)>1000)
         keyboard
     end
 
@@ -173,16 +173,16 @@ glodap_data.SIGMA = gsw_sigma0(glodap_data.ABSSAL,glodap_data.CNSTEMP);
 glodap_data.SPICE = gsw_spiciness0(glodap_data.ABSSAL,glodap_data.CNSTEMP);
 
 %% display the number of matching cruises and profiles
-disp(['# of matching GLODAP profiles (' param_props.p5 '): ' num2str(length(unique(glodap_data.ID)))]);
-disp(['# of matching GLODAP cruises (' param_props.p5 '): ' num2str(length(unique(glodap_data.CRU)))]);
+disp(['# of matching GLODAP profiles (' param_props.temp_name '): ' num2str(length(unique(glodap_data.ID)))]);
+disp(['# of matching GLODAP cruises (' param_props.temp_name '): ' num2str(length(unique(glodap_data.CRU)))]);
 
 %% plot processed profile locations on top of unprocessed
 figure(1); hold on;
 lon_temp = convert_lon(convert_lon(glodap_data.LON));
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,glodap_data.LAT,'.g'); hold off;
-if ~exist([param_props.p1 '/Figures/Data'],'dir'); mkdir([param_props.p1 '/Figures/Data']); end
-export_fig(gcf,[param_props.p1 '/Figures/Data/processed_glodap_' year '.png'],'-transparent');
+if ~exist([param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
+export_fig(gcf,[param_props.dir_name '/Figures/Data/processed_glodap_' year '.png'],'-transparent');
 clear lon_temp
 
 %% clean up
@@ -196,8 +196,8 @@ glodap_data = rmfield(glodap_data,vars(idx));
 clear idx
 
 %% save glodap data
-if ~exist([param_props.p1 '/Data'],'dir'); mkdir([param_props.p1 '/Data']); end
-save([param_props.p1 '/Data/processed_glodap_' param_props.p2 '_data_' year '.mat'],'glodap_data');
+if ~exist([param_props.dir_name '/Data'],'dir'); mkdir([param_props.dir_name '/Data']); end
+save([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' year '.mat'],'glodap_data');
 
 %% clean up
 clear glodap_data

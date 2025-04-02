@@ -120,7 +120,7 @@ idx_folders = find(~contains(foldernames,'.')); % index to folders only
 clear today_date mnth folderinfo
 
 %% pre-allocate float data structure
-float_data.(param_props.argo_name) = [];
+float_data.(param_props.temp_name) = [];
 float_data.LAT = [];
 float_data.LON = [];
 float_data.PRES = [];
@@ -256,10 +256,10 @@ for n = 1:length(idx_folders) % for each DAC
                         end
                         temp_var_i(~index_from) = NaN;
 
-                        % not sure why this is here...
-                        if str2double(floatnum)*1000 + float.(['F' floatnum]).CYCLE_NUMBER(p) == 5901464005
-                            keyboard
-                        end
+                        % % not sure why this is here...
+                        % if str2double(floatnum)*1000 + float.(['F' floatnum]).CYCLE_NUMBER(p) == 5901464005
+                        %     keyboard
+                        % end
 
                         % if there is a greater than 0.5 % change per meter
                         % at the bottom of the profile or 1% change per
@@ -329,7 +329,7 @@ for n = 1:length(idx_folders) % for each DAC
             float.(['F' floatnum]).FLOAT_NUMBERi = repmat(str2double(floatnum),length(zi),sum(~nan_idx));
     
             %% add interpolated data to float data structure
-            float_data.(param_props.argo_name) = [float_data.(param_props.argo_name);float.(['F' floatnum]).([param_props.argo_name '_ADJUSTEDi'])(:)];
+            float_data.(param_props.temp_name) = [float_data.(param_props.temp_name);float.(['F' floatnum]).([param_props.argo_name '_ADJUSTEDi'])(:)];
             float_data.LAT = [float_data.LAT;float.(['F' floatnum]).LATITUDEi(:)];
             float_data.LON = [float_data.LON;float.(['F' floatnum]).LONGITUDEi(:)];
             float_data.PRES = [float_data.PRES;float.(['F' floatnum]).PRES_ADJUSTEDi(:)];
@@ -356,7 +356,7 @@ end
 clear foldernames snapshot_path idx_folders n vars zi
 
 %% remove nan data points
-idx = isnan(float_data.(param_props.argo_name));
+idx = isnan(float_data.(param_props.temp_name));
 idx_sal = isnan(float_data.SAL);
 idx_temp = isnan(float_data.TEMP);
 idx_any = idx | idx_sal | idx_temp;

@@ -27,7 +27,7 @@ if exist([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) 
         load([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
              'all_data');
     else
-        load([param_props.p1 '/Data/' base_grid '_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
+        load([param_props.dir_name '/Data/' base_grid '_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
              'all_data');
     end
     
@@ -53,10 +53,10 @@ if exist([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) 
         'CovarianceType','diagonal',...
         'SharedCovariance',true,'Replicates',10);
     % save GMM model
-    if ~isfolder([param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters)])
-        mkdir([param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters)]);
+    if ~isfolder([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters)])
+        mkdir([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters)]);
     end
-    save([param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str],...
+    save([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str],...
         'gmm','num_clusters','C','S','-v7.3');
     clear gmm C S
     toc
@@ -154,7 +154,7 @@ if ~isfile([folder_name '/clusters.nc']) || ...
     end
     
     % load GMM model
-    load([param_props.p1 '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' ...
+    load([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' ...
         date_str],'gmm','C','S');
     
     % set up parallel pool

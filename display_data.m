@@ -6,15 +6,15 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 09/12/2023
+% DATE: 3/31/2025
 
-function display_data(param_props,float_file_ext,glodap_year)
+function display_data(param_props,float_file_ext,glodap_year,snap_date)
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-load([param_props.p1 '/Data/processed_float_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
+load([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date');
-load([param_props.p1 '/Data/processed_glodap_' param_props.p2 '_data_' num2str(glodap_year) '.mat'],...
+load([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' num2str(glodap_year) '.mat'],...
     'glodap_data');
 
 %% plot for sanity
@@ -25,8 +25,8 @@ float_mean = nan(size(zi));
 float_std = nan(size(zi));
 for z = 1:length(zi)
     idx_float = float_data.PRES == zi(z);
-    float_mean(z) = mean(float_data.(param_props.p5)(idx_float));
-    float_std(z) = std(float_data.(param_props.p5)(idx_float));
+    float_mean(z) = mean(float_data.(param_props.temp_name)(idx_float));
+    float_std(z) = std(float_data.(param_props.temp_name)(idx_float));
 end
 figure; hold on;
 title('Average Float Profile');
@@ -38,9 +38,9 @@ set(gca,'YDir','reverse');
 ylabel('Depth (dbar)');
 xlabel('[O_{2}] (\mumol kg^{-1})');
 hold off;
-if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir')
-    mkdir([param_props.p1 '/Figures/Data']); end
-export_fig(gcf,[param_props.p1 '/Figures/Data/mean_float_profile_' ...
+if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir')
+    mkdir([param_props.dir_name '/Figures/Data']); end
+export_fig(gcf,[param_props.dir_name '/Figures/Data/mean_float_profile_' ...
     file_date float_file_ext '.png'],'-transparent');
 close
 % floats (individual profiles)
@@ -49,15 +49,15 @@ title('5% of Float Profiles');
 profs = unique(float_data.PROF_ID);
 for z = 1:length(profs)/20
     idx = float_data.PROF_ID == profs(z*20);
-    plot(float_data.(param_props.p5)(idx),float_data.PRES(idx));
+    plot(float_data.(param_props.temp_name)(idx),float_data.PRES(idx));
 end
 set(gca,'YDir','reverse');
 ylabel('Depth (dbar)');
 xlabel('[O_{2}] (\mumol kg^{-1})');
 hold off;
-if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir')
-    mkdir([param_props.p1 '/Figures/Data']); end
-export_fig(gcf,[param_props.p1 '/Figures/Data/all_float_profiles_' ...
+if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir')
+    mkdir([param_props.dir_name '/Figures/Data']); end
+export_fig(gcf,[param_props.dir_name '/Figures/Data/all_float_profiles_' ...
     file_date float_file_ext '.png'],'-transparent');
 close
 % clean up
@@ -68,8 +68,8 @@ glodap_mean = nan(size(zi));
 glodap_std = nan(size(zi));
 for z = 1:length(zi)
     idx_glodap = glodap_data.PRES == zi(z);
-    glodap_mean(z) = mean(glodap_data.(param_props.p5)(idx_glodap),'omitnan');
-    glodap_std(z) = std(glodap_data.(param_props.p5)(idx_glodap),'omitnan');
+    glodap_mean(z) = mean(glodap_data.(param_props.temp_name)(idx_glodap),'omitnan');
+    glodap_std(z) = std(glodap_data.(param_props.temp_name)(idx_glodap),'omitnan');
 end
 figure; hold on;
 plot(glodap_mean,zi,'linewidth',3);
@@ -78,9 +78,9 @@ fill([glodap_mean+glodap_std;flipud(glodap_mean-glodap_std)],...
     [zi;flipud(zi)],clrs(1,:),'FaceAlpha',0.25,'LineStyle','none');
 set(gca,'YDir','reverse');
 hold off;
-if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir')
-    mkdir([param_props.p1 '/Figures/Data']); end
-export_fig(gcf,[param_props.p1 '/Figures/Data/mean_glodap_profile_' ...
+if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir')
+    mkdir([param_props.dir_name '/Figures/Data']); end
+export_fig(gcf,[param_props.dir_name '/Figures/Data/mean_glodap_profile_' ...
     num2str(glodap_year) '.png'],'-transparent');
 close
 % glodap (individual profiles)
@@ -88,13 +88,13 @@ figure; hold on;
 profs = unique(glodap_data.ID);
 for z = 1:length(profs)
     idx = glodap_data.ID == profs(z);
-    plot(glodap_data.(param_props.p5)(idx),glodap_data.PRES(idx));
+    plot(glodap_data.(param_props.temp_name)(idx),glodap_data.PRES(idx));
 end
 set(gca,'YDir','reverse');
 hold off;
-if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir')
-    mkdir([param_props.p1 '/Figures/Data']); end
-export_fig(gcf,[param_props.p1 '/Figures/Data/all_glodap_profiles_' ...
+if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir')
+    mkdir([param_props.dir_name '/Figures/Data']); end
+export_fig(gcf,[param_props.dir_name '/Figures/Data/all_glodap_profiles_' ...
     num2str(glodap_year) '.png'],'-transparent');
 close
 % clean up
@@ -102,9 +102,9 @@ clear clrs idx idx_glodap glodap_mean glodap_std profs z zi
 
 %% Display data distribution
 
-if ~isfile([param_props.p1 '/Figures/Data/data_by_year_' file_date float_file_ext '.png']) && ...
-   ~isfile([param_props.p1 '/Figures/Data/data_by_latitude_' file_date float_file_ext '.png']) && ...
-   ~isfile([param_props.p1 '/Figures/Data/data_by_longitude_' file_date float_file_ext '.png'])
+if ~isfile([param_props.dir_name '/Figures/Data/data_by_year_' file_date float_file_ext '.png']) && ...
+   ~isfile([param_props.dir_name '/Figures/Data/data_by_latitude_' file_date float_file_ext '.png']) && ...
+   ~isfile([param_props.dir_name '/Figures/Data/data_by_longitude_' file_date float_file_ext '.png'])
 
 % float
 f_profiles = unique(float_data.PROF_ID);
@@ -135,9 +135,9 @@ histogram(glodap_data.TIME(g_idx),edges,'FaceColor','b');
 legend({'Floats' 'GLODAP'},'location','northwest');
 datetick('x'); xlim([datenum([2003 1 1]) datenum([2024 1 1])]);
 ylabel('Profiles within each year');
-if ~exist([pwd '/' param_props.p1 '/Figures'],'dir'); mkdir([param_props.p1 '/Figures']); end
-if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir'); mkdir([param_props.p1 '/Figures/Data']); end
-export_fig(gcf,[param_props.p1 '/Figures/Data/data_by_year_' file_date ...
+if ~exist([pwd '/' param_props.dir_name '/Figures'],'dir'); mkdir([param_props.dir_name '/Figures']); end
+if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
+export_fig(gcf,[param_props.dir_name '/Figures/Data/data_by_year_' file_date ...
     float_file_ext '.png'],'-transparent');
 clear edges year_temp
 close
@@ -151,8 +151,8 @@ histogram(float_data.LAT(f_idx),edges,'FaceColor','r');
 histogram(glodap_data.LAT(g_idx),edges,'FaceColor','b');
 legend({'Floats' 'GLODAP'})
 ylabel('Profiles within each latitude range');
-if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir'); mkdir([param_props.p1 '/Figures/Data']); end
-export_fig(gcf,[param_props.p1 '/Figures/Data/data_by_latitude_' ...
+if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
+export_fig(gcf,[param_props.dir_name '/Figures/Data/data_by_latitude_' ...
     file_date float_file_ext '.png'],'-transparent');
 clear edges
 close
@@ -166,8 +166,8 @@ histogram(float_data.LON(f_idx),edges,'FaceColor','r');
 histogram(glodap_data.LON(g_idx),edges,'FaceColor','b');
 legend({'Floats' 'GLODAP'})
 ylabel('Profiles within each longitude range');
-if ~exist([pwd '/' param_props.p1 '/Figures/Data'],'dir'); mkdir([param_props.p1 '/Figures/Data']); end
-export_fig(gcf,[param_props.p1 '/Figures/Data/data_by_longitude_' ...
+if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
+export_fig(gcf,[param_props.dir_name '/Figures/Data/data_by_longitude_' ...
     file_date float_file_ext '.png'],'-transparent');
 clear edges
 close

@@ -10,14 +10,14 @@
 
 %% establish paths, folders, and options
 % file paths and names
-fpath = [pwd '/Data/RFROM/'];
+fpath = '/fast3/sharp/';
 folder = 'RFROM_SAL_v0.1';
 fname = '/RFROM_SAL_STABLE_';
 % create annual file folder
 if ~isfolder([fpath folder '_annual']); mkdir([fpath folder '_annual']); end
 % timespan
 y1 = 2004;
-y2 = 2023;
+y2 = 2022;
 
 %% create monthly annual files
 % loop through each year to create annual files
