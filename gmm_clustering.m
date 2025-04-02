@@ -137,7 +137,7 @@ if ~isfile([folder_name '/clusters.nc']) || ...
        % create file
        create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
     elseif strcmp(base_grid,'RFROM')
-        [TS,months,weeks,timesteps] = load_RFROM_dim([fpath '/Data/RFROM/']);
+        [TS,months,weeks,timesteps] = load_RFROM_dim(fpath,2004,2022);
         % create file
         create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
     else

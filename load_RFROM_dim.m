@@ -9,12 +9,12 @@
 %
 % DATE: 1/23/2024
 
-function [TS,months,weeks,timesteps] = load_RFROM_dim(fpath)
+function [TS,months,weeks,timesteps] = load_RFROM_dim(fpath,y1,y2)
 
 % load RFROM climatological temp and salinity
-TS.Longitude = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'longitude');
-TS.Latitude = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'latitude');
-TS.Pressure = ncread([fpath 'RFROM_TEMP_STABLE_CLIM.nc'],'mean_pressure');
+TS.Longitude = ncread([fpath 'RFROM_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'longitude');
+TS.Latitude = ncread([fpath 'RFROM_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'latitude');
+TS.Pressure = ncread([fpath 'RFROM_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'mean_pressure');
 % compute dimensions
 TS.xdim = length(TS.Longitude);
 TS.ydim = length(TS.Latitude);
