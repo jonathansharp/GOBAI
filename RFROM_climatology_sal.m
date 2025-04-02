@@ -10,7 +10,7 @@
 
 %% establish paths, folders, and options
 % file paths and names
-fpath = '/fast3/sharp/';
+fpath = '/fast3/sharp/sal/';
 folder = 'RFROM_SAL_v0.1';
 fname = '/RFROM_SAL_STABLE_';
 % create annual file folder

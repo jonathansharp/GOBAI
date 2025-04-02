@@ -10,7 +10,7 @@
 
 %% establish paths, folders, and options
 % file paths and names
-fpath = '/fast2/sharp/';
+fpath = '/fast2/sharp/temp/';
 folder = 'RFROM_TEMP_v0.1';
 fname = '/RFROM_TEMP_STABLE_';
 % create annual file folder
