@@ -81,18 +81,18 @@ end
 
 %% load data
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    load([param_props.p1 '/Data/processed_all_' param_props.p2 '_data_' file_date float_file_ext '.mat'],'all_data');
+    load([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'all_data');
 else
-    load([param_props.p1 '/Data/' base_grid '_' param_props.p2 '_data_' file_date float_file_ext '.mat'],'all_data');
+    load([param_props.dir_name '/Data/' base_grid '_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'all_data');
 end
 
 %% load data clusters
-load([param_props.p1 '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param_props.dir_name '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% load data cluster indices (for k-fold testing)
 if num_folds > 1
-    load([param_props.p1 '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
+    load([param_props.dir_name '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
         '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],...
         'num_folds','train_idx','test_idx');
 else
@@ -110,22 +110,22 @@ if glodap_only
 end
 
 %% create directory and file names
-alg_dir = [param_props.p1 '/Models/' dir_base];
+alg_dir = [param_props.dir_name '/Models/' dir_base];
 alg_fnames = cell(num_folds,num_clusters);
 for f = 1:num_folds
     for c = 1:num_clusters
         if num_folds > 1
-            alg_fnames(f,c) = {[alg_type '_' param_props.p2 '_C' num2str(c) '_F' num2str(f) '_test']};
+            alg_fnames(f,c) = {[alg_type '_' param_props.file_name '_C' num2str(c) '_F' num2str(f) '_test']};
         else
-            alg_fnames(c) = {[alg_type '_' param_props.p2 '_C' num2str(c)]};
+            alg_fnames(c) = {[alg_type '_' param_props.file_name '_C' num2str(c)]};
         end
     end
 end
 
 %% variables for k-fold test
 if num_folds > 1
-    kfold_dir = [param_props.p1 '/KFold/' alg_type '/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
-    fig_dir = [param_props.p1 '/Figures/KFold/' alg_type '/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+    kfold_dir = [param_props.dir_name '/KFold/' alg_type '/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+    fig_dir = [param_props.dir_name '/Figures/KFold/' alg_type '/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
     if strcmp(alg_type,'RFR')
         kfold_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
         fig_name_1 = ['k_fold_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];
@@ -198,16 +198,16 @@ end
 % clean up
 clear f c
 % aggregate output from all folds
-alg_output.(['k_fold_test_' param_props.p2]) = nan(size(all_data.(param_props.p2)));
+alg_output.(['k_fold_test_' param_props.file_name]) = nan(size(all_data.(param_props.file_name)));
 for f = 1:num_folds
     % load output index
     load([alg_dir '/' alg_fnames{f,1}],'obs_index_test')
     % aggregate
-    alg_output.(['k_fold_test_' param_props.p2])(obs_index_test) = ...
+    alg_output.(['k_fold_test_' param_props.file_name])(obs_index_test) = ...
         alg_output.(['f' num2str(f) '_mean']);
 end
 % compare k-fold output to data
-alg_output.k_fold_delta = alg_output.(['k_fold_test_' param_props.p2]) - all_data.(param_props.p2);
+alg_output.k_fold_delta = alg_output.(['k_fold_test_' param_props.file_name]) - all_data.(param_props.file_name);
 % calculate error stats
 alg_mean_err = mean(alg_output.k_fold_delta,'omitnan');
 alg_med_err = median(alg_output.k_fold_delta,'omitnan');
@@ -223,14 +223,14 @@ load([kfold_dir '/' kfold_name],'alg_output','alg_rmse');
 figure('visible','on'); hold on;
 set(gca,'fontsize',12);
 set(gcf,'position',[100 100 600 400]);
-[counts,bin_centers] = hist3([all_data.(param_props.p2) alg_output.(['k_fold_test_' param_props.p2])],...
+[counts,bin_centers] = hist3([all_data.(param_props.file_name) alg_output.(['k_fold_test_' param_props.file_name])],...
     'Edges',{param_props.edges param_props.edges});
 h=pcolor(bin_centers{1},bin_centers{2},counts');
 plot([param_props.edges(1) param_props.edges(end)],[param_props.edges(1) param_props.edges(end)],'k--');
 set(h,'EdgeColor','none');
 xlim([param_props.edges(1) param_props.edges(end)]); ylim([param_props.edges(1) param_props.edges(end)]);
-xlabel(['Measured ' param_props.p1 ' ' param_props.units]);
-ylabel([alg_type ' ' param_props.p1 ' ' param_props.units]);
+xlabel(['Measured ' param_props.label ' ' param_props.units]);
+ylabel([alg_type ' ' param_props.label ' ' param_props.units]);
 myColorMap = flipud(hot(256.*32));
 myColorMap(1,:) = 1;
 colormap(myColorMap);
@@ -274,7 +274,7 @@ geoshow(land,'FaceColor',rgb('grey'));
 cmap = cmocean('amp'); cmap(1,:) = 1; colormap(cmap);
 caxis([0 (2/50)*(param_props.edges(end)-param_props.edges(1))]);
 c=colorbar('location','southoutside');
-c.Label.String = ['Average Absolute \Delta' param_props.p3];
+c.Label.String = ['Average Absolute \Delta' param_props.label];
 c.FontSize = 22;
 c.TickLength = 0;
 mlabel off; plabel off;
@@ -330,18 +330,18 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
     if strcmp(alg_type,'FFNN')
         % define model parameters and train FFNN
         nodes1 = [5 10 15]; nodes2 = [15 10 5];
-        alg = fit_FFNN(param_props.p2,all_data,all_data_clusters.(['c' num2str(c)]),...
+        alg = fit_FFNN(param_props.file_name,all_data,all_data_clusters.(['c' num2str(c)]),...
             obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,...
             thresh,par_use);
     elseif strcmp(alg_type,'RFR')
         % define model parameters and train RFR
         NumPredictors = ceil(sqrt(length(variables)));
-        alg = fit_RFR(param_props.p2,all_data,all_data_clusters.(['c' num2str(c)]),...
+        alg = fit_RFR(param_props.file_name,all_data,all_data_clusters.(['c' num2str(c)]),...
             obs_index_train,variables,numtrees,minLeafSize,NumPredictors,0,thresh);
         alg = compact(alg); % convert RFR to compact
     elseif strcmp(alg_type,'GBM')
         % train GBM
-        alg = fit_GBM(param_props.p2,all_data,all_data_clusters.(['c' num2str(c)]),...
+        alg = fit_GBM(param_props.file_name,all_data,all_data_clusters.(['c' num2str(c)]),...
             obs_index_train,variables,numstumps,numbins,thresh);
     end
     

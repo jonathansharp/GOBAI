@@ -342,6 +342,9 @@ for n = 1:length(idx_folders) % for each DAC
 
         end
 
+    % clean up
+    float = rmfield(float,(['F' floatnum]));
+
     % increase conter
     counter = counter + 1;
 

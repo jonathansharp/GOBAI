@@ -9,7 +9,7 @@
 %
 % DATE: 3/25/2025
 
-function gmm_clustering(param_props,fpath,base_grid,start_year,snap_date,...
+function gmm_clustering(param_props,temp_path,sal_path,base_grid,start_year,end_year,snap_date,...
     float_file_ext,clust_vars,num_clusters,numWorkers_predict,param_path)
 
 %% process date
@@ -64,7 +64,7 @@ if exist([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) 
     %% fit GMM from climatological mean temperature and salinity
     
     % load climatological temperature and salinity data
-    % TS = load_climatological_TS_data(fpath,base_grid,start_year,date_str);
+    % TS = load_climatological_TS_data(temp_path,base_grid,start_year,date_str);
     % 
     % % Some replicates don't converge, investigate further...
     % tic
@@ -115,9 +115,10 @@ if exist([folder_name '/clusters.nc'],'file') == 2
     end
 end
 % determine expected length
-year = str2double(date_str(1:4));
-month = str2double(date_str(5:6));
-length_expt = (year-start_year)*12 + month;
+% year = str2double(date_str(1:4));
+% month = str2double(date_str(5:6));
+% length_expt = (year-start_year)*12 + month;
+length_expt = (end_year-start_year)*12 + 12;
 
 %% check for existence of cluster file and length of cluster grids
 if ~isfile([folder_name '/clusters.nc']) || ...
@@ -133,24 +134,24 @@ if ~isfile([folder_name '/clusters.nc']) || ...
     
     %% create netCDF file that will be end result
     if strcmp(base_grid,'RG')
-       [TS,months,weeks,timesteps] = load_RG_dim([fpath '/Data/RG_CLIM/']);
+       [TS,months,weeks,timesteps] = load_RG_dim(temp_path);
        % create file
        create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
     elseif strcmp(base_grid,'RFROM')
-        [TS,months,weeks,timesteps] = load_RFROM_dim(fpath,2004,2022);
+        [TS,months,weeks,timesteps] = load_RFROM_dim(temp_path,start_year,end_year);
         % create file
-        create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
+        create_nc_files(TS,0,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name); % don't write cluster probs for RFROM
     else
         % define paths
         path2 = ['_Omon_' base_grid '_'];
         path3 = ['_' rlz '_gr'];
         % define filepaths
-        nc_filepath_abs_sal = [fpath 'combined/regridded/abs_sal' path2 ...
+        nc_filepath_abs_sal = [temp_path 'combined/regridded/abs_sal' path2 ...
             'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
         % load dimensions
         [TS,months,weeks,timesteps] = load_model_dim(nc_filepath_abs_sal);
         % create file
-        create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
+        create_nc_files(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
     end
     
     % load GMM model
@@ -159,12 +160,12 @@ if ~isfile([folder_name '/clusters.nc']) || ...
     
     % set up parallel pool
     tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
-    
+
     %% assign clusters for each timestep
     parfor t = 1:timesteps
-    
+
         % load T/S grid
-        TS = load_monthly_TS_data(fpath,base_grid,months(t),weeks(t),start_year,date_str);
+        TS = load_monthly_TS_data(temp_path,sal_path,base_grid,months(t),weeks(t),start_year,date_str);
 
         % transform to normalized arrays
         idx = ~isnan(TS.temperature_cns) & ~isnan(TS.salinity_abs);
@@ -173,12 +174,12 @@ if ~isfile([folder_name '/clusters.nc']) || ...
             predictor_matrix = [predictor_matrix TS.(clust_vars{v})(idx)];
         end
         X_norm = normalize(predictor_matrix,'Center',C,'Scale',S);
-        
+
         % assign data points to clusters
-        assign_to_gmm_clusters(TS,gmm,num_clusters,idx,X_norm,t,folder_name);
-    
+        assign_to_gmm_clusters(TS,base_grid,gmm,num_clusters,idx,X_norm,t,folder_name);
+
     end
-    
+
     % end parallel session
     delete(gcp('nocreate'));
 
@@ -192,11 +193,15 @@ if ~isfile([folder_name '/clusters.nc']) || ...
         ncwrite(filename,'time',time,t); % write
         GMM_clusters = ncread(filename_temp,'GMM_clusters'); % read
         ncwrite(filename,'clusters',GMM_clusters,[1 1 1 t]); % write
-        for c = 1:num_clusters
-            GMM_cluster_probs = ncread(filename_temp,...
-                ['GMM_cluster_probs_' num2str(c)]); % read
-            ncwrite(filename,['cluster_probs_c' num2str(c)],...
-                GMM_cluster_probs,[1 1 1 t]); % write
+        if strcmp(base_grid,'RFROM')
+            % do nothing
+        else
+            for c = 1:num_clusters
+                GMM_cluster_probs = ncread(filename_temp,...
+                    ['GMM_cluster_probs_' num2str(c)]); % read
+                ncwrite(filename,['cluster_probs_c' num2str(c)],...
+                    GMM_cluster_probs,[1 1 1 t]); % write
+            end
         end
         % delete temporary file
         delete(filename_temp);
@@ -217,7 +222,7 @@ end
 end
 
 %% embedded function to assign points to GMM clusters
-function assign_to_gmm_clusters(TS,gmm,num_clusters,idx,X_norm,t,folder_name)
+function assign_to_gmm_clusters(TS,base_grid,gmm,num_clusters,idx,X_norm,t,folder_name)
     % assign to clusters and obtain probabilities
     [clusters,~,p] = cluster(gmm,X_norm);
     % fill 3D clusters (highest probability cluster)
@@ -225,21 +230,25 @@ function assign_to_gmm_clusters(TS,gmm,num_clusters,idx,X_norm,t,folder_name)
     GMM_clusters(idx) = uint8(clusters);
     % save cluster properties in temporary files
     filename = [folder_name '/clust_' num2str(t) '.nc'];
-    if isfile('filename'); delete(filename); end
+    if isfile(filename); delete(filename); end
     nccreate(filename,'time','Dimensions',{'time' 1});
     ncwrite(filename,'time',TS.time(t));
     nccreate(filename,'GMM_clusters','Dimensions',{'lon' size(GMM_clusters,1) ...
         'lat' size(GMM_clusters,2) 'pres' size(GMM_clusters,3)});
     ncwrite(filename,'GMM_clusters',GMM_clusters);
-    % fill 3D probabilities (for each cluster)
-    for c = 1:num_clusters
-        GMM_cluster_probs = nan(TS.xdim,TS.ydim,TS.zdim);
-        GMM_cluster_probs(idx) = int16(p(:,c)*10000);
-        nccreate(filename,['GMM_cluster_probs_' num2str(c)],...
-            'Dimensions',{'lon' size(GMM_cluster_probs,1) 'lat' ...
-            size(GMM_cluster_probs,2) 'pres' size(GMM_cluster_probs,3)});
-        ncwrite(filename,['GMM_cluster_probs_' num2str(c)],...
-            GMM_cluster_probs);
+    if strcmp(base_grid,'RFROM')
+        % do nothing
+    else
+        % fill 3D probabilities (for each cluster)
+        for c = 1:num_clusters
+            GMM_cluster_probs = nan(TS.xdim,TS.ydim,TS.zdim);
+            GMM_cluster_probs(idx) = int16(p(:,c)*10000);
+            nccreate(filename,['GMM_cluster_probs_' num2str(c)],...
+                'Dimensions',{'lon' size(GMM_cluster_probs,1) 'lat' ...
+                size(GMM_cluster_probs,2) 'pres' size(GMM_cluster_probs,3)});
+            ncwrite(filename,['GMM_cluster_probs_' num2str(c)],...
+                GMM_cluster_probs);
+    end
     end
 end
 

@@ -26,7 +26,9 @@ num_months = length(files);
 months = [];
 weeks = [];
 timesteps = 0;
-TS.time = [];
+TS.Time = [];
+TS.cnt = {};
+cnt = 1;
 for m = 1:num_months
     % determine number of weeks in each monthly file
     nc_atts = ncinfo([files(m).folder '/' files(m).name]);
@@ -34,7 +36,9 @@ for m = 1:num_months
     months = [months;repmat(m,num_weeks,1)];
     weeks = [weeks;(1:num_weeks)'];
     timesteps = timesteps + num_weeks;
-    TS.time = [TS.time;double(ncread([files(m).folder '/' files(m).name],'time'))];
+    TS.Time = [TS.Time;double(ncread([files(m).folder '/' files(m).name],'time'))];
+    TS.cnt = [TS.cnt;cnt:(cnt-1)+num_weeks];
+    cnt = cnt + num_weeks;
 end
 % add years and months
 TS.years = nan(length(files),1);

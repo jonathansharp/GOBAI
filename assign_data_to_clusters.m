@@ -17,16 +17,16 @@ file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy
 
 %% load combined data
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    load([param_props.p1 '/Data/processed_all_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
+    load([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
          'all_data','file_date');
 else
-    load([param_props.p1 '/Data/' base_grid '_' param_props.p2 '_data_' file_date float_file_ext '.mat'],...
+    load([param_props.dir_name '/Data/' base_grid '_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
          'all_data','file_date');
 end
 
 %% assign data points and probabilities to clusters
 % load GMM model
-load(['Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str]);
+load([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str]);
 % transform to normalized arrays
 predictor_matrix = [];
 for v = 1:length(clust_vars)
@@ -42,7 +42,7 @@ for c = 1:size(p,2)
 end
 % save data clusters
 if ~isfolder([pwd '/Data']); mkdir('Data'); end
-save([param_props.p1 '/Data/all_data_clusters_'  base_grid '_' num2str(num_clusters) '_' ...
+save([param_props.dir_name '/Data/all_data_clusters_'  base_grid '_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters','-v7.3');
 % display information
 disp(['data assigned to ' num2str(num_clusters) ' clusters on ' base_grid]);

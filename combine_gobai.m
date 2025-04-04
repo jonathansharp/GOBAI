@@ -8,8 +8,8 @@
 %
 % DATE: 3/10/2025
 
-function combine_gobai(param_props,fpath,base_grid,file_date,float_file_ext,...
-    num_clusters,start_year,snap_date,train_ratio,val_ratio,...
+function combine_gobai(param_props,temp_path,param_path,base_grid,file_date,float_file_ext,...
+    num_clusters,start_year,end_year,snap_date,train_ratio,val_ratio,...
     test_ratio,numtrees,minLeafSize,numstumps,numbins,varargin)
 
 %% set defaults and process optional input arguments
@@ -24,33 +24,33 @@ date_str = num2str(snap_date);
 
 %% create directory names
 gobai_ffnn_dir = ... % FFNN
-    [param_props.p1 '/Data/GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) '_' file_date ...
+    [param_path 'GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/train' num2str(100*train_ratio) '_val' ...
     num2str(100*val_ratio) '_test' num2str(100*test_ratio) '/'];
 gobai_rfr_dir = ... % RFR
-    [param_props.p1 '/Data/GOBAI/' base_grid '/RFR/c' num2str(num_clusters) '_' file_date ...
+    [param_path 'GOBAI/' base_grid '/RFR/c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize) '/'];
 gobai_gbm_dir = ... % GBM
-    [param_props.p1 '/Data/GOBAI/' base_grid '/GBM/c' num2str(num_clusters) '_' file_date ...
+    [param_path 'GOBAI/' base_grid '/GBM/c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/tr' num2str(numstumps) '_bin' num2str(numbins) '/'];
 gobai_dir = ... % final product
-    [param_props.p1 '/Data/GOBAI/' base_grid '/AVG/c' num2str(num_clusters) '_' file_date ...
+    [param_path 'GOBAI/' base_grid '/AVG/c' num2str(num_clusters) '_' file_date ...
     float_file_ext '/'];
 
 %% create netCDF file
 if strcmp(base_grid,'RG')
-    TS = load_RG_dim([fpath '/Data/RG_CLIM/']);
+    TS = load_RG_dim(temp_path);
     % create file
     create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_dir,param_props);
 elseif strcmp(base_grid,'RFROM')
-    TS = load_RFROM_dim([fpath '/Data/RFROM/']);
+    TS = load_RFROM_dim(temp_path,start_year,end_year);
     % create file
     create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_dir,param_props);
 else
     % define paths
     path2 = ['_Omon_' base_grid '_']; path3 = '_r1i1p1f1_gr';
     % define filepaths
-    nc_filepath_abs_sal = [fpath 'combined/regridded/abs_sal' path2 ...
+    nc_filepath_abs_sal = [temp_path 'combined/regridded/abs_sal' path2 ...
         'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
     % load dimensions
     TS = load_model_dim(nc_filepath_abs_sal);
@@ -66,25 +66,25 @@ for m = 1:length(TS.Time)
 
     %% load monthly outputs
     % load monthly output (FFNN)
-    gobai_3d_ffnn = ncread([gobai_ffnn_dir 'gobai-' param_props.p2 '.nc'],...
-        param_props.p2,[1 1 1 cnt],[Inf Inf Inf 1]);
+    gobai_3d_ffnn = ncread([gobai_ffnn_dir 'gobai-' param_props.file_name '.nc'],...
+        param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
     % load monthly output (RFR)
-    gobai_3d_rfr = ncread([gobai_rfr_dir 'gobai-' param_props.p2 '.nc'],...
-        param_props.p2,[1 1 1 cnt],[Inf Inf Inf 1]);
+    gobai_3d_rfr = ncread([gobai_rfr_dir 'gobai-' param_props.file_name '.nc'],...
+        param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
     % load monthly output (GBM)
-    gobai_3d_gbm = ncread([gobai_gbm_dir 'gobai-' param_props.p2 '.nc'],...
-        param_props.p2,[1 1 1 cnt],[Inf Inf Inf 1]);
+    gobai_3d_gbm = ncread([gobai_gbm_dir 'gobai-' param_props.file_name '.nc'],...
+        param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
 
     %% average monthly outputs
     gobai_3d_avg = mean(cat(4,gobai_3d_ffnn,gobai_3d_rfr,gobai_3d_gbm),4,'omitnan');
     gobai_3d_var = std(cat(4,gobai_3d_ffnn,gobai_3d_rfr,gobai_3d_gbm),[],4,'omitnan');
 
     %% create folder and save monthly output
-    filename = [gobai_dir 'gobai-' param_props.p2 '.nc'];
+    filename = [gobai_dir 'gobai-' param_props.file_name '.nc'];
     % write to file
     ncwrite(filename,'time',datenum(TS.years(cnt),TS.months(cnt),15),cnt);
-    ncwrite(filename,param_props.p2,gobai_3d_avg,[1 1 1 cnt]);
-    ncwrite(filename,[param_props.p2 '_var'],gobai_3d_var,[1 1 1 cnt]);
+    ncwrite(filename,param_props.file_name,gobai_3d_avg,[1 1 1 cnt]);
+    ncwrite(filename,[param_props.file_name '_var'],gobai_3d_var,[1 1 1 cnt]);
 
 end
 
@@ -94,25 +94,25 @@ end
 function create_nc_file(TS,base_grid,xdim,ydim,zdim,gobai_dir,param_props)
 
 % define file name
-filename = [gobai_dir 'gobai-' param_props.p2 '.nc'];
+filename = [gobai_dir 'gobai-' param_props.file_name '.nc'];
 
 % create folder and file
 if ~isfolder([pwd '/' gobai_dir]); mkdir(gobai_dir); end
 if isfile(filename); delete(filename); end % delete file if it exists
 % bgc parameter
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    nccreate(filename,param_props.p2,'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
+    nccreate(filename,param_props.file_name,'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
         'DataType','single','FillValue',NaN);
-    nccreate(filename,[param_props.p2 '_var'],'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
+    nccreate(filename,[param_props.file_name '_var'],'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
         'DataType','single','FillValue',NaN);
 else
-    nccreate(filename,param_props.p2,'Dimensions',{'lon',xdim,'lat',ydim,'depth',zdim,'time',Inf},...
+    nccreate(filename,param_props.file_name,'Dimensions',{'lon',xdim,'lat',ydim,'depth',zdim,'time',Inf},...
         'DataType','single','FillValue',NaN);
-    nccreate(filename,[param_props.p2 '_var'],'Dimensions',{'lon',xdim,'lat',ydim,'depth',zdim,'time',Inf},...
+    nccreate(filename,[param_props.file_name '_var'],'Dimensions',{'lon',xdim,'lat',ydim,'depth',zdim,'time',Inf},...
         'DataType','single','FillValue',NaN);
 end
-ncwriteatt(filename,param_props.p2,'units',param_props.units);
-ncwriteatt(filename,param_props.p2,'long_name',param_props.long_param_name);
+ncwriteatt(filename,param_props.file_name,'units',param_props.units);
+ncwriteatt(filename,param_props.file_name,'long_name',param_props.long_param_name);
 % longitude
 nccreate(filename,'lon','Dimensions',{'lon',xdim},...
     'DataType','single','FillValue',NaN);

@@ -9,13 +9,18 @@
 %
 % DATE: 3/11/2025
 
-function adjust_no3_float_data(float_file_ext,glodap_year)
+function adjust_no3_float_data(float_file_ext,glodap_year,snap_date)
+
+%% Only do all this if downloaded float matlab file does not exist
+file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
+if exist(['NO3/Data/processed_float_no3_data_adjusted_' file_date ...
+        float_file_ext '.mat'],'file') ~= 2
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-load(['NO3/Data/processed_float_nitrate_data_' file_date float_file_ext '.mat'],...
+load(['NO3/Data/processed_float_no3_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date');
-load(['NO3/Data/processed_glodap_nitrate_data_' num2str(glodap_year) '.mat'],...
+load(['NO3/Data/processed_glodap_no3_data_' num2str(glodap_year) '.mat'],...
     'glodap_data');
 
 %% import WOA climatologies
@@ -393,6 +398,14 @@ for v = 1:length(vars)
 end
 % save
 if ~exist([pwd '/NO3/Data'],'dir'); mkdir('NO3/Data'); end
-save(['NO3/Data/processed_float_nitrate_data_adjusted_' file_date float_file_ext '.mat'],...
+save(['NO3/Data/processed_float_no3_data_adjusted_' file_date float_file_ext '.mat'],...
     'float_data_adjusted','file_date','-v7.3');
 clear slp int float_data float_data_adjusted v vars
+
+
+else
+
+% display information
+disp('Float data already adjusted.')
+
+end

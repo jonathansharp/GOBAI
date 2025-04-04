@@ -10,8 +10,6 @@
 
 function combine_data(param_props,float_file_ext,glodap_year,snap_date)
 
-% if exist([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'file') ~= 2
-
 %% load data after implementing float data adjustment
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 load([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_adjusted_' file_date float_file_ext '.mat'],...
@@ -94,7 +92,7 @@ all_data.(['gridded_' param_props.file_name]) = accumarray(subs(~idx_subs,:),...
     abs(all_data.(param_props.file_name)(~idx_subs)),sz,@nanmean);
 clear subs sz
 % plot map
-figure('visible','on'); hold on
+figure('visible','off'); hold on
 m_proj('robinson','lon',[20 380]);
 %lon = convert_lon(lon);
 [lon_temp,z] = reformat_lon(lon,all_data.(['gridded_' param_props.file_name])(:,:,2),20);
@@ -118,9 +116,5 @@ close
 if ~exist([pwd '/' param_props.dir_name '/Data'],'dir'); mkdir([param_props.dir_name '/Data']); end
 save([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
     'all_data','file_date','-v7.3');
-
-clear
-
-% end
 
 end
