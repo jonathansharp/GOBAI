@@ -1,13 +1,14 @@
 % compare_osse
 %
 % DESCRIPTION:
-% This function 
+% This function compares reconstructed fields from GOBAI OSSEs
+% to full model gridded fields.
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
 % DATE: 11/7/2024
 
-function compare_osse(param,param1,fpath,base_grid,file_date,...
+function compare_osse(param_props,fpath,base_grid,file_date,...
     float_file_ext,num_clusters,start_year,snap_date,train_ratio,...
     val_ratio,test_ratio,numtrees,minLeafSize,...
     numstumps,numbins,rlz)
@@ -17,25 +18,32 @@ date_str = num2str(snap_date);
 
 %% create directory names
 ffnn_filepath = ... % FFNN
-    [param1 '/Data/GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/train' num2str(100*train_ratio) '_val' ...
-    num2str(100*val_ratio) '_test' num2str(100*test_ratio) '/gobai-' param '.nc'];
+    [fpath 'GOBAI/' base_grid '/FFNN/c' ...
+    num2str(num_clusters) '_' file_date float_file_ext '/train' ...
+    num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' ...
+    num2str(100*test_ratio) '/gobai-' param_props.file_name '.nc'];
 rfr_filepath = ... % RFR
-    [param1 '/Data/GOBAI/' base_grid '/RFR/c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize) '/gobai-' param '.nc'];
+    [fpath 'GOBAI/' base_grid '/RFR/c' ...
+    num2str(num_clusters) '_' file_date float_file_ext '/tr' ...
+    num2str(numtrees) '_lf' num2str(minLeafSize) '/gobai-' ...
+    param_props.file_name '.nc'];
 gbm_filepath = ... % GBM
-    [param1 '/Data/GOBAI/' base_grid '/GBM/c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/tr' num2str(numstumps) '_bin' num2str(numbins) '/gobai-' param '.nc'];
+    [fpath 'GOBAI/' base_grid '/GBM/c' ...
+    num2str(num_clusters) '_' file_date float_file_ext '/tr' ...
+    num2str(numstumps) '_bin' num2str(numbins) '/gobai-' ...
+    param_props.file_name '.nc'];
 % gobai
-gobai_filepath = [param1 '/Data/GOBAI/' base_grid '/AVG/c' ...
-    num2str(num_clusters) '_' file_date float_file_ext '/gobai-' param '.nc'];
+gobai_filepath = ...
+    [fpath 'GOBAI/' base_grid '/AVG/c' ...
+    num2str(num_clusters) '_' file_date float_file_ext '/gobai-' ...
+    param_props.file_name '.nc'];
 % cmip
 path2 = ['_Omon_' base_grid '_'];
 path3 = ['_' rlz '_gr'];
-cmip_filepath = [fpath 'combined/regridded/' param path2 ...
+cmip_filepath = [fpath 'combined/regridded/' param_props.file_name path2 ...
     'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
 % delta
-delta_filepath = [param1 '/Data/GOBAI/' base_grid '/DELTA/c' ...
+delta_filepath = [fpath 'GOBAI/' base_grid '/DELTA/c' ...
     num2str(num_clusters) '_' file_date float_file_ext];
 
 %% load dimensions
@@ -60,11 +68,11 @@ for m = 1:length(time)
     try
 
     %% load monthly output
-    rfr = ncread(rfr_filepath,param,[1 1 1 m],[Inf Inf Inf 1]);
-    ffnn = ncread(ffnn_filepath,param,[1 1 1 m],[Inf Inf Inf 1]);
-    gbm = ncread(gbm_filepath,param,[1 1 1 m],[Inf Inf Inf 1]);    
-    gobai = ncread(gobai_filepath,param,[1 1 1 m],[Inf Inf Inf 1]);
-    cmip = ncread(cmip_filepath,param,[1 1 1 m],[Inf Inf Inf 1]);
+    rfr = ncread(rfr_filepath,param_props.file_name,[1 1 1 m],[Inf Inf Inf 1]);
+    ffnn = ncread(ffnn_filepath,param_props.file_name,[1 1 1 m],[Inf Inf Inf 1]);
+    gbm = ncread(gbm_filepath,param_props.file_name,[1 1 1 m],[Inf Inf Inf 1]);    
+    gobai = ncread(gobai_filepath,param_props.file_name,[1 1 1 m],[Inf Inf Inf 1]);
+    cmip = ncread(cmip_filepath,param_props.file_name,[1 1 1 m],[Inf Inf Inf 1]);
 
     %% apply RFROM mask
     % load RG grid
@@ -83,9 +91,12 @@ for m = 1:length(time)
     gbm(mask_cmip) = NaN;
     gobai(mask_cmip) = NaN;
     cmip(mask_cmip) = NaN;
-    
-    %% determine differens between masked grids
+
+    %% determine differences between masked grids
     delta = gobai-cmip;
+    delta_rfr = rfr-cmip;
+    delta_ffnn = ffnn-cmip;
+    delta_gbm = gbm-cmip;
 
     %% calculate global means
     vol = single(calculate_volume(lat,lon,depth));
@@ -113,40 +124,40 @@ for m = 1:length(time)
     end
 
     %% plot
-%     figure('visible','off');
-%     worldmap('world');
-%     set(gca,'fontsize',12);
-%     pcolorm(lat,lon,delta(:,:,1)');
-%     title(datestr(time(m),'mmm yyyy'));
-%     plot_land('map');
-%     c=colorbar;
-%     caxis([-50 50]);
-%     colormap(cmocean('balance'));
-%     c.Label.String = ['\Delta[O_{2}]_{(GOBAI - ' base_grid ')}'];
-%     mlabel off;
-%     plabel off;
-%     if ~isfolder([param1 '/Figures/' base_grid '/' rlz '_gr'])
-%         mkdir([param1 '/Figures/' base_grid '/' rlz '_gr']);
-%     end
-%     date = datevec(time(m));
-%     export_fig(gcf,[param1 '/Figures/' base_grid '/' rlz '_gr' ...
-%         '/' num2str(date(1)) '_' num2str(date(2)) '.png'],'-transparent');
-%     close
+    % figure('visible','off');
+    % worldmap('world');
+    % set(gca,'fontsize',12);
+    % pcolorm(lat,lon,delta(:,:,1)');
+    % title(datestr(time(m),'mmm yyyy'));
+    % plot_land('map');
+    % c=colorbar;
+    % clim([-(max(param_props.edges)/10) (max(param_props.edges)/10)]);
+    % colormap(cmocean('balance'));
+    % c.Label.String = ['\Delta[O_{2}]_{(GOBAI - ' base_grid ')}'];
+    % mlabel off;
+    % plabel off;
+    % if ~isfolder([param_props.dir_name '/Figures/' base_grid '/' rlz '_gr'])
+    %     mkdir([param_props.dir_name '/Figures/' base_grid '/' rlz '_gr']);
+    % end
+    % date = datevec(time(m));
+    % export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
+    %     '/' num2str(date(1)) '_' num2str(date(2)) '.png'],'-transparent');
+    % close
 
     %% save monthly differences
     if m == 1
         if ~isfolder(delta_filepath); mkdir(delta_filepath); end
         % create combined file
-        ncsave_4d([delta_filepath '/delta_gobai-' param '.nc'],...
+        ncsave_4d([delta_filepath '/delta_gobai-' param_props.file_name '.nc'],...
             {'lon' lon 'longitude' 'degrees east'},...
             {'lat' lat 'latitude' 'degrees north'},...
             {'depth' depth 'depth' 'meters'},...
             {'time' time(m) 'time' 'time'},...
-            {['delta_' param] delta ' ' 'umol/kg'});
+            {['delta_' param_props.file_name] delta ' ' 'umol/kg'});
     else
         % append to combined file
-        ncwrite([delta_filepath '/delta_gobai-' param '.nc'],'time',time(2),m);
-        ncwrite([delta_filepath '/delta_gobai-' param '.nc'],['delta_' param],delta,[1 1 1 m]);
+        ncwrite([delta_filepath '/delta_gobai-' param_props.file_name '.nc'],'time',time(2),m);
+        ncwrite([delta_filepath '/delta_gobai-' param_props.file_name '.nc'],['delta_' param_props.file_name],delta,[1 1 1 m]);
     end
 
     catch
@@ -155,16 +166,19 @@ for m = 1:length(time)
 end
 
 %% save global means
-if ~isfolder([param1 '/Data/' base_grid]); mkdir([param1 '/Data/' base_grid '/' rlz '_gr']); end
-save([param1 '/Data/' base_grid '/' rlz '_gr/statistics.mat'],'rfr_mean',...
+if ~isfolder([param_props.dir_name '/Data/' base_grid]); mkdir([param_props.dir_name '/Data/' base_grid '/' rlz '_gr']); end
+save([param_props.dir_name '/Data/' base_grid '/' rlz '_gr/statistics.mat'],'rfr_mean',...
     'ffnn_mean','gbm_mean','gobai_mean','gobai_depth_mean','cmip_mean','cmip_depth_mean');
 
 %% plot timeseries
 figure;
 plot(time,cmip_mean,time,gobai_mean,'LineWidth',2);
-legend({base_grid ['GOBAI-' param1 '_{(' base_grid ')}']});
+legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']});
 datetick('x','keeplimits');
-export_fig(gcf,[param1 '/Figures/' base_grid '/' rlz '_gr' ...
+if ~isfolder([param_props.dir_name '/Figures/' base_grid '/' rlz '_gr'])
+    mkdir([param_props.dir_name '/Figures/' base_grid '/' rlz '_gr']);
+end
+export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
         '/timeseries.png'],'-transparent'); close;
 
 %% plot average profile
@@ -175,8 +189,8 @@ set(gca,'YDir','reverse','XAxisLocation','top');
 ylim([0 max(depth)]);
 xlabel('[O_{2}] (\mumol kg^{-1})');
 ylabel('Depth (m)');
-legend({base_grid ['GOBAI-' param1 '_{(' base_grid ')}']},'Location','southeast');
-export_fig(gcf,[param1 '/Figures/' base_grid '/' rlz '_gr' ...
+legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']},'Location','southeast');
+export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
         '/profile.png'],'-transparent'); close;
 
 %% plot average profile difference
@@ -189,7 +203,7 @@ ylim([0 max(depth)]);
 xlim([-3 3]);
 xlabel('\Delta[O_{2}] (\mumol kg^{-1})');
 ylabel('Depth (m)');
-export_fig(gcf,[param1 '/Figures/' base_grid '/' rlz '_gr' ...
+export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
         '/profile_delta.png'],'-transparent'); close;
 
 end

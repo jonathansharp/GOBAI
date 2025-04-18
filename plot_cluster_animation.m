@@ -60,6 +60,7 @@ parfor d = 1:length(pressures)
         % load monthly clusters
         GMM_clusters = ncread([folder_name '/clusters.nc'],...
             'clusters',[1 1 1 t],[Inf Inf Inf 1]);
+        time = ncread([folder_name '/clusters.nc'],'time',t,1);
         % make plot
         m_proj('robinson','lon',[20 380]);
         z = [GMM_clusters(~idx_20,:,depth_idx);GMM_clusters(idx_20,:,depth_idx)];

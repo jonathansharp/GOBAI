@@ -10,7 +10,11 @@ for v = 1:length(variables)
     predictors(:,v) = data.(variables{v})(idx_train);
 end
 
-lrn_rate = 0.55; % optimized 
+% Optimal Learn rate appears to scale (from about 0.1 - 0.6) with how much
+% data are vailable for model
+lrn_rate = sum(idx_train)/sum(index) + 0.1;
+% lrn_rate = 0.2;
+% lrn_rate = 0.55;
 
 % perform random forest regression fit
 GBM = fitrensemble(predictors,data.(target)(idx_train),...
@@ -21,4 +25,4 @@ GBM = fitrensemble(predictors,data.(target)(idx_train),...
 % 
 % GBM = fitrensemble(predictors,data.(target)(idx_train),...
 %     'Method','LSBoost','NumLearningCycles',50,'OptimizeHyperparameters','LearnRate');
-
+% 

@@ -1,12 +1,12 @@
-%% Run all scripts to make GOBAI-NO3
+%% Run all scripts to make GOBAI-DIC
 t_whole_script=tic; % time entire script
 
 %% Set configuration parameters
 start_year = 2004;
 end_year = 2022;
 % system-specific worker configuration
-numWorkers_train = 20;
-numWorkers_predict = 20;
+numWorkers_train = 30;
+numWorkers_predict = 30;
 % float snapshot configuration
 snap_download = 1;
 snap_date = 202501;
@@ -24,20 +24,20 @@ num_folds = 5;
 % algorithm training configuration
 variables = ... % variables for algorithms
     {'latitude' 'lon_cos_1' 'lon_cos_2' 'pressure' 'sigma' ...
-    'temperature_cns' 'salinity_abs' 'oxygen' 'day_sin' 'day_cos' 'year'};
+    'temperature_cns' 'salinity_abs' 'day_sin' 'day_cos' 'year'};
 % random forest regression configuration
 numtrees = 100;
 minLeafSize = 10;
 % shallow neural network configuration
-train_ratio = 0.7;
-val_ratio = 0.15;
-test_ratio = 0.15;
+train_ratio = 0.8;
+val_ratio = 0.1;
+test_ratio = 0.1;
 % gradient boosting configuration
 numstumps = 1000;
 numbins = 50;
 % data and parameter configuration
-data_per = 1.0; % set data reduction to 100%
-param = 'no3';
+data_per = 1; % set data reduction to 10%
+param = 'dic';
 param_props = param_config(param);
 % base grid
 base_grid = 'RFROM';
@@ -47,12 +47,12 @@ base_grid = 'RFROM';
 % acquire data
 acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
 acquire_glodap_data(param_props,glodap_year);
-% %acquire_wod_ctd_data(param_props,glodap_year);
-% % display data
-% display_data(param_props,float_file_ext,glodap_year,snap_date);
-% % adjust and combine data
-% adjust_no3_float_data(float_file_ext,glodap_year,snap_date);
-% combine_data(param_props,float_file_ext,glodap_year,snap_date);
+%acquire_wod_ctd_data(param_props,glodap_year);
+% display data
+display_data(param_props,float_file_ext,glodap_year,snap_date);
+% adjust and combine data
+adjust_o2_float_data(float_file_ext,glodap_year,snap_date);
+combine_data(param_props,float_file_ext,glodap_year,snap_date);
 
 %% create time-varying clusters and assign data points to them
 % % form clusters
@@ -91,12 +91,16 @@ acquire_glodap_data(param_props,glodap_year);
 %     num_clusters,variables,thresh,numWorkers_train,snap_date,'reduce_data',...
 %     data_per,'numstumps',numstumps,'numbins',numbins,...
 %     'num_folds',num_folds);
+% % combined average
+% kfold_avg_all(param_props,base_grid,float_file_ext,num_clusters,...
+%     snap_date,train_ratio,val_ratio,test_ratio,numtrees,minLeafSize,...
+%     numstumps,numbins);
 
 %% train models to create GOBAI product
 % % feed-forward neural networks
 % train_gobai('FFNN',param_props,base_grid,file_date,float_file_ext,...
 %     num_clusters,variables,thresh,numWorkers_train,snap_date,'reduce_data',...
-%     data_per,'train_ratio',train_ratio,'val_ratio',val_ratio,...
+%     0.05,'train_ratio',train_ratio,'val_ratio',val_ratio,...
 %     'test_ratio',test_ratio);
 % % random forest regressions
 % train_gobai('RFR',param_props,base_grid,file_date,float_file_ext,...
@@ -122,25 +126,24 @@ acquire_glodap_data(param_props,glodap_year);
 %     end_year,snap_date,'numtrees',numtrees,'minLeafSize',minLeafSize);
 % plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'RFR',...
 %     file_date,float_file_ext,numWorkers_predict,'numtrees',numtrees,'minLeafSize',minLeafSize);
-% gradient-boosting machines
-predict_gobai('GBM',param_props,param_path,temp_path,sal_path,base_grid,file_date,float_file_ext,...
-    num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
-    end_year,snap_date,'numstumps',numstumps,'numbins',numbins);
+% % gradient-boosting machines
+% predict_gobai('GBM',param_props,param_path,temp_path,sal_path,base_grid,file_date,float_file_ext,...
+%     num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
+%     end_year,snap_date,'numstumps',numstumps,'numbins',numbins);
 % plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'GBM',...
 %     file_date,float_file_ext,numWorkers_predict,'numstumps',numstumps,'numbins',numbins);
-
-%% assemble ensemble mean GOBAI
-combine_gobai(param_props,temp_path,param_path,base_grid,file_date,float_file_ext,...
-    num_clusters,start_year,end_year,snap_date,train_ratio,...
-        val_ratio,test_ratio,numtrees,minLeafSize,...
-        numstumps,numbins);
-plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'AVG',...
-    file_date,float_file_ext,numWorkers_predict);
+% 
+% %% assemble ensemble mean GOBAI
+% combine_gobai(param_props,temp_path,param_path,base_grid,file_date,float_file_ext,...
+%     num_clusters,start_year,end_year,snap_date,train_ratio,...
+%     val_ratio,test_ratio,numtrees,minLeafSize,numstumps,numbins);
+% plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'AVG',...
+%     file_date,float_file_ext,numWorkers_predict);
 
 %% run OSSEs
-% run_osse(model_path,param_props,file_date,snap_date,float_file_ext,num_clusters,...
-%     variables,clust_vars,train_ratio,val_ratio,test_ratio,numtrees,...
-%     minLeafSize,numstumps,numbins,thresh,numWorkers_train,numWorkers_predict);
+run_osse(model_path,param_props,file_date,snap_date,float_file_ext,start_year,end_year,...
+    num_clusters,variables,clust_vars,train_ratio,val_ratio,test_ratio,numtrees,...
+    minLeafSize,numstumps,numbins,thresh,numWorkers_train,numWorkers_predict);
 
 %% determine uncertainty
 % calculate_gridding_uncertainty;

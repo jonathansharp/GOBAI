@@ -16,7 +16,8 @@ numNets = length(nodes1);
 % fit each network
 for n = 1:numNets
     % training function
-    trainFcn = 'trainlm';  % Levenberg-Marquardt backpropagation
+    % trainFcn = 'trainlm';  % Levenberg-Marquardt backpropagation
+    trainFcn = 'trainbr';  % Baysian Regularization    
     % create a Fitting Network
     net = feedforwardnet([nodes1(n) nodes2(n)],trainFcn);
     % Set training parameter criteria

@@ -7,6 +7,12 @@ function plot_gobai_animation(param_props,param_path,base_grid,num_clusters,...
 %% set pressures
 pressures = [2.5 10 50 100 200 300 500 1000 1500 1975];
 
+%% set delay time
+if strcmp(base_grid,'RFROM')
+    delay_time = 0.1;
+else
+    delay_time = (52/12)*0.1;
+end
 %% process necessary input arguments for model parameters
 % pre-allocate
 train_ratio = NaN;
@@ -135,9 +141,9 @@ parfor d = 1:length(pressures)
         [imind,cm] = rgb2ind(im,256);
         % write to file
         if t == 1
-            imwrite(imind,cm,[dname '/' fname],'gif','Loopcount',inf,'DelayTime',0.1);
+            imwrite(imind,cm,[dname '/' fname],'gif','Loopcount',inf,'DelayTime',delay_time);
         else
-            imwrite(imind,cm,[dname '/' fname],'gif','WriteMode','append','DelayTime',0.1);
+            imwrite(imind,cm,[dname '/' fname],'gif','WriteMode','append','DelayTime',delay_time);
         end
     end
     close

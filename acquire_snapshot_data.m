@@ -8,7 +8,7 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 3/25/2025
+% DATE: 4/11/2025
 
 function acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download)
 
@@ -110,7 +110,7 @@ end
 
 %% Only do all this if downloaded float matlab file does not exist
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-if exist([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'file') ~= 2
+% if exist([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'file') ~= 2
 
 %% Define file structure
 snapshot_path = ['BGC_Argo_Snapshots/' num2str(snap_date) '-BgcArgoSprof/dac']; % define file path
@@ -120,6 +120,11 @@ idx_folders = find(~contains(foldernames,'.')); % index to folders only
 clear today_date mnth folderinfo
 
 %% pre-allocate float data structure
+if strcmp(param_props.argo_name,'PH_IN_SITU_TOTAL')
+    float_data.OXY = [];
+if strcmp(param_props.argo_name,'NITRATE')
+    float_data.OXY = [];
+end
 float_data.(param_props.temp_name) = [];
 float_data.LAT = [];
 float_data.LON = [];
@@ -138,7 +143,13 @@ m_coast('patch',rgb('gray'));
 m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
 
 %% Define interpolation parameters
-vars = {'PSAL' 'TEMP' param_props.argo_name}; % define variables to interpolate
+if strcmp(param_props.argo_name,'PH_IN_SITU_TOTAL')
+    vars = {'PSAL' 'TEMP' 'DOXY' param_props.argo_name}; % define variables to interpolate
+elseif strcmp(param_props.argo_name,'NITRATE')
+    vars = {'PSAL' 'TEMP' 'DOXY' param_props.argo_name}; % define variables to interpolate
+else
+    vars = {'PSAL' 'TEMP' param_props.argo_name}; % define variables to interpolate
+end
 zi = ([2.5 10:10:170 182.5 ... % construct depth axis on which to interpolate
     200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
 
@@ -215,8 +226,12 @@ for n = 1:length(idx_folders) % for each DAC
                 % index based on data mode
                 mode_idx = false(n_levels,n_prof);
                 for m = 1:length(data_modes)
+                    if ~isfield(float.(['F' floatnum]),([vars{k} '_DATA_MODE']))
+                        mode_idx = mode_idx;
+                    else
                     mode_idx = mode_idx | ...
                         float.(['F' floatnum]).([vars{k} '_DATA_MODE']) == data_modes{m};
+                    end
                 end
                 % index based on data mode and flags
                 index = mode_idx & ... % use data mode index that was created
@@ -238,11 +253,9 @@ for n = 1:length(idx_folders) % for each DAC
                         % extract temporary pressure axis and parameter
                         temp_pres = float.(['F' floatnum]).PRES_ADJUSTED(index(:,p),p);
                         temp_var = float.(['F' floatnum]).([vars{k} '_ADJUSTED'])(index(:,p),p);
-                        % remove data deeper than 1950m for oxygen
-                        if strcmp(vars{k},'DOXY')
-                            temp_var(temp_pres>1950) = [];
-                            temp_pres(temp_pres>1950) = [];
-                        end
+                        % remove data deeper than 1950m
+                        temp_var(temp_pres>1950) = [];
+                        temp_pres(temp_pres>1950) = [];
 
                         % interpolate to edges (with extrapolation)
                         [~,unique_idx_pres] = unique(temp_pres);
@@ -316,6 +329,11 @@ for n = 1:length(idx_folders) % for each DAC
             float.(['F' floatnum]).TIME = datenum(1950,1,1+float.(['F' floatnum]).JULD);
     
             %% drop empty interpolated profiles
+            if strcmp(param_props.argo_name,'PH_IN_SITU_TOTAL')
+                float.(['F' floatnum]).DOXY_ADJUSTEDi(:,nan_idx) = [];
+            elseif strcmp(param_props.argo_name,'NITRATE')
+                float.(['F' floatnum]).DOXY_ADJUSTEDi(:,nan_idx) = [];
+            end
             float.(['F' floatnum]).([param_props.argo_name '_ADJUSTEDi'])(:,nan_idx) = [];
             float.(['F' floatnum]).PSAL_ADJUSTEDi(:,nan_idx) = [];
             float.(['F' floatnum]).TEMP_ADJUSTEDi(:,nan_idx) = [];
@@ -329,6 +347,11 @@ for n = 1:length(idx_folders) % for each DAC
             float.(['F' floatnum]).FLOAT_NUMBERi = repmat(str2double(floatnum),length(zi),sum(~nan_idx));
     
             %% add interpolated data to float data structure
+            if strcmp(param_props.argo_name,'PH_IN_SITU_TOTAL')
+                float_data.OXY = [float_data.OXY;float.(['F' floatnum]).DOXY_ADJUSTEDi(:)];
+            elseif strcmp(param_props.argo_name,'NITRATE')
+                float_data.OXY = [float_data.OXY;float.(['F' floatnum]).DOXY_ADJUSTEDi(:)];
+            end
             float_data.(param_props.temp_name) = [float_data.(param_props.temp_name);float.(['F' floatnum]).([param_props.argo_name '_ADJUSTEDi'])(:)];
             float_data.LAT = [float_data.LAT;float.(['F' floatnum]).LATITUDEi(:)];
             float_data.LON = [float_data.LON;float.(['F' floatnum]).LONGITUDEi(:)];
@@ -359,7 +382,11 @@ end
 clear foldernames snapshot_path idx_folders n vars zi
 
 %% remove nan data points
-idx = isnan(float_data.(param_props.temp_name));
+if strcmp(param_props.argo_name,'NITRATE')
+    idx = isnan(float_data.OXY) & isnan(float_data.(param_props.temp_name));
+else
+    idx = isnan(float_data.(param_props.temp_name));
+end
 idx_sal = isnan(float_data.SAL);
 idx_temp = isnan(float_data.TEMP);
 idx_any = idx | idx_sal | idx_temp;
@@ -412,11 +439,11 @@ close all
 % display information
 disp('Float data processed and saved.')
 
-else
-
-% display information
-disp('Float data already processed.')
-
-end
+% else
+% 
+% % display information
+% disp('Float data already processed.')
+% 
+% end
 
 end

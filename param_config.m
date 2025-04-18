@@ -30,18 +30,18 @@ elseif strcmp(p,'no3')
     param_props.long_param_name = 'Dissolved Nitrate Amount Content';
     param_props.dec_points = 2;
     param_props.cmap = flipud(cmocean('speed'));
-elseif strcmp(p,'ph')
-    param_props.dir_name = 'pH'; % directory name
-    param_props.file_name = 'ph'; % file name
-    param_props.fig_name = 'ph'; % for saving figures
-    param_props.label = 'pH_{T}'; % axis labels
+elseif strcmp(p,'dic')
+    param_props.dir_name = 'DIC'; % directory name
+    param_props.file_name = 'dic'; % file name
+    param_props.fig_name = 'dic'; % for saving figures
+    param_props.label = '{/itC}_{T}'; % axis labels
     param_props.argo_name = 'PH_IN_SITU_TOTAL'; % Argo name
     param_props.temp_name = 'PH'; % my temporary name
-    param_props.glodap_name = 'G2phtsinsitutp'; % glodap name
+    param_props.glodap_name = 'G2tcarbon'; % glodap name
     param_props.woa_name = '';
-    param_props.edges = 7.2:0.01:8.2;
-    param_props.units = '';
-    param_props.long_param_name = 'In situ pH on the Total Scale';
-    param_props.dec_points = 4;
+    param_props.edges = 1800:2:2400;
+    param_props.units = '(umol kg^{-1})';
+    param_props.long_param_name = 'Dissolved Inorganic Carbon';
+    param_props.dec_points = 1;
     param_props.cmap = cmocean('matter');
 end

@@ -187,7 +187,6 @@ for f = 1:num_folds
         alg_output.(['f' num2str(f)])(:,c) = output;
         % assemble matrix of probabilities greater than the threshold (5%)
         probs_array = all_data_clusters.(['c' num2str(c)])(obs_index_test);
-        probs_array = probs_array;
         probs_array(probs_array < thresh) = NaN;
         probs_matrix = [probs_matrix,probs_array];
     end
@@ -212,6 +211,12 @@ alg_output.k_fold_delta = alg_output.(['k_fold_test_' param_props.file_name]) - 
 alg_mean_err = mean(alg_output.k_fold_delta,'omitnan');
 alg_med_err = median(alg_output.k_fold_delta,'omitnan');
 alg_rmse = sqrt(mean(alg_output.k_fold_delta.^2,'omitnan'));
+alg_med_abs_err = median(abs(alg_output.k_fold_delta),'omitnan');
+% print error stats
+fprintf(['Mean Error = ' num2str(alg_mean_err) ' ' param_props.units '\n']);
+fprintf(['Median Error = ' num2str(alg_med_err) ' ' param_props.units '\n']);
+fprintf(['RMSE = ' num2str(alg_rmse) ' ' param_props.units '\n']);
+fprintf(['Median Abs. Error = ' num2str(alg_med_abs_err) ' ' param_props.units '\n']);
 % save predicted data
 if ~isfolder([pwd '/' kfold_dir]); mkdir(kfold_dir); end
 save([kfold_dir '/' kfold_name],'alg_output','alg_rmse',...
@@ -300,11 +305,11 @@ if num_folds > 1
 else
     obs_index_train = true(size(all_data.temperature));
 end
-% reduce data volume if applicable:
+% reduce training data volume if applicable:
 % number of observations marked to use for training
 num_obs = length(obs_index_train);
-% unique random numbers equal to observational index
-numbers = randperm(num_obs);
+% unique random numbers (same for each cluster) equal to observational index
+rng(f); numbers = randperm(num_obs);
 % adjust observation index to fraction (i.e., 'data_per') its current sum
 obs_index_train(numbers > (data_per.*num_obs)) = false;
 
@@ -314,8 +319,8 @@ if num_folds > 1
     % reduce data volume if applicable:
     % number of observations marked to use for training
     num_obs = length(obs_index_test);
-    % unique random numbers equal to observational index
-    numbers = randperm(num_obs)';
+    % unique random numbers (same for each cluster) equal to observational index
+    rng(f); numbers = randperm(num_obs)';
     % adjust observation index to fraction (i.e., 'data_per') its current sum
     obs_index_test(numbers > (data_per.*num_obs)) = false;
 end
@@ -329,7 +334,7 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
     %% fit model for each cluster
     if strcmp(alg_type,'FFNN')
         % define model parameters and train FFNN
-        nodes1 = [5 10 15]; nodes2 = [15 10 5];
+        nodes1 = [10 20 30]; nodes2 = [30 20 10];
         alg = fit_FFNN(param_props.file_name,all_data,all_data_clusters.(['c' num2str(c)]),...
             obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,...
             thresh,par_use);

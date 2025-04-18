@@ -230,7 +230,8 @@ parfor m = 1:length(TS.months)
         % apply model
         apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
             base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-            thresh,gobai_alg_dir,param_props,date_str,clust_vars);
+            thresh,gobai_alg_dir,param_props,param_path,date_str,clust_vars);
+
     end
 end
 
@@ -380,7 +381,7 @@ function create_nc_file(TS,base_grid,xdim,ydim,zdim,gobai_alg_dir,...
 filename = [gobai_alg_dir 'gobai-' param_props.file_name '.nc'];
 
 % create folder and file
-if ~isfolder([pwd '/' gobai_alg_dir]); mkdir(gobai_alg_dir); end
+if ~isfolder([gobai_alg_dir]); mkdir(gobai_alg_dir); end
 if isfile(filename); delete(filename); end % delete file if it exists
 % bgc parameter
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')

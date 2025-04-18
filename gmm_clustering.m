@@ -10,7 +10,17 @@
 % DATE: 3/25/2025
 
 function gmm_clustering(param_props,temp_path,sal_path,base_grid,start_year,end_year,snap_date,...
-    float_file_ext,clust_vars,num_clusters,numWorkers_predict,param_path)
+    float_file_ext,clust_vars,num_clusters,numWorkers_predict,param_path,varargin)
+
+%% process optional input arguments
+% pre-allocate
+rlz = NaN;
+% process inputs
+for i = 1:2:length(varargin)-1
+    if strcmpi(varargin{i}, 'rlz')
+        rlz = varargin{i+1};
+    end
+end
 
 %% process date
 date_str = num2str(snap_date);
@@ -151,7 +161,7 @@ if ~isfile([folder_name '/clusters.nc']) || ...
         % load dimensions
         [TS,months,weeks,timesteps] = load_model_dim(nc_filepath_abs_sal);
         % create file
-        create_nc_files(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
+        create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
     end
     
     % load GMM model
@@ -232,7 +242,7 @@ function assign_to_gmm_clusters(TS,base_grid,gmm,num_clusters,idx,X_norm,t,folde
     filename = [folder_name '/clust_' num2str(t) '.nc'];
     if isfile(filename); delete(filename); end
     nccreate(filename,'time','Dimensions',{'time' 1});
-    ncwrite(filename,'time',TS.time(t));
+    ncwrite(filename,'time',TS.Time(t));
     nccreate(filename,'GMM_clusters','Dimensions',{'lon' size(GMM_clusters,1) ...
         'lat' size(GMM_clusters,2) 'pres' size(GMM_clusters,3)});
     ncwrite(filename,'GMM_clusters',GMM_clusters);

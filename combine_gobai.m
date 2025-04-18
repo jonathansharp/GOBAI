@@ -61,30 +61,34 @@ end
 %% average over each time window
 for m = 1:length(TS.Time)
 
-    %% set counter
-    cnt = m;
+        %% set counter
+        cnt = m;
 
-    %% load monthly outputs
-    % load monthly output (FFNN)
-    gobai_3d_ffnn = ncread([gobai_ffnn_dir 'gobai-' param_props.file_name '.nc'],...
-        param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
-    % load monthly output (RFR)
-    gobai_3d_rfr = ncread([gobai_rfr_dir 'gobai-' param_props.file_name '.nc'],...
-        param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
-    % load monthly output (GBM)
-    gobai_3d_gbm = ncread([gobai_gbm_dir 'gobai-' param_props.file_name '.nc'],...
-        param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
-
-    %% average monthly outputs
-    gobai_3d_avg = mean(cat(4,gobai_3d_ffnn,gobai_3d_rfr,gobai_3d_gbm),4,'omitnan');
-    gobai_3d_var = std(cat(4,gobai_3d_ffnn,gobai_3d_rfr,gobai_3d_gbm),[],4,'omitnan');
-
-    %% create folder and save monthly output
-    filename = [gobai_dir 'gobai-' param_props.file_name '.nc'];
-    % write to file
-    ncwrite(filename,'time',datenum(TS.years(cnt),TS.months(cnt),15),cnt);
-    ncwrite(filename,param_props.file_name,gobai_3d_avg,[1 1 1 cnt]);
-    ncwrite(filename,[param_props.file_name '_var'],gobai_3d_var,[1 1 1 cnt]);
+        %% load monthly outputs
+        % load monthly output (FFNN)
+        gobai_3d_ffnn = ncread([gobai_ffnn_dir 'gobai-' param_props.file_name '.nc'],...
+            param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
+        % load monthly output (RFR)
+        gobai_3d_rfr = ncread([gobai_rfr_dir 'gobai-' param_props.file_name '.nc'],...
+            param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
+        % load monthly output (GBM)
+        gobai_3d_gbm = ncread([gobai_gbm_dir 'gobai-' param_props.file_name '.nc'],...
+            param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
+    
+        %% average monthly outputs
+        gobai_3d_avg = mean(cat(4,gobai_3d_ffnn,gobai_3d_rfr,gobai_3d_gbm),4,'omitnan');
+        gobai_3d_var = std(cat(4,gobai_3d_ffnn,gobai_3d_rfr,gobai_3d_gbm),[],4,'omitnan');
+    
+        %% create folder and save monthly output
+        filename = [gobai_dir 'gobai-' param_props.file_name '.nc'];
+        % write to file
+        if strcmp(base_grid,'RFROM')
+            ncwrite(filename,'time',TS.Time,cnt);
+        else
+            ncwrite(filename,'time',datenum(TS.years(cnt),TS.months(cnt),15),cnt);
+        end
+        ncwrite(filename,param_props.file_name,gobai_3d_avg,[1 1 1 cnt]);
+        ncwrite(filename,[param_props.file_name '_var'],gobai_3d_var,[1 1 1 cnt]);
 
 end
 
@@ -97,7 +101,7 @@ function create_nc_file(TS,base_grid,xdim,ydim,zdim,gobai_dir,param_props)
 filename = [gobai_dir 'gobai-' param_props.file_name '.nc'];
 
 % create folder and file
-if ~isfolder([pwd '/' gobai_dir]); mkdir(gobai_dir); end
+if ~isfolder(gobai_dir); mkdir(gobai_dir); end
 if isfile(filename); delete(filename); end % delete file if it exists
 % bgc parameter
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')

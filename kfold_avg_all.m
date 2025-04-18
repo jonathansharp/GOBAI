@@ -1,16 +1,19 @@
-% k_fold_ensemble
+% kfold_avg_all
 %
 % DESCRIPTION:
-% This function uses validation versions of machine learning models to
-% evaluate a reserved subset of data.
+% This function takes an average of all k-fold evaluation results.
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 1/2/2024
+% DATE: 4/14/2025
+
+function kfold_avg_all(param_props,base_grid,float_file_ext,num_clusters,...
+    snap_date,train_ratio,val_ratio,test_ratio,numtrees,minLeafSize,...
+    numstumps,numbins,varargin)
 
 %% load combined data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
+load(['Data/processed_all_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% create directory names
@@ -18,48 +21,54 @@ load(['Data/processed_all_o2_data_' file_date float_file_ext '.mat'],...
 kfold_ffnn_dir = ...
     ['KFold/FFNN/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 kfold_ffnn_name = ['FFNN_output_train' num2str(100*train_ratio) '_val' ...
-    num2str(100*val_ratio) '_test' num2str(100*val_ratio)];
+    num2str(100*val_ratio) '_test' num2str(100*test_ratio)];
 % GBM
 kfold_gbm_dir = ...
     ['KFold/GBM/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
-kfold_gbm_name = ['GBM_output_tr' num2str(numstumps)];
+kfold_gbm_name = ['GBM_output_tr' num2str(numstumps) '_bin' num2str(numbins)];
 % RFR
 kfold_rfr_dir = ...
     ['KFold/RFR/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 kfold_rfr_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
-% FFNN
+% AVG
 kfold_ens_dir = ...
-    ['KFold/ENS/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
-kfold_ens_name = ['ENS_output' ...
+    ['KFold/AVG/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+kfold_ens_name = ['AVG_output' ...
     'FFNN_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) ...
     'GBM_tr' num2str(numstumps) 'RFR_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
 % Figures
-fig_dir = ['Figures/KFold/ENS/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
-fig_name = ['k_fold_comparison.png'];
+fig_dir = [param_props.dir_name '/Figures/KFold/AVG/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+fig_name = 'k_fold_comparison.png';
+fig_name_2 = 'k_fold_spatial_comparison.png';
 
 %% load k-fold data
 % FFNN
-load([kfold_ffnn_dir '/' kfold_ffnn_name],'ffnn_output','ffnn_rmse',...
-    'ffnn_med_err','ffnn_mean_err');
+ffnn_output = load([param_props.dir_name '/' kfold_ffnn_dir '/' kfold_ffnn_name '.mat']);
 % GBM
-load([kfold_gbm_dir '/' kfold_gbm_name],'gbm_output','gbm_rmse',...
-    'gbm_med_err','gbm_mean_err');
+gbm_output = load([param_props.dir_name '/' kfold_gbm_dir '/' kfold_gbm_name '.mat']);
 % RFR
-load([kfold_rfr_dir '/' kfold_rfr_name],'rfr_output','rfr_rmse',...
-    'rfr_med_err','rfr_mean_err');
+rfr_output = load([param_props.dir_name '/' kfold_rfr_dir '/' kfold_rfr_name '.mat']);
 
 %% average across models
-ens_output.k_fold_test_oxygen = ...
-    mean([rfr_output.k_fold_test_oxygen ffnn_output.k_fold_test_oxygen ...
-    gbm_output.k_fold_test_oxygen],2);
+ens_output.(['k_fold_test_' param_props.file_name]) = ...
+    mean([rfr_output.alg_output.(['k_fold_test_' param_props.file_name]) ...
+          ffnn_output.alg_output.(['k_fold_test_' param_props.file_name]) ...
+          gbm_output.alg_output.(['k_fold_test_' param_props.file_name])],2);
 % clean up
 clear rfr_output ffnn_output gbm_output
 % compare k-fold output to data
-ens_output.k_fold_delta = ens_output.k_fold_test_oxygen - all_data.oxygen;
+ens_output.k_fold_delta = ...
+    ens_output.(['k_fold_test_' param_props.file_name]) - all_data.(param_props.file_name);
 % calculate error stats
-ens_mean_err = mean(ens_output.k_fold_delta);
-ens_med_err = median(ens_output.k_fold_delta);
-ens_rmse = sqrt(mean(ens_output.k_fold_delta.^2));
+ens_mean_err = mean(ens_output.k_fold_delta,'omitnan');
+ens_med_err = median(ens_output.k_fold_delta,'omitnan');
+ens_rmse = sqrt(mean(ens_output.k_fold_delta.^2,'omitnan'));
+ens_med_abs_err = median(abs(ens_output.k_fold_delta),'omitnan');
+% print error stats
+fprintf(['Mean Error = ' num2str(ens_mean_err) ' ' param_props.units '\n']);
+fprintf(['Median Error = ' num2str(ens_med_err) ' ' param_props.units '\n']);
+fprintf(['RMSE = ' num2str(ens_rmse) ' ' param_props.units '\n']);
+fprintf(['Median Abs. Error = ' num2str(ens_med_abs_err) ' ' param_props.units '\n']);
 % save predicted data
 if ~isfolder([pwd '/' kfold_ens_dir]); mkdir(kfold_ens_dir); end
 save([kfold_ens_dir '/' kfold_ens_name],...
@@ -69,14 +78,15 @@ save([kfold_ens_dir '/' kfold_ens_name],...
 figure('visible','off'); hold on;
 set(gca,'fontsize',12);
 set(gcf,'position',[100 100 600 400]);
-[counts,bin_centers] = hist3([all_data.oxygen ens_output.k_fold_test_oxygen],...
+[counts,bin_centers] = hist3([all_data.(param_props.file_name) ...
+    ens_output.(['k_fold_test_' param_props.file_name])],...
     'Edges',{0:5:500 0:5:500});
 h=pcolor(bin_centers{1},bin_centers{2},counts');
 plot([0 500],[0 500],'k--');
 set(h,'EdgeColor','none');
 xlim([0 500]); ylim([0 500]);
 xlabel('Measured Oxygen (\mumol kg^{-1})');
-ylabel('ENS Oxygen (\mumol kg^{-1})');
+ylabel('AVG Oxygen (\mumol kg^{-1})');
 myColorMap = flipud(hot(256.*32));
 myColorMap(1,:) = 1;
 colormap(myColorMap);
@@ -85,7 +95,7 @@ caxis([1e0 1e5]);
 c=colorbar;
 c.Label.String = 'log_{10}(Bin Counts)';
 text(300,50,['RMSE = ' num2str(round(ens_rmse,1)) '\mumol kg^{-1}'],'fontsize',12);
-if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
+if ~isfolder(fig_dir); mkdir(fig_dir); end
 exportgraphics(gcf,[fig_dir '/' fig_name]);
 % clean up
 clear counts bin_centers h p myColorMap
@@ -122,7 +132,7 @@ c.Label.String = ['Average Absolute \Delta[O_{2}]'];
 c.FontSize = 22;
 c.TickLength = 0;
 mlabel off; plabel off;
-if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
+if ~isfolder(fig_dir); mkdir(fig_dir); end
 exportgraphics(gcf,[fig_dir '/' fig_name_2]);
 % clean up
 clear land cmap c
