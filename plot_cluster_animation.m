@@ -82,7 +82,8 @@ parfor d = 1:length(pressures)
         if ~isfolder([dname '/' num2str(pressures(d)) 'dbars'])
             mkdir([dname '/' num2str(pressures(d)) 'dbars']);
         end
-        export_fig([dname '/' num2str(pressures(d)) 'dbars/t' num2str(t) '.png']);
+        export_fig([dname '/' num2str(pressures(d)) 'dbars/t' num2str(t) '.png'],...
+            '-transparent','-silent');
         % capture frame
         frame = getframe(gcf);
         im = frame2im(frame);

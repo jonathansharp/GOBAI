@@ -61,7 +61,8 @@ parfor p = 1:length(pressures)
     % save figure
     dname = [param_props.dir_name '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
-    export_fig(gcf,[dname '/clustered_data_' num2str(pressures(p)) '.png'],'-transparent');
+    export_fig(gcf,[dname '/clustered_data_' num2str(pressures(p)) '.png'],...
+        '-transparent','-silent');
     close
     % plot data by cluster probability
     for clst = 1:num_clusters
@@ -97,7 +98,8 @@ parfor p = 1:length(pressures)
         dname = [param_props.dir_name '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
         if ~isfolder([pwd '/' dname]); mkdir(dname); end
         export_fig([dname '/clustered_data_probability_c' ...
-            num2str(clst) '_' num2str(pressures(p)) '.png'],'-transparent');
+            num2str(clst) '_' num2str(pressures(p)) '.png'],...
+            '-transparent','-silent');
         close
     end
 end

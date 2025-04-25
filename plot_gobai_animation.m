@@ -49,15 +49,17 @@ elseif strcmp(alg_type,'GBM')
             numbins = varargin{i+1};
         end
     end
+elseif strcmp(alg_type,'AVG')
+    % do nothing
 else
-    disp('"alg_type" must be "FFNN", "RFR", or "GBM"')
+    disp('"alg_type" must be "FFNN", "RFR", "GBM", or "AVG"')
 end
 
 %% set up parallel pool
-tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+% tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% plot frames
-parfor d = 1:length(pressures)
+for d = 1:length(pressures)
     % create folder for figures
     dname = [param_props.dir_name '/Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
@@ -100,7 +102,7 @@ parfor d = 1:length(pressures)
     % depth index
     depth_idx = find(Pressure == pressures(d));
     % establish fiugre
-    h = figure('color','w','visible','off');
+    h = figure('color','w','visible','on','Position',[616 474 1200 800]);
     axis tight manual
     % plot clusters each month/week
     for t = 1:timesteps
@@ -112,14 +114,15 @@ parfor d = 1:length(pressures)
         time = ncread(gobai_fname,'time',t,1);
         % establish figure
         figure(h);
+        set(gca,'FontSize',20);
         % make plot
         m_proj('robinson','lon',[20 380]);
         z = [gobai(~idx_20,:);gobai(idx_20,:)];
         m_pcolor(double(Longitude),double(Latitude),double(z)');
         if strcmp(base_grid,'RFROM')
-            title(gca,datestr(time));
+            title(gca,datestr(datenum(1950,0,0)+time),'FontSize',20);
         else
-            title(gca,extractAfter(datestr(datenum(2004,t,1)),'-'));
+            title(gca,extractAfter(datestr(datenum(2004,t,1)),'-'),'FontSize',20);
         end
         colormap(param_props.cmap);
         m_coast('patch',rgb('grey'));
@@ -134,7 +137,7 @@ parfor d = 1:length(pressures)
             mkdir([dname '/' num2str(pressures(d)) 'dbars']);
         end
         export_fig(h,[dname '/' num2str(pressures(d)) ...
-            'dbars/t' num2str(t) '.png'],'-transparent');
+            'dbars/t' num2str(t) '.png'],'-transparent','-silent');
         % capture frame
         frame = getframe(h);
         im = frame2im(frame);
