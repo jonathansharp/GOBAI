@@ -110,7 +110,7 @@ end
 
 %% Only do all this if downloaded float matlab file does not exist
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-% if exist([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'file') ~= 2
+if exist([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'file') ~= 2
 
 %% Define file structure
 snapshot_path = ['BGC_Argo_Snapshots/' num2str(snap_date) '-BgcArgoSprof/dac']; % define file path
@@ -439,11 +439,11 @@ close all
 % display information
 disp('Float data processed and saved.')
 
-% else
-% 
-% % display information
-% disp('Float data already processed.')
-% 
-% end
+else
+
+% display information
+disp('Float data already processed.')
+
+end
 
 end

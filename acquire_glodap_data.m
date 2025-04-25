@@ -11,6 +11,11 @@
 
 function acquire_glodap_data(param_props,glodap_year)
 
+%% change temporary param name for DIC
+if strcmp(param_props.temp_name,'PH')
+    param_props.temp_name = 'DIC';
+end
+
 %% Only do all this if downloaded glodap matlab file does not exist
 if exist([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' num2str(glodap_year) '.mat'],'file') ~= 2
 
@@ -39,12 +44,8 @@ clear lon_temp
 %% indices for glodap
 idx_nans = ~isnan(glodap_data.G2temperature) & ~isnan(glodap_data.G2pressure) & ...
           ~isnan(glodap_data.G2salinity) & ~isnan(glodap_data.(param_props.glodap_name));
-% check for secondary QC
-if strcmp(param_props.file_name,'ph')
-    idx_qc = glodap_data.G2salinityqc == 1 & glodap_data.G2phtsqc == 1;
-else
-    idx_qc = glodap_data.G2salinityqc == 1 & glodap_data.([param_props.glodap_name 'qc']) == 1;
-end
+idx_qc = glodap_data.G2salinityqc == 1 & ...
+    glodap_data.([param_props.glodap_name 'qc']) == 1;
 % check for good flags
 idx_flags = glodap_data.G2salinityf == 2 & glodap_data.([param_props.glodap_name 'f']) == 2;
 % check depth and/or time range
@@ -55,6 +56,14 @@ idx = idx_nans & idx_qc & idx_flags & idx_lims;
 clear idx_nans idx_qc idx_flags idx_lims
 
 %% remove extraneous data points
+if param_props.glodap_name == 'G2tco2'
+    glodap_data.G2phtsinsitutp = glodap_data.G2phtsinsitutp(idx);
+    glodap_data.G2talk = glodap_data.G2talk(idx);
+    glodap_data.G2oxygen = glodap_data.G2oxygen(idx);
+    glodap_data.G2nitrate = glodap_data.G2nitrate(idx);
+elseif param_props.glodap_name == 'G2nitrate'
+    glodap_data.G2oxygen = glodap_data.G2oxygen(idx);
+end
 glodap_data.(param_props.glodap_name) = glodap_data.(param_props.glodap_name)(idx);
 glodap_data.G2latitude = glodap_data.G2latitude(idx);
 glodap_data.G2longitude = glodap_data.G2longitude(idx);
@@ -69,7 +78,18 @@ glodap_data.G2station = glodap_data.G2station(idx);
 glodap_data.G2id = glodap_data.G2cruise.*100000+glodap_data.G2station;
 
 %% pre-allocate glodap data structure
-glodap_data.(param_props.temp_name) = [];
+if param_props.glodap_name == 'G2tco2'
+    glodap_data.(param_props.temp_name) = [];
+    glodap_data.PH = [];
+    glodap_data.TA = [];
+    glodap_data.OXY = [];
+    glodap_data.NIT = [];
+elseif param_props.glodap_name == 'G2nitrate'
+    glodap_data.(param_props.temp_name) = [];
+    glodap_data.OXY = [];
+else
+    glodap_data.(param_props.temp_name) = [];
+end
 glodap_data.LAT = [];
 glodap_data.LON = [];
 glodap_data.PRES = [];
@@ -84,8 +104,16 @@ glodap_data.ID = [];
 %% construct depth axis on which to interpolate
 zi = ([2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
 % define variables to interpolate
-vars = {'G2salinity' 'G2temperature' param_props.glodap_name};
-varsi = {'SAL' 'TEMP' param_props.temp_name};
+if param_props.glodap_name == 'G2tco2'
+    vars = {'G2salinity' 'G2temperature' param_props.glodap_name 'G2phtsinsitutp' 'G2talk' 'G2oxygen' 'G2nitrate'};
+    varsi = {'SAL' 'TEMP' param_props.temp_name 'PH' 'TA' 'OXY' 'NIT'};
+elseif param_props.glodap_name == 'G2nitrate'
+    vars = {'G2salinity' 'G2temperature' param_props.glodap_name 'G2oxygen'};
+    varsi = {'SAL' 'TEMP' param_props.temp_name 'OXY'};
+else
+    vars = {'G2salinity' 'G2temperature' param_props.glodap_name};
+    varsi = {'SAL' 'TEMP' param_props.temp_name};
+end
 % define station ids
 stations = unique(glodap_data.G2id);
 
@@ -136,9 +164,9 @@ for f = 1:length(stations) % for each unique station id
 
     end
 
-    if any(glodap_data.(param_props.temp_name)(:)>1000)
-        keyboard
-    end
+    % if any(glodap_data.(param_props.temp_name)(:)>100000)
+    %     keyboard
+    % end
 
     %% log extra data in interpolated data structure
     glodap_data.LAT = [glodap_data.LAT;...
