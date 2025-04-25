@@ -233,19 +233,20 @@ set(gcf,'position',[100 100 600 400]);
 h=pcolor(bin_centers{1},bin_centers{2},counts');
 plot([param_props.edges(1) param_props.edges(end)],[param_props.edges(1) param_props.edges(end)],'k--');
 set(h,'EdgeColor','none');
-xlim([param_props.edges(1) param_props.edges(end)]); ylim([param_props.edges(1) param_props.edges(end)]);
+xlim([param_props.edges(1) param_props.edges(end)]);
+ylim([param_props.edges(1) param_props.edges(end)]);
 xlabel(['Measured ' param_props.label ' ' param_props.units]);
 ylabel([alg_type ' ' param_props.label ' ' param_props.units]);
 myColorMap = flipud(hot(256.*32));
 myColorMap(1,:) = 1;
 colormap(myColorMap);
 set(gca,'ColorScale','log');
-caxis([1e0 1e5]);
+clim([1e0 1e5]);
 c=colorbar;
 c.Label.String = 'log_{10}(Bin Counts)';
 text(param_props.edges(1)+(2/5)*(param_props.edges(end)-param_props.edges(1)),...
     param_props.edges(1)+(1/10)*(param_props.edges(end)-param_props.edges(1)),...
-    ['RMSE = ' num2str(round(alg_rmse,param_props.dec_points)) '\mumol kg^{-1}'],'fontsize',12);
+    ['RMSE = ' num2str(round(alg_rmse,param_props.dec_points)) ' ' param_props.units],'fontsize',12);
 if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
 exportgraphics(gcf,[fig_dir '/' fig_name_1]);
 % clean up
@@ -277,7 +278,7 @@ pcolorm(lat,[lon lon(end)+1],[alg_output.k_fold_delta_spatial ...
 land = shaperead('landareas', 'UseGeoCoords', true);
 geoshow(land,'FaceColor',rgb('grey'));
 cmap = cmocean('amp'); cmap(1,:) = 1; colormap(cmap);
-caxis([0 (2/50)*(param_props.edges(end)-param_props.edges(1))]);
+clim([0 (2/50)*(param_props.edges(end)-param_props.edges(1))]);
 c=colorbar('location','southoutside');
 c.Label.String = ['Average Absolute \Delta' param_props.label];
 c.FontSize = 22;

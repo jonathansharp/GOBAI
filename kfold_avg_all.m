@@ -5,7 +5,7 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 4/14/2025
+% DATE: 4/24/2025
 
 function kfold_avg_all(param_props,base_grid,float_file_ext,num_clusters,...
     snap_date,train_ratio,val_ratio,test_ratio,numtrees,minLeafSize,...
@@ -80,21 +80,24 @@ set(gca,'fontsize',12);
 set(gcf,'position',[100 100 600 400]);
 [counts,bin_centers] = hist3([all_data.(param_props.file_name) ...
     ens_output.(['k_fold_test_' param_props.file_name])],...
-    'Edges',{0:5:500 0:5:500});
+    'Edges',{param_props.edges param_props.edges});
 h=pcolor(bin_centers{1},bin_centers{2},counts');
-plot([0 500],[0 500],'k--');
+plot([param_props.edges(1) param_props.edges(end)],[param_props.edges(1) param_props.edges(end)],'k--');
 set(h,'EdgeColor','none');
-xlim([0 500]); ylim([0 500]);
-xlabel('Measured Oxygen (\mumol kg^{-1})');
-ylabel('AVG Oxygen (\mumol kg^{-1})');
+xlim([param_props.edges(1) param_props.edges(end)]);
+ylim([param_props.edges(1) param_props.edges(end)]);
+xlabel(['Measured ' param_props.label ' ' param_props.units]);
+ylabel(['AVG ' param_props.label ' ' param_props.units]);
 myColorMap = flipud(hot(256.*32));
 myColorMap(1,:) = 1;
 colormap(myColorMap);
 set(gca,'ColorScale','log');
-caxis([1e0 1e5]);
+clim([1e0 1e5]);
 c=colorbar;
 c.Label.String = 'log_{10}(Bin Counts)';
-text(300,50,['RMSE = ' num2str(round(ens_rmse,1)) '\mumol kg^{-1}'],'fontsize',12);
+text(param_props.edges(1)+(2/5)*(param_props.edges(end)-param_props.edges(1)),...
+    param_props.edges(1)+(1/10)*(param_props.edges(end)-param_props.edges(1)),...
+    ['RMSE = ' num2str(round(ens_rmse,1)) ' ' param_props.units],'fontsize',12);
 if ~isfolder(fig_dir); mkdir(fig_dir); end
 exportgraphics(gcf,[fig_dir '/' fig_name]);
 % clean up
@@ -115,7 +118,7 @@ ens_output.k_fold_delta_spatial = accumarray(subs(~idx_subs,:),...
     abs(ens_output.k_fold_delta(~idx_subs)),sz,@nanmean);
 clear subs sz
 % plot map
-figure; hold on
+figure('visible','off'); hold on
 worldmap([-90 90],[20 380]);
 setm(gca,'mapprojection','robinson');
 set(gcf,'units','inches','position',[0 5 20 10]);
@@ -126,9 +129,9 @@ pcolorm(lat,[lon lon(end)+1],[ens_output.k_fold_delta_spatial ...
 land = shaperead('landareas', 'UseGeoCoords', true);
 geoshow(land,'FaceColor',rgb('grey'));
 cmap = cmocean('amp'); cmap(1,:) = 1; colormap(cmap);
-caxis([0 20]);
+clim([0 (2/50)*(param_props.edges(end)-param_props.edges(1))]);
 c=colorbar('location','southoutside');
-c.Label.String = ['Average Absolute \Delta[O_{2}]'];
+c.Label.String = ['Average Absolute \Delta' param_props.label];
 c.FontSize = 22;
 c.TickLength = 0;
 mlabel off; plabel off;

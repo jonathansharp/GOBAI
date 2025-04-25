@@ -34,12 +34,12 @@ elseif strcmp(p,'dic')
     param_props.dir_name = 'DIC'; % directory name
     param_props.file_name = 'dic'; % file name
     param_props.fig_name = 'dic'; % for saving figures
-    param_props.label = '{/itC}_{T}'; % axis labels
+    param_props.label = '{\itC}_{T}'; % axis labels
     param_props.argo_name = 'PH_IN_SITU_TOTAL'; % Argo name
     param_props.temp_name = 'PH'; % my temporary name
-    param_props.glodap_name = 'G2tcarbon'; % glodap name
+    param_props.glodap_name = 'G2tco2'; % glodap name
     param_props.woa_name = '';
-    param_props.edges = 1800:2:2400;
+    param_props.edges = 1800:2:2500;
     param_props.units = '(umol kg^{-1})';
     param_props.long_param_name = 'Dissolved Inorganic Carbon';
     param_props.dec_points = 1;

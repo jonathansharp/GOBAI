@@ -330,7 +330,7 @@ sig2_min = double(mean(crossover.nit_delta(idx))-2*std(crossover.nit_delta(idx))
 sig2_max = double(mean(crossover.nit_delta(idx))+2*std(crossover.nit_delta(idx)));
 plot([sig2_min sig2_min],[0 1],'r','linewidth',1);
 plot([sig2_max sig2_max],[0 1],'r','linewidth',1);
-xlabel('GLODAP [NO_{3}] - Float [NO_{3}]');
+xlabel('Float [NO_{3}] - GLODAP [NO_{3}]');
 xL = xlim; yL = ylim;
 text(0.9*xL(1),0.9*yL(2),['Mean \Delta[NO_{3}] = ' ...
     num2str(round(mean(crossover.nit_delta(idx)),2))],...
@@ -372,7 +372,7 @@ sig2_min = double(mean(crossover.nit_delta_corr(idx))-2*std(crossover.nit_delta_
 sig2_max = double(mean(crossover.nit_delta_corr(idx))+2*std(crossover.nit_delta_corr(idx)));
 plot([sig2_min sig2_min],[0 1],'r','linewidth',1);
 plot([sig2_max sig2_max],[0 1],'r','linewidth',1);
-xlabel('GLODAP [NO_{3}] - Float [NO_{3}]');
+xlabel('Float [NO_{3}] - GLODAP [NO_{3}]');
 xL = xlim; yL = ylim;
 text(0.9*xL(1),0.9*yL(2),['Mean \Delta[NO_{3}] = ' ...
     num2str(round(mean(crossover.nit_delta_corr(idx)),2))],...

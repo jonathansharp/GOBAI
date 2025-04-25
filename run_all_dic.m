@@ -36,7 +36,7 @@ test_ratio = 0.1;
 numstumps = 1000;
 numbins = 50;
 % data and parameter configuration
-data_per = 1; % set data reduction to 10%
+data_per = 1; % set data reduction to 100%
 param = 'dic';
 param_props = param_config(param);
 % base grid
@@ -44,15 +44,14 @@ base_grid = 'RFROM';
 [model_path,param_path,temp_path,sal_path] = path_config(base_grid,param);
 
 %% load and process data
-% acquire data
-acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
-acquire_glodap_data(param_props,glodap_year);
-%acquire_wod_ctd_data(param_props,glodap_year);
-% display data
-display_data(param_props,float_file_ext,glodap_year,snap_date);
-% adjust and combine data
-adjust_o2_float_data(float_file_ext,glodap_year,snap_date);
-combine_data(param_props,float_file_ext,glodap_year,snap_date);
+% % acquire data
+% acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
+% acquire_glodap_data(param_props,glodap_year);
+% % display data
+% display_data(param_props,float_file_ext,glodap_year,snap_date);
+% % adjust and combine data
+% adjust_dic_float_data(float_file_ext,glodap_year,snap_date);
+% combine_data(param_props,float_file_ext,glodap_year,snap_date);
 
 %% create time-varying clusters and assign data points to them
 % % form clusters
@@ -117,35 +116,69 @@ combine_data(param_props,float_file_ext,glodap_year,snap_date);
 %     num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
 %     end_year,snap_date,'train_ratio',train_ratio,'val_ratio',val_ratio,...
 %     'test_ratio',test_ratio);
-% plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'FFNN',...
-%     file_date,float_file_ext,numWorkers_predict,'train_ratio',train_ratio,...
-%     'val_ratio',val_ratio,'test_ratio',test_ratio);
+% % plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'FFNN',...
+% %     file_date,float_file_ext,numWorkers_predict,'train_ratio',train_ratio,...
+% %     'val_ratio',val_ratio,'test_ratio',test_ratio);
 % % random forest regressions
 % predict_gobai('RFR',param_props,param_path,temp_path,sal_path,base_grid,file_date,float_file_ext,...
 %     num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
 %     end_year,snap_date,'numtrees',numtrees,'minLeafSize',minLeafSize);
-% plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'RFR',...
-%     file_date,float_file_ext,numWorkers_predict,'numtrees',numtrees,'minLeafSize',minLeafSize);
+% % plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'RFR',...
+% %     file_date,float_file_ext,numWorkers_predict,'numtrees',numtrees,'minLeafSize',minLeafSize);
 % % gradient-boosting machines
-% predict_gobai('GBM',param_props,param_path,temp_path,sal_path,base_grid,file_date,float_file_ext,...
-%     num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
-%     end_year,snap_date,'numstumps',numstumps,'numbins',numbins);
+predict_gobai('GBM',param_props,param_path,temp_path,sal_path,base_grid,file_date,float_file_ext,...
+    num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
+    end_year,snap_date,'numstumps',numstumps,'numbins',numbins);
 % plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'GBM',...
 %     file_date,float_file_ext,numWorkers_predict,'numstumps',numstumps,'numbins',numbins);
-% 
-% %% assemble ensemble mean GOBAI
-% combine_gobai(param_props,temp_path,param_path,base_grid,file_date,float_file_ext,...
-%     num_clusters,start_year,end_year,snap_date,train_ratio,...
-%     val_ratio,test_ratio,numtrees,minLeafSize,numstumps,numbins);
-% plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'AVG',...
-%     file_date,float_file_ext,numWorkers_predict);
+
+%% assemble ensemble mean GOBAI
+combine_gobai(param_props,temp_path,param_path,base_grid,file_date,float_file_ext,...
+    num_clusters,start_year,end_year,snap_date,train_ratio,...
+    val_ratio,test_ratio,numtrees,minLeafSize,numstumps,numbins);
+plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'AVG',...
+    file_date,float_file_ext,numWorkers_predict);
 
 %% run OSSEs
-run_osse(model_path,param_props,file_date,snap_date,float_file_ext,start_year,end_year,...
-    num_clusters,variables,clust_vars,train_ratio,val_ratio,test_ratio,numtrees,...
-    minLeafSize,numstumps,numbins,thresh,numWorkers_train,numWorkers_predict);
+% run_osse(model_path,param_props,file_date,snap_date,float_file_ext,start_year,end_year,...
+%     num_clusters,variables,clust_vars,train_ratio,val_ratio,test_ratio,numtrees,...
+%     minLeafSize,numstumps,numbins,thresh,numWorkers_train,numWorkers_predict);
 
 %% determine uncertainty
 % calculate_gridding_uncertainty;
 
+%% evaluate timeseries
+lon_fig = 200;
+lat_fig = 40;
+pres_fig = 10;
+
+filename = [param_path 'GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) ...
+            '_' file_date float_file_ext '/train' num2str(100*train_ratio) ...
+            '_val' num2str(100*test_ratio) '_test' num2str(100*val_ratio) ...
+            '/gobai-' param_props.file_name '.nc'];
+lon = ncread(filename,'lon'); [~,lon_idx] = min(abs(lon-lon_fig));
+lat = ncread(filename,'lat'); [~,lat_idx] = min(abs(lat-lat_fig));
+pres = ncread(filename,'pres'); [~,pres_idx] = min(abs(pres-pres_fig));
+
+% global mean dic
+for t = 1:992
+    dic_temp = ncread(filename,'dic',[1 1 1 t],[Inf Inf Inf 1]);
+    dic(t) = mean(dic_temp(:),'omitnan');
+end
+
+% dic = squeeze(ncread(filename,'dic',[lon_idx lat_idx pres_idx 1],[1 1 1 Inf]));
+time = ncread(filename,'time');
+
+figure; hold on; set(gcf,'position',[100 100 1000 200]);
+dic_m = movmean(dic,52);
+mdl=fitlm(time,dic_m);
+dic_fit = (mdl.Coefficients{2,1}.*time + mdl.Coefficients{1,1})';
+ylabel('DIC Anomaly (\mumol kg^{-1})');
+clr=cmocean('amplitude',1);
+plot(time(53:end-52),dic_m(53:end-52)-dic_fit(53:end-52),'LineWidth',3,'Color',clr);
+% plot(time,dic-mean(dic),'LineWidth',1,'LineStyle','-','Color','#0072BD');
+plot([time(53) time(end-52)],[0 0],'LineWidth',1,'LineStyle',':','Color','k');
+datetick('x');
+
+%% end timing
 toc(t_whole_script)

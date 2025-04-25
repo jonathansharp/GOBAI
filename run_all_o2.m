@@ -29,11 +29,11 @@ variables = ... % variables for algorithms
 numtrees = 100;
 minLeafSize = 10;
 % shallow neural network configuration
-train_ratio = 0.8;
-val_ratio = 0.1;
-test_ratio = 0.1;
+train_ratio = 0.7;
+val_ratio = 0.15;
+test_ratio = 0.15;
 % gradient boosting configuration
-numstumps = 1000;
+numstumps = 500;
 numbins = 50;
 % data and parameter configuration
 data_per = 1; % set data reduction to 10%
@@ -92,9 +92,9 @@ base_grid = 'RFROM';
 %     data_per,'numstumps',numstumps,'numbins',numbins,...
 %     'num_folds',num_folds);
 % combined average
-kfold_avg_all(param_props,base_grid,float_file_ext,num_clusters,...
-    snap_date,train_ratio,val_ratio,test_ratio,numtrees,minLeafSize,...
-    numstumps,numbins);
+% kfold_avg_all(param_props,base_grid,float_file_ext,num_clusters,...
+%     snap_date,train_ratio,val_ratio,test_ratio,numtrees,minLeafSize,...
+%     numstumps,numbins);
 
 %% train models to create GOBAI product
 % % feed-forward neural networks
@@ -117,9 +117,9 @@ kfold_avg_all(param_props,base_grid,float_file_ext,num_clusters,...
 %     num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
 %     end_year,snap_date,'train_ratio',train_ratio,'val_ratio',val_ratio,...
 %     'test_ratio',test_ratio);
-% plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'FFNN',...
-%     file_date,float_file_ext,numWorkers_predict,'train_ratio',train_ratio,...
-%     'val_ratio',val_ratio,'test_ratio',test_ratio);
+plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'FFNN',...
+    file_date,float_file_ext,numWorkers_predict,'train_ratio',train_ratio,...
+    'val_ratio',val_ratio,'test_ratio',test_ratio);
 % % random forest regressions
 % predict_gobai('RFR',param_props,param_path,temp_path,sal_path,base_grid,file_date,float_file_ext,...
 %     num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
@@ -132,20 +132,58 @@ kfold_avg_all(param_props,base_grid,float_file_ext,num_clusters,...
 %     end_year,snap_date,'numstumps',numstumps,'numbins',numbins);
 % plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'GBM',...
 %     file_date,float_file_ext,numWorkers_predict,'numstumps',numstumps,'numbins',numbins);
-% 
-% %% assemble ensemble mean GOBAI
+
+%% assemble ensemble mean GOBAI
 % combine_gobai(param_props,temp_path,param_path,base_grid,file_date,float_file_ext,...
 %     num_clusters,start_year,end_year,snap_date,train_ratio,...
 %     val_ratio,test_ratio,numtrees,minLeafSize,numstumps,numbins);
-% plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'AVG',...
-%     file_date,float_file_ext,numWorkers_predict);
+plot_gobai_animation(param_props,param_path,base_grid,num_clusters,'AVG',...
+    file_date,float_file_ext,numWorkers_predict);
 
 %% run OSSEs
-run_osse(model_path,param_props,file_date,snap_date,float_file_ext,start_year,end_year,...
-    num_clusters,variables,clust_vars,train_ratio,val_ratio,test_ratio,numtrees,...
-    minLeafSize,numstumps,numbins,thresh,numWorkers_train,numWorkers_predict);
+% run_osse(model_path,param_props,file_date,snap_date,float_file_ext,start_year,end_year,...
+%     num_clusters,variables,clust_vars,train_ratio,val_ratio,test_ratio,numtrees,...
+%     minLeafSize,numstumps,numbins,thresh,numWorkers_train,numWorkers_predict);
 
 %% determine uncertainty
 % calculate_gridding_uncertainty;
 
+%% evaluate timeseries
+lon_fig = 240;
+lat_fig = 0;
+pres_fig = 200;
+
+filename = [param_path 'GOBAI/' base_grid '/AVG/c' num2str(num_clusters) ...
+    '_' file_date float_file_ext '/gobai-' param_props.file_name '.nc'];
+lon = ncread(filename,'lon'); [~,lon_idx] = min(abs(lon-lon_fig));
+lat = ncread(filename,'lat'); [~,lat_idx] = min(abs(lat-lat_fig));
+pres = ncread(filename,'pres'); [~,pres_idx] = min(abs(pres-pres_fig));
+
+o2 = squeeze(ncread(filename,'o2',[lon_idx,lat_idx,pres_idx,1],[1 1 1 Inf]));
+time = datenum(1950,0,0)+ncread(filename,'time');
+
+figure; hold on; set(gcf,'position',[100 100 1000 200]);
+o2_m = movmean(o2,52);
+yyaxis left; ax = gca; ax.YColor = '#0072BD';
+ylabel('[O_{2}] Anomaly (\mumol kg^{-1})');
+plot(time,o2_m-mean(o2_m),'LineWidth',3,'Color','#0072BD');
+plot(time,o2-mean(o2),'LineWidth',1,'LineStyle','-','Color','#0072BD');
+plot([time(1) time(end)],[0 0],'LineWidth',1,'LineStyle',':','Color','k');
+datetick('x');
+
+enso_table = readtable('meiv2.data.txt');
+enso_index = table2array(enso_table(26:46,2:13))';
+enso_index = enso_index(:);
+enso_time = datenum(repelem(2004:2024,12)',repmat(1:12,1,21)',15);
+enso_index_m = movmean(enso_index,12);
+yyaxis right; ax = gca; ax.YColor = '#77AC30';
+ylabel('ENSO Index (MEIv2)')
+plot(enso_time,enso_index_m,'LineWidth',3,'Color','#77AC30');
+plot(enso_time,enso_index,'LineWidth',1,'LineStyle','-','Color','#77AC30');
+% save figure
+export_fig(gcf,['O2/Figures/enso_o2_' num2str(lat_fig) 'E_' num2str(lon_fig) 'W_' ...
+    num2str(pres_fig) 'dbar.png'],'-transparent','-silent');
+close
+
+%% finish timing
 toc(t_whole_script)

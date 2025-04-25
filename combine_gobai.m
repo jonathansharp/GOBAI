@@ -83,9 +83,9 @@ for m = 1:length(TS.Time)
         filename = [gobai_dir 'gobai-' param_props.file_name '.nc'];
         % write to file
         if strcmp(base_grid,'RFROM')
-            ncwrite(filename,'time',TS.Time,cnt);
+            ncwrite(filename,'time',TS.Time(m),cnt);
         else
-            ncwrite(filename,'time',datenum(TS.years(cnt),TS.months(cnt),15),cnt);
+            ncwrite(filename,'time',datenum(TS.years(cnt),TS.months(cnt),15)-datenum(1950,0,0),cnt);
         end
         ncwrite(filename,param_props.file_name,gobai_3d_avg,[1 1 1 cnt]);
         ncwrite(filename,[param_props.file_name '_var'],gobai_3d_var,[1 1 1 cnt]);
@@ -154,7 +154,7 @@ end
 % time
 nccreate(filename,'time','Dimensions',{'time',Inf},...
     'DataType','single','FillValue',NaN);
-ncwriteatt(filename,'time','units','days since 0000-01-01');
+ncwriteatt(filename,'time','units','days since 1950-0-0');
 ncwriteatt(filename,'time','axis','T');
 ncwriteatt(filename,'time','long_name','time');
 ncwriteatt(filename,'time','_CoordinateAxisType','Time');

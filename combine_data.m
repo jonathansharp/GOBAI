@@ -10,6 +10,11 @@
 
 function combine_data(param_props,float_file_ext,glodap_year,snap_date)
 
+%% change temporary param name for DIC
+if strcmp(param_props.temp_name,'PH')
+    param_props.temp_name = 'DIC';
+end
+
 %% load data after implementing float data adjustment
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 load([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_adjusted_' file_date float_file_ext '.mat'],...

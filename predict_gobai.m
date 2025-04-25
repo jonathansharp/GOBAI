@@ -364,7 +364,11 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     filename = [gobai_alg_dir 'gobai-' param_props.file_name '-' num2str(cnt) '.nc'];
     if exist(filename,'file')==2; delete(filename); end
     nccreate(filename,'time','Dimensions',{'time' 1});
-    ncwrite(filename,'time',datenum(TS.years(m),TS.months(m),15));
+    if strcmp(base_grid,'RFROM')
+        ncwrite(filename,'time',TS.Time(m));
+    else
+        ncwrite(filename,'time',datenum(TS.years(m),TS.months(m),15)-datenum(1950,0,0));
+    end
     nccreate(filename,param_props.file_name,'Dimensions',{'lon' xdim 'lat' ydim 'pres' zdim});
     ncwrite(filename,param_props.file_name,gobai_3d);
 
@@ -430,7 +434,7 @@ end
 % time
 nccreate(filename,'time','Dimensions',{'time',Inf},...
     'DataType','single','FillValue',NaN);
-ncwriteatt(filename,'time','units','days since 0000-01-01');
+ncwriteatt(filename,'time','units','days since 1950-0-0');
 ncwriteatt(filename,'time','axis','T');
 ncwriteatt(filename,'time','long_name','time');
 ncwriteatt(filename,'time','_CoordinateAxisType','Time');
