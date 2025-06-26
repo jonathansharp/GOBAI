@@ -4,8 +4,25 @@ function [vol,area,h] = weights3d(lon,lat,depth)
 lon3d = repmat(lon,1,length(lat),length(depth));
 lat3d = repmat(lat',length(lon),1,length(depth));
 % volume = length x width x depth
-L = (((lon3d + 0.5) - (lon3d- 0.5)) .* 111.320 .* cosd(lat3d)); % longitude distance (km)
-W = (((lat3d + 0.5) - (lat3d - 0.5)) .* 110.574); % latitude distance (km)
+lon_delta = diff(lon); 
+lat_delta = diff(lat);
+if length(unique(lon_delta)) > 1
+    if any(lon_delta == -359)
+       lon_delta = lon_delta(lon_delta ~= -359);
+       lon_delta = lon_delta(1);
+    else
+        disp('Longitude spacing must be consistent');
+    end
+else
+    lon_delta = lon_delta(1);
+end
+if length(unique(lat_delta)) > 1
+    disp('Latitude spacing must be consistent');
+else
+    lat_delta = lat_delta(1);
+end
+L = (((lon3d + lon_delta/2) - (lon3d - lon_delta/2)) .* 111.320 .* cosd(lat3d)); % longitude distance (km)
+W = (((lat3d + lat_delta/2) - (lat3d - lat_delta/2)) .* 110.574); % latitude distance (km)
 % detemine depth bounds and heights of grid cells
 D = single(nan(size(depth)));
 d1 = 0;
