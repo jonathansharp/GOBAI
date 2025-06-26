@@ -122,7 +122,7 @@ clear today_date mnth folderinfo
 %% pre-allocate float data structure
 if strcmp(param_props.argo_name,'PH_IN_SITU_TOTAL')
     float_data.OXY = [];
-if strcmp(param_props.argo_name,'NITRATE')
+elseif strcmp(param_props.argo_name,'NITRATE')
     float_data.OXY = [];
 end
 float_data.(param_props.temp_name) = [];
@@ -182,9 +182,16 @@ for n = 1:length(idx_folders) % for each DAC
         float.(['F' floatnum]).PARAMETER = temp;
         clear temp m
         
-        %% Continue if float has the relevant sensor
-        if any(strcmp(float.(['F' floatnum]).PARAMETER,param_props.argo_name))
+        %% Continue if float has the relevant sensors
+        cmp_idx = true;
+        for cmp_n = 1:length(vars)
+            % if any needed parameter is not present, change index to false
+            if any(strcmp(float.(['F' floatnum]).PARAMETER,vars(cmp_n)))
+            else; cmp_idx = false; end
+        end
 
+        %% Extract float data
+        if cmp_idx
             %% Parse parameter data modes
             for m = 1:n_param
                 if ~isempty(float.(['F' floatnum]).PARAMETER{m})
@@ -233,13 +240,14 @@ for n = 1:length(idx_folders) % for each DAC
                         float.(['F' floatnum]).([vars{k} '_DATA_MODE']) == data_modes{m};
                     end
                 end
-                % index based on data mode and flags
+                % index based on data mode and flags and depth < 1950
                 index = mode_idx & ... % use data mode index that was created
                         (float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 1 | ...
                         float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 2 | ...
                         float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 8) & ... % with good variable flags,
                         (float.(['F' floatnum]).PRES_ADJUSTED_QC == 1 | ...
-                        float.(['F' floatnum]).PRES_ADJUSTED_QC == 2); % and good pressure flags.
+                        float.(['F' floatnum]).PRES_ADJUSTED_QC == 2) & ... % and good pressure flags
+                        float.(['F' floatnum]).PRES_ADJUSTED <= 1950;
                 
                 % pre-allocate interpolated profiles
                 float.(['F' floatnum]).([vars{k} '_ADJUSTEDi']) = ...
@@ -253,15 +261,20 @@ for n = 1:length(idx_folders) % for each DAC
                         % extract temporary pressure axis and parameter
                         temp_pres = float.(['F' floatnum]).PRES_ADJUSTED(index(:,p),p);
                         temp_var = float.(['F' floatnum]).([vars{k} '_ADJUSTED'])(index(:,p),p);
-                        % remove data deeper than 1950m
-                        temp_var(temp_pres>1950) = [];
-                        temp_pres(temp_pres>1950) = [];
 
                         % interpolate to edges (with extrapolation)
                         [~,unique_idx_pres] = unique(temp_pres);
+                        try
                         temp_var_i = interp1(temp_pres(unique_idx_pres),...
                             temp_var(unique_idx_pres),zi,'linear','extrap');
-                        
+                        catch
+                        keyboard
+                        end
+
+                        % remove interpolated data beneath deepest measurement
+                        % nah this doesn't seem necessary
+                        % temp_var_i(zi>max(temp_pres(unique_idx_pres))) = NaN;
+
                         % remove interpolated data more than 100m from a measurement
                         index_from = false(size(zi));
                         for z = 1:length(zi)
@@ -306,14 +319,13 @@ for n = 1:length(idx_folders) % for each DAC
                 % save a random profile every 100 floats
                 if k == 3 && mod(counter,100) == 0
                     prof_to_plot = randi(n_prof);
-                    figure('visible','off');
-                    plot(float.(['F' floatnum]).([vars{k} '_ADJUSTED'])(:,prof_to_plot),...
-                        float.(['F' floatnum]).PRES_ADJUSTED(:,prof_to_plot),'linewidth',2);
-                    info = gcf; info.Position(4) = info.Position(4)*2;
-                    hold on; set(gca,'YDir','reverse');
+                    figure('visible','off'); hold on; set(gca,'YDir','reverse');
                     plot(float.(['F' floatnum]).([vars{k} '_ADJUSTEDi'])(:,prof_to_plot),...
                         zi,'linewidth',2);
-                    legend({'Measurements' 'Interpolation'},'Location',...
+                    info = gcf; info.Position(4) = info.Position(4)*2;
+                    scatter(float.(['F' floatnum]).([vars{k} '_ADJUSTED'])(:,prof_to_plot),...
+                        float.(['F' floatnum]).PRES_ADJUSTED(:,prof_to_plot),'filled');
+                    legend({'Interpolation' 'Measurements'},'Location',...
                         'northoutside','NumColumns',2);
                     if ~exist([param_props.dir_name '/Figures/Data/Profiles'],'dir')
                         mkdir([param_props.dir_name '/Figures/Data/Profiles']); end
@@ -368,7 +380,7 @@ for n = 1:length(idx_folders) % for each DAC
     % clean up
     float = rmfield(float,(['F' floatnum]));
 
-    % increase conter
+    % increase counter
     counter = counter + 1;
 
     end

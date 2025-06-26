@@ -7,10 +7,10 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 3/25/2025
+% DATE: 6/20/2025
 
 function gmm_clustering(param_props,temp_path,sal_path,base_grid,start_year,end_year,snap_date,...
-    float_file_ext,clust_vars,num_clusters,numWorkers_predict,param_path,varargin)
+    float_file_ext,clust_vars,num_clusters,numWorkers_cluster,param_path,varargin)
 
 %% process optional input arguments
 % pre-allocate
@@ -27,7 +27,7 @@ date_str = num2str(snap_date);
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 
 %% check for existence of model
-if exist([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str '.mat'],'file') ~= 2
+if exist([param_props.dir_name '/Data/GMM_' num2str(num_clusters) '/model_' date_str '.mat'],'file') ~= 2
 
     %% load basin mask file
     
@@ -63,10 +63,10 @@ if exist([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) 
         'CovarianceType','diagonal',...
         'SharedCovariance',true,'Replicates',10);
     % save GMM model
-    if ~isfolder([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters)])
-        mkdir([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters)]);
+    if ~isfolder([param_props.dir_name '/Data/GMM_' num2str(num_clusters)])
+        mkdir([param_props.dir_name '/Data/GMM_' num2str(num_clusters)]);
     end
-    save([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' date_str],...
+    save([param_props.dir_name '/Data/GMM_' num2str(num_clusters) '/model_' date_str],...
         'gmm','num_clusters','C','S','-v7.3');
     clear gmm C S
     toc
@@ -165,17 +165,17 @@ if ~isfile([folder_name '/clusters.nc']) || ...
     end
     
     % load GMM model
-    load([param_props.dir_name '/Data/GMM_' base_grid '_' num2str(num_clusters) '/model_' ...
+    load([param_props.dir_name '/Data/GMM_' num2str(num_clusters) '/model_' ...
         date_str],'gmm','C','S');
     
     % set up parallel pool
-    tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+    tic; parpool(numWorkers_cluster); fprintf('Pool initiation: '); toc;
 
     %% assign clusters for each timestep
     parfor t = 1:timesteps
 
         % load T/S grid
-        TS = load_monthly_TS_data(temp_path,sal_path,base_grid,months(t),weeks(t),start_year,date_str);
+        TS = load_monthly_TS_data(temp_path,sal_path,base_grid,months(t),weeks(t),start_year,end_year,date_str);
 
         % transform to normalized arrays
         idx = ~isnan(TS.temperature_cns) & ~isnan(TS.salinity_abs);

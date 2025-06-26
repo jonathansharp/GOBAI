@@ -17,7 +17,7 @@ else
     load([param_props.dir_name '/Data/' base_grid '_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'all_data');
 end
 % load cluster data
-load([param_props.dir_name '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param_props.dir_name '/Data/all_data_clusters_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 % define pressure axis
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')

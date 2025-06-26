@@ -56,10 +56,10 @@ else
 end
 
 %% set up parallel pool
-% tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% plot frames
-for d = 1:length(pressures)
+parfor d = 1:length(pressures)
     % create folder for figures
     dname = [param_props.dir_name '/Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
@@ -111,16 +111,15 @@ for d = 1:length(pressures)
         % load monthly gobai
         gobai = ncread(gobai_fname,param_props.file_name,...
             [1 1 depth_idx t],[Inf Inf 1 1]);
-        time = ncread(gobai_fname,'time',t,1);
+        time = datenum(1950,0,0) + ncread(gobai_fname,'time',t,1);
         % establish figure
-        figure(h);
         set(gca,'FontSize',20);
         % make plot
         m_proj('robinson','lon',[20 380]);
         z = [gobai(~idx_20,:);gobai(idx_20,:)];
         m_pcolor(double(Longitude),double(Latitude),double(z)');
         if strcmp(base_grid,'RFROM')
-            title(gca,datestr(datenum(1950,0,0)+time),'FontSize',20);
+            title(gca,datestr(time,'mmm-YYYY'),'FontSize',20);
         else
             title(gca,extractAfter(datestr(datenum(2004,t,1)),'-'),'FontSize',20);
         end
@@ -132,21 +131,24 @@ for d = 1:length(pressures)
         c.Limits = [param_props.edges(1) param_props.edges(end)];
         c.Label.String = [param_props.label ' ' param_props.units];
         c.TickLength = 0;
-        % save frame
+        % create folder
         if ~isfolder([dname '/' num2str(pressures(d)) 'dbars'])
             mkdir([dname '/' num2str(pressures(d)) 'dbars']);
         end
-        export_fig(h,[dname '/' num2str(pressures(d)) ...
-            'dbars/t' num2str(t) '.png'],'-transparent','-silent');
-        % capture frame
-        frame = getframe(h);
-        im = frame2im(frame);
-        [imind,cm] = rgb2ind(im,256);
+        % save frame
+        % export_fig(h,[dname '/' num2str(pressures(d)) ...
+        %     'dbars/t' num2str(t) '.png'],'-transparent','-silent');
+        % % capture frame
+        % frame = getframe(h);
+        % im = frame2im(frame);
+        % [imind,cm] = rgb2ind(im,256);
         % write to file
         if t == 1
-            imwrite(imind,cm,[dname '/' fname],'gif','Loopcount',inf,'DelayTime',delay_time);
+            % imwrite(imind,cm,[dname '/' fname],'gif','Loopcount',inf,'DelayTime',delay_time);
+            exportgraphics(h,[dname '/' fname],'Append',false);
         else
-            imwrite(imind,cm,[dname '/' fname],'gif','WriteMode','append','DelayTime',delay_time);
+            % imwrite(imind,cm,[dname '/' fname],'gif','WriteMode','append','DelayTime',delay_time);
+            exportgraphics(h,[dname '/' fname],'Append',true);
         end
     end
     close

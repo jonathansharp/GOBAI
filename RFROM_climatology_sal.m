@@ -6,18 +6,18 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 11/30/2023
+% DATE: 5/29/2025
 
 %% establish paths, folders, and options
 % file paths and names
-fpath = '/fast3/sharp/sal/';
-folder = 'RFROM_SAL_v0.1';
-fname = '/RFROM_SAL_STABLE_';
+fpath = '/fast3/salinity/';
+folder = 'RFROM_SAL_v2.2';
+fname = '/RFROMV22_SAL_STABLE_';
 % create annual file folder
 if ~isfolder([fpath folder '_annual']); mkdir([fpath folder '_annual']); end
 % timespan
-y1 = 2004;
-y2 = 2022;
+y1 = 1993;
+y2 = 2024;
 
 %% create monthly annual files
 % loop through each year to create annual files

@@ -5,7 +5,7 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 3/13/2025
+% DATE: 6/25/2025
 
 function train_gobai(alg_type,param_props,base_grid,file_date,...
     float_file_ext,num_clusters,variables,thresh,numWorkers_train,snap_date,varargin)
@@ -69,13 +69,13 @@ date_str = num2str(snap_date);
 
 %% directory base
 if strcmp(alg_type,'FFNN')
-    dir_base = create_dir_base(alg_type,{base_grid;num_clusters;file_date;...
+    dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
         float_file_ext;train_ratio;val_ratio;test_ratio});
 elseif strcmp(alg_type,'RFR')
-    dir_base = create_dir_base(alg_type,{base_grid;num_clusters;file_date;...
+    dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
         float_file_ext;numtrees;minLeafSize});
 elseif strcmp(alg_type,'GBM')
-    dir_base = create_dir_base(alg_type,{base_grid;num_clusters;file_date;...
+    dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
         float_file_ext;numstumps;numbins});
 end
 
@@ -87,12 +87,12 @@ else
 end
 
 %% load data clusters
-load([param_props.dir_name '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param_props.dir_name '/Data/all_data_clusters_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% load data cluster indices (for k-fold testing)
 if num_folds > 1
-    load([param_props.dir_name '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
+    load([param_props.dir_name '/Data/k_fold_data_indices_' num2str(num_clusters) ...
         '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],...
         'num_folds','train_idx','test_idx');
 else
@@ -124,8 +124,8 @@ end
 
 %% variables for k-fold test
 if num_folds > 1
-    kfold_dir = [param_props.dir_name '/KFold/' alg_type '/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
-    fig_dir = [param_props.dir_name '/Figures/KFold/' alg_type '/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+    kfold_dir = [param_props.dir_name '/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
+    fig_dir = [param_props.dir_name '/Figures/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
     if strcmp(alg_type,'RFR')
         kfold_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
         fig_name_1 = ['k_fold_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];
@@ -146,18 +146,31 @@ end
 % start timing training
 tStart = tic;
 
-% set up parallel pool
-tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
 % parameter that matches fold number with cluster number
 folds = repelem(1:num_folds,1,num_clusters)';
 clusters = repmat(1:num_clusters,1,num_folds)';
+
 % fit models
-parfor cnt = 1:num_folds*num_clusters
-    train_models(param_props,num_folds,base_grid,...
-        alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
-        train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
-        numtrees,minLeafSize,numstumps,numbins,thresh,'no',...
-        folds(cnt),clusters(cnt));
+if num_folds == 1 & strcmp(alg_type,'FFNN')
+    % set up parallel pool
+    % tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+    for cnt = 1:num_folds*num_clusters
+        train_models(param_props,num_folds,...
+            alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
+            train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
+            numtrees,minLeafSize,numstumps,numbins,thresh,'yes',...
+            folds(cnt),clusters(cnt));
+    end
+else
+    % set up parallel pool
+    tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+    parfor cnt = 1:num_folds*num_clusters
+        train_models(param_props,num_folds,...
+            alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
+            train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
+            numtrees,minLeafSize,numstumps,numbins,thresh,'no',...
+            folds(cnt),clusters(cnt));
+    end
 end
 
 % end parallel session
@@ -165,9 +178,9 @@ delete(gcp('nocreate'));
 
 % stop timing full script
 if num_folds > 1
-    fprintf([alg_type ' k-Fold Training for ' base_grid ': ']);
+    fprintf([alg_type ' k-Fold Training for: ']);
 else
-    fprintf([alg_type ' Training for ' base_grid ': ']);
+    fprintf([alg_type ' Training for: ']);
 end
 
 % print elapsed time in minutes
@@ -295,7 +308,7 @@ end
 end
 
 %% function to train ML models
-function train_models(param_props,num_folds,base_grid,...
+function train_models(param_props,num_folds,...
     alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
     train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
     numtrees,minLeafSize,numstumps,numbins,thresh,par_use,f,c)
@@ -353,9 +366,9 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
     
     %% stop timing fit
     if num_folds > 1
-        fprintf(['Train ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
+        fprintf(['Train ' alg_type ' for - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
     else
-        fprintf(['Train ' alg_type ' for ' base_grid ' - Cluster #' num2str(c) ': ']);
+        fprintf(['Train ' alg_type ' for - Cluster #' num2str(c) ': ']);
     end
     
     toc
@@ -387,7 +400,7 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
         end
 
         % stop timing predictions
-        fprintf(['Run ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
+        fprintf(['Run ' alg_type ' for - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
         toc
 
     end
@@ -397,10 +410,10 @@ else
 
     % print information
     if num_folds > 1
-        fprintf(['Train ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+        fprintf(['Train ' alg_type ' for - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
         disp(' ');
     else
-        fprintf(['Train ' alg_type ' for ' base_grid ' - Cluster #' num2str(c) ': N/A']);
+        fprintf(['Train ' alg_type ' for - Cluster #' num2str(c) ': N/A']);
         disp(' ');
     end
 
@@ -411,7 +424,7 @@ else
         % output = nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
 
         % print information
-        fprintf(['Run ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+        fprintf(['Run ' alg_type ' for - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
         disp(' ');
 
     end

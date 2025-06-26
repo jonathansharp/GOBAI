@@ -56,12 +56,12 @@ idx = idx_nans & idx_qc & idx_flags & idx_lims;
 clear idx_nans idx_qc idx_flags idx_lims
 
 %% remove extraneous data points
-if param_props.glodap_name == 'G2tco2'
+if strcmp(param_props.glodap_name,'G2tco2')
     glodap_data.G2phtsinsitutp = glodap_data.G2phtsinsitutp(idx);
     glodap_data.G2talk = glodap_data.G2talk(idx);
     glodap_data.G2oxygen = glodap_data.G2oxygen(idx);
     glodap_data.G2nitrate = glodap_data.G2nitrate(idx);
-elseif param_props.glodap_name == 'G2nitrate'
+elseif strcmp(param_props.glodap_name,'G2nitrate')
     glodap_data.G2oxygen = glodap_data.G2oxygen(idx);
 end
 glodap_data.(param_props.glodap_name) = glodap_data.(param_props.glodap_name)(idx);
@@ -78,13 +78,13 @@ glodap_data.G2station = glodap_data.G2station(idx);
 glodap_data.G2id = glodap_data.G2cruise.*100000+glodap_data.G2station;
 
 %% pre-allocate glodap data structure
-if param_props.glodap_name == 'G2tco2'
+if strcmp(param_props.glodap_name,'G2tco2')
     glodap_data.(param_props.temp_name) = [];
     glodap_data.PH = [];
     glodap_data.TA = [];
     glodap_data.OXY = [];
     glodap_data.NIT = [];
-elseif param_props.glodap_name == 'G2nitrate'
+elseif strcmp(param_props.glodap_name,'G2nitrate')
     glodap_data.(param_props.temp_name) = [];
     glodap_data.OXY = [];
 else
@@ -104,10 +104,10 @@ glodap_data.ID = [];
 %% construct depth axis on which to interpolate
 zi = ([2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
 % define variables to interpolate
-if param_props.glodap_name == 'G2tco2'
+if strcmp(param_props.glodap_name,'G2tco2')
     vars = {'G2salinity' 'G2temperature' param_props.glodap_name 'G2phtsinsitutp' 'G2talk' 'G2oxygen' 'G2nitrate'};
     varsi = {'SAL' 'TEMP' param_props.temp_name 'PH' 'TA' 'OXY' 'NIT'};
-elseif param_props.glodap_name == 'G2nitrate'
+elseif strcmp(param_props.glodap_name,'G2nitrate')
     vars = {'G2salinity' 'G2temperature' param_props.glodap_name 'G2oxygen'};
     varsi = {'SAL' 'TEMP' param_props.temp_name 'OXY'};
 else

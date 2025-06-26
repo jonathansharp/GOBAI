@@ -5,20 +5,17 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 2/7/2025
+% DATE: 6/20/2025
 
-function kfold_split_data(param_props,base_grid,file_date,float_file_ext,...
+function kfold_split_data(param_props,file_date,float_file_ext,...
     glodap_only,num_clusters,num_folds,thresh)
-
-if ~exist([param_props.dir_name '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
-        '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],'file')
 
 %% load combined data
 load([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
-load([param_props.dir_name '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
+load([param_props.dir_name '/Data/all_data_clusters_' num2str(num_clusters) '_' ...
     file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% remove float data for GLODAP only test
@@ -84,17 +81,10 @@ clear test_data_points test_data_points_table idx_test
 
 %% save k-fold evaluation indices
 if ~isfolder([param_props.dir_name '/Data']); mkdir([param_props.dir_name '/Data']); end
-save([param_props.dir_name '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) '_' num2str(num_folds) '_'...
+save([param_props.dir_name '/Data/k_fold_data_indices_' num2str(num_clusters) '_' num2str(num_folds) '_'...
     file_date float_file_ext '.mat'],'num_folds','train_idx','test_idx','-v7.3');
 
 %% display information
 disp(['Data split into ' num2str(num_folds) ' folds']);
-
-else
-
-%% display information
-disp(['Data already split into ' num2str(num_folds) ' folds']);
-
-end
 
 end

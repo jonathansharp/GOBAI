@@ -8,8 +8,11 @@
 %
 % DATE: 3/10/2025
 
+% function combine_gobai(param_props,temp_path,param_path,base_grid,file_date,float_file_ext,...
+%     num_clusters,start_year,end_year,snap_date,train_ratio,val_ratio,...
+%     test_ratio,numtrees,minLeafSize,numstumps,numbins,varargin)
 function combine_gobai(param_props,temp_path,param_path,base_grid,file_date,float_file_ext,...
-    num_clusters,start_year,end_year,snap_date,train_ratio,val_ratio,...
+    num_clusters_1,num_clusters_2,num_clusters_3,start_year,end_year,snap_date,train_ratio,val_ratio,...
     test_ratio,numtrees,minLeafSize,numstumps,numbins,varargin)
 
 %% set defaults and process optional input arguments
@@ -22,19 +25,36 @@ end
 %% process date
 date_str = num2str(snap_date);
 
-%% create directory names
-gobai_ffnn_dir = ... % FFNN
-    [param_path 'GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) '_' file_date ...
+%% create directory names (multiple models)
+% gobai_ffnn_dir = ... % FFNN
+%     [param_path 'GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) '_' file_date ...
+%     float_file_ext '/train' num2str(100*train_ratio) '_val' ...
+%     num2str(100*val_ratio) '_test' num2str(100*test_ratio) '/'];
+% gobai_rfr_dir = ... % RFR
+%     [param_path 'GOBAI/' base_grid '/RFR/c' num2str(num_clusters) '_' file_date ...
+%     float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize) '/'];
+% gobai_gbm_dir = ... % GBM
+%     [param_path 'GOBAI/' base_grid '/GBM/c' num2str(num_clusters) '_' file_date ...
+%     float_file_ext '/tr' num2str(numstumps) '_bin' num2str(numbins) '/'];
+% gobai_dir = ... % final product
+%     [param_path 'GOBAI/' base_grid '/AVG/c' num2str(num_clusters) '_' file_date ...
+%     float_file_ext '/'];
+
+%% create directory names (multiple cluster formations)
+gobai_ffnn_dir_1 = ... % FFNN
+    [param_path 'GOBAI/' base_grid '/FFNN/c' num2str(num_clusters_1) '_' file_date ...
     float_file_ext '/train' num2str(100*train_ratio) '_val' ...
     num2str(100*val_ratio) '_test' num2str(100*test_ratio) '/'];
-gobai_rfr_dir = ... % RFR
-    [param_path 'GOBAI/' base_grid '/RFR/c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/tr' num2str(numtrees) '_lf' num2str(minLeafSize) '/'];
-gobai_gbm_dir = ... % GBM
-    [param_path 'GOBAI/' base_grid '/GBM/c' num2str(num_clusters) '_' file_date ...
-    float_file_ext '/tr' num2str(numstumps) '_bin' num2str(numbins) '/'];
+gobai_ffnn_dir_2 = ... % FFNN
+    [param_path 'GOBAI/' base_grid '/FFNN/c' num2str(num_clusters_2) '_' file_date ...
+    float_file_ext '/train' num2str(100*train_ratio) '_val' ...
+    num2str(100*val_ratio) '_test' num2str(100*test_ratio) '/'];
+gobai_ffnn_dir_3 = ... % FFNN
+    [param_path 'GOBAI/' base_grid '/FFNN/c' num2str(num_clusters_3) '_' file_date ...
+    float_file_ext '/train' num2str(100*train_ratio) '_val' ...
+    num2str(100*val_ratio) '_test' num2str(100*test_ratio) '/'];
 gobai_dir = ... % final product
-    [param_path 'GOBAI/' base_grid '/AVG/c' num2str(num_clusters) '_' file_date ...
+    [param_path 'GOBAI/' base_grid '/AVG/multiple_clusters_' file_date ...
     float_file_ext '/'];
 
 %% create netCDF file
@@ -64,20 +84,33 @@ for m = 1:length(TS.Time)
         %% set counter
         cnt = m;
 
-        %% load monthly outputs
+        % %% load monthly outputs (multiple models)
+        % % load monthly output (FFNN)
+        % gobai_3d_ffnn = ncread([gobai_ffnn_dir 'gobai-' param_props.file_name '.nc'],...
+        %     param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
+        % % load monthly output (RFR)
+        % gobai_3d_rfr = ncread([gobai_rfr_dir 'gobai-' param_props.file_name '.nc'],...
+        %     param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
+        % % load monthly output (GBM)
+        % gobai_3d_gbm = ncread([gobai_gbm_dir 'gobai-' param_props.file_name '.nc'],...
+        %     param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
+ 
+        %% load monthly outputs (multiple cluster formations)
         % load monthly output (FFNN)
-        gobai_3d_ffnn = ncread([gobai_ffnn_dir 'gobai-' param_props.file_name '.nc'],...
+        gobai_3d_ffnn_1 = ncread([gobai_ffnn_dir_1 'gobai-' param_props.file_name '.nc'],...
             param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
-        % load monthly output (RFR)
-        gobai_3d_rfr = ncread([gobai_rfr_dir 'gobai-' param_props.file_name '.nc'],...
+        gobai_3d_ffnn_2 = ncread([gobai_ffnn_dir_2 'gobai-' param_props.file_name '.nc'],...
             param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
-        % load monthly output (GBM)
-        gobai_3d_gbm = ncread([gobai_gbm_dir 'gobai-' param_props.file_name '.nc'],...
+        gobai_3d_ffnn_3 = ncread([gobai_ffnn_dir_3 'gobai-' param_props.file_name '.nc'],...
             param_props.file_name,[1 1 1 cnt],[Inf Inf Inf 1]);
-    
-        %% average monthly outputs
-        gobai_3d_avg = mean(cat(4,gobai_3d_ffnn,gobai_3d_rfr,gobai_3d_gbm),4,'omitnan');
-        gobai_3d_var = std(cat(4,gobai_3d_ffnn,gobai_3d_rfr,gobai_3d_gbm),[],4,'omitnan');
+        
+        % %% average monthly outputs (multiple models)
+        % gobai_3d_avg = mean(cat(4,gobai_3d_ffnn,gobai_3d_rfr,gobai_3d_gbm),4,'omitnan');
+        % gobai_3d_var = std(cat(4,gobai_3d_ffnn,gobai_3d_rfr,gobai_3d_gbm),[],4,'omitnan');
+
+        %% average monthly outputs (multiple cluster formations)
+        gobai_3d_avg = mean(cat(4,gobai_3d_ffnn_1,gobai_3d_ffnn_2,gobai_3d_ffnn_3),4,'omitnan');
+        gobai_3d_var = std(cat(4,gobai_3d_ffnn_1,gobai_3d_ffnn_2,gobai_3d_ffnn_3),[],4,'omitnan');
     
         %% create folder and save monthly output
         filename = [gobai_dir 'gobai-' param_props.file_name '.nc'];

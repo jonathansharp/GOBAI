@@ -67,13 +67,13 @@ date_str = num2str(snap_date);
 
 %% directory base
 if strcmp(alg_type,'FFNN')
-    dir_base = create_dir_base(alg_type,{base_grid;num_clusters;file_date;...
+    dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
         float_file_ext;train_ratio;val_ratio;test_ratio});
 elseif strcmp(alg_type,'RFR')
-    dir_base = create_dir_base(alg_type,{base_grid;num_clusters;file_date;...
+    dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
         float_file_ext;numtrees;minLeafSize});
 elseif strcmp(alg_type,'GBM')
-    dir_base = create_dir_base(alg_type,{base_grid;num_clusters;file_date;...
+    dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
         float_file_ext;numstumps;numbins});
 end
 
@@ -174,22 +174,31 @@ parfor m = 1:length(TS.months)
         TS = load_RFROM_dim(temp_path,start_year,end_year);
         TS = replicate_dims(base_grid,TS,1);
         % determine number of weeks in file
-        nc_atts = ncinfo([temp_path 'RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
+        nc_atts = ncinfo([temp_path 'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
         for w = 1:nc_atts.Dimensions(3).Length
             % counter
             cnt = TS.cnt{m}(w);
             % get RFROM T and S
-            TS.temperature_cns = ncread([temp_path 'RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
-            num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
-                'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
-            TS.salinity_abs = ncread([sal_path 'RFROM_SAL_v0.1/RFROM_SAL_STABLE_' ...
-            num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
-                'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
+            TS.temperature_cns = ncread([temp_path 'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
+                num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
+                    'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
+            TS.salinity_abs = ncread([sal_path 'RFROM_SAL_v2.2/RFROMV22_SAL_STABLE_' ...
+                num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
+                    'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
+            % load bgc variables if applicable
+            if any(strcmp(variables,'o2'))
+                TS.o2 = ncread(['/fast4/o2/GOBAI/' base_grid '/' dir_base '/gobai-o2.nc'],...
+                        'o2',[1 1 1 cnt],[Inf Inf Inf 1]);
+            end
+            if any(strcmp(variables,'no3'))
+                TS.o2 = ncread(['/fast5/no3/GOBAI/' base_grid '/' dir_base '/gobai-no3.nc'],...
+                        'no3',[1 1 1 cnt],[Inf Inf Inf 1]);
+            end
             % get time variables for just this timestep
-            date_temp = datevec(datenum(TS.years(m),TS.months(m),15));
+            date_temp = datevec(datenum(1950,0,0)+TS.Time(cnt));
             date_temp0 = date_temp;
-            date_temp0(:,2:3) = 1; % Jan. 1 of each year
+            date_temp0(:,2:3) = 1; % Jan. 1 of the year
             TS.year = date_temp(:,1);
             TS.day = datenum(date_temp) - datenum(date_temp0) + 1;
             % transform day
@@ -240,9 +249,9 @@ delete(gcp('nocreate'));
 
 %% concatenate cluster information in main file
 files = dir([gobai_alg_dir '/*.nc']); % count files in folder
+filename = [gobai_alg_dir 'gobai-' param_props.file_name '.nc'];
 for cnt = 1:length(files)-1
-    % define file names
-    filename = [gobai_alg_dir 'gobai-' param_props.file_name '.nc'];
+    % define file name
     filename_temp = [gobai_alg_dir 'gobai-' param_props.file_name '-' num2str(cnt) '.nc'];
     % read information from temporary file and write it to main file
     time = ncread(filename_temp,'time'); % read
@@ -253,7 +262,19 @@ for cnt = 1:length(files)-1
     delete(filename_temp);
 end
 
-% stop timing predictions
+%% create monthly,one degree file
+% for x = 1:length(TS.Longitude)
+%     for y = 1:length(TS.Latitude)
+%         for z = 1:length(TS.Pressure)
+%             var = squeeze(ncread(filename,param_props.file_name,[x y z 1],[1 1 1 Inf]));
+%             if any(~isnan(var))
+% 
+%             end
+%         end
+%     end
+% end
+
+%% stop timing predictions
 fprintf([alg_type ' Prediction (' num2str(start_year) ' to ' date_str(1:4) '): ']);
 
 tElapsed = toc(tStart);
@@ -267,7 +288,7 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     param_props,param_path,date_str,clust_vars)
     
     % define folder name
-    folder_name = [param_path 'GMM_' base_grid '_' num2str(num_clusters)];
+    folder_name = [param_path 'GMM_' num2str(num_clusters)];
 
     % convert to arrays
     TS_index = ~isnan(TS.temperature_cns);
@@ -296,9 +317,9 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     probs_matrix = single(nan(length(TS.temperature_cns_array),num_clusters));
 
     % apply GMM model for RFROM basegrid
-    if strcmp(base_grid,'RFROM')
+    %if strcmp(base_grid,'RFROM')
         % load GMM model
-        load([param_props.dir_name '/Data/GMM_' base_grid '_' ...
+        load([param_props.dir_name '/Data/GMM_' ...
             num2str(num_clusters) '/model_' date_str],'gmm','C','S');
         % transform to normalized arrays
         predictor_matrix = [];
@@ -308,7 +329,7 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         X_norm = normalize(predictor_matrix,'Center',C,'Scale',S);
         % assign to clusters and obtain probabilities
         [~,~,p] = cluster(gmm,X_norm);
-    end
+    %end
     clear predictor_matrix gmm X_norm
 
     % apply models for each cluster
@@ -318,13 +339,13 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
       if isfile([alg_dir '/' alg_fnames{c} '.mat'])
 
         % load GMM cluster probabilities for this cluster and month, and convert to array
-        if strcmp(base_grid,'RFROM') % use 'p' for RFROM basegrid
+        %if strcmp(base_grid,'RFROM') % use 'p' for RFROM basegrid
             GMM_probs = nan(size(TS_index));
             GMM_probs(TS_index) = int16(p(:,c)*10000);
-        else % load probabilities for other basegrids
-            GMM_probs = ncread([folder_name '/clusters.nc'],['cluster_probs_c' num2str(c)],...
-                [1 1 1 cnt],[Inf Inf Inf 1]);
-        end
+        %else % load probabilities for other basegrids %%%%%%% SOME ISSUE HERE
+        %    GMM_probs = ncread([folder_name '/clusters.nc'],['cluster_probs_c' num2str(c)],...
+        %        [1 1 1 cnt],[Inf Inf Inf 1]);
+        %end
         probabilities_array = GMM_probs(TS_index)./10000; % convert to array
         probabilities_array(probabilities_array < thresh) = NaN; % remove probabilities below thresh
         probs_matrix(:,c) = probabilities_array; % add to probability matrix
@@ -365,9 +386,9 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     if exist(filename,'file')==2; delete(filename); end
     nccreate(filename,'time','Dimensions',{'time' 1});
     if strcmp(base_grid,'RFROM')
-        ncwrite(filename,'time',TS.Time(m));
+        ncwrite(filename,'time',TS.Time(cnt));
     else
-        ncwrite(filename,'time',datenum(TS.years(m),TS.months(m),15)-datenum(1950,0,0));
+        ncwrite(filename,'time',datenum(TS.years(cnt),TS.months(cnt),15)-datenum(1950,0,0));
     end
     nccreate(filename,param_props.file_name,'Dimensions',{'lon' xdim 'lat' ydim 'pres' zdim});
     ncwrite(filename,param_props.file_name,gobai_3d);

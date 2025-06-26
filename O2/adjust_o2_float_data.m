@@ -20,6 +20,23 @@ load(['O2/Data/processed_glodap_o2_data_' num2str(glodap_year) '.mat'],...
 % load(['O2/Data/processed_wod_ctd_oxygen_data_' num2str(glodap_year) '.mat'],...
 %     'wod_data');
 
+% idx_f = (float_data.LON > 0 & float_data.LON < 35) & ...
+%     (float_data.LAT > 18 & float_data.LAT < 43) & ...
+%     float_data.YEAR < 2009;
+% idx_g = (glodap_data.LON > 0 & glodap_data.LON < 35) & ...
+%     (glodap_data.LAT > 18 & glodap_data.LAT < 43) & ...
+%     glodap_data.YEAR < 2009;
+% figure; scatter(float_data.OXY(idx_f),float_data.PRES(idx_f));
+% figure; scatter(glodap_data.OXY(idx_g),glodap_data.PRES(idx_g));
+% 
+% prof_ids = unique(float_data.PROF_ID(idx_f));
+% figure; hold on;
+% set(gca,'ydir','reverse');
+% for p = 1:length(prof_ids)
+%     idx = prof_ids(p) == float_data.PROF_ID;
+%     plot(float_data.OXY(idx_f),float_data.PRES(idx_f)); 
+% end
+
 %% import WOA climatologies
 temp_path = [pwd '/Data/WOA/TEMPERATURE/'];
 sal_path = [pwd '/Data/WOA/SALINITY/'];
@@ -74,8 +91,8 @@ figure; hold on
 histogram(WOA_delta);
 set(gca,'fontsize',16);
 ax = gca;
-plot([mean_delta+5*st_dev_delta mean_delta+5*st_dev_delta],ax.YLim,'r','linewidth',2);
-plot([mean_delta-5*st_dev_delta mean_delta-5*st_dev_delta],ax.YLim,'r','linewidth',2);
+plot([mean_delta+3*st_dev_delta mean_delta+3*st_dev_delta],ax.YLim,'r','linewidth',2);
+plot([mean_delta-3*st_dev_delta mean_delta-3*st_dev_delta],ax.YLim,'r','linewidth',2);
 xlabel('Float [O_{2}] - WOA [O_{2}]');
 exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
 close
@@ -95,7 +112,7 @@ myColorMap = flipud(hot(256.*32));
 myColorMap(1,:) = 1;
 colormap(myColorMap);
 set(gca,'ColorScale','log')
-caxis([1e0 1e5]);
+clim([1e0 1e5]);
 c=colorbar;
 c.Label.String = 'log10(Bin Counts)';
 exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_comp_scatter_' file_date float_file_ext '.png']);
@@ -103,15 +120,48 @@ close
 % clean up
 clear counts bin_centers c h myColorMap
 
-%% remove data points more than 5 sigmas from WOA value
-idx_rem = WOA_delta > mean_delta+5.*st_dev_delta | WOA_delta < mean_delta-5.*st_dev_delta;
-% sum(idx_rem)
+%% remove data points more than 3 sigmas from WOA value forr each depth
+pres_levels = unique(float_data.PRES);
+idx_rem = false(length(WOA_delta),1);
+st_dev_delta_pres = nan(size(pres_levels));
+mean_delta_pres = nan(size(pres_levels));
+for z = 1:length(pres_levels)
+    pres_idx = float_data.PRES == pres_levels(z);
+    st_dev_delta_pres(z) = std(WOA_delta(pres_idx),[],'omitnan');
+    mean_delta_pres(z) = mean(WOA_delta(pres_idx),'omitnan');
+    idx_rem(pres_idx) = WOA_delta(pres_idx) > mean_delta_pres(z)+3.*st_dev_delta_pres(z) | ...
+        WOA_delta(pres_idx) < mean_delta_pres(z)-3.*st_dev_delta_pres(z);
+end
+disp([num2str(sum(idx_rem)) ' data points removed by WOA comparison test (' ...
+    num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
 vars = fieldnames(float_data);
+% plot(mean_delta_pres,pres_levels); xlabel('Float - WOA'); ylabel('pres.');
 for v = 1:length(vars)
     float_data.(vars{v})(idx_rem) = [];
 end
+WOA_delta(idx_rem) = [];
+% histogram of differences (corrected)
+figure; hold on
+histogram(WOA_delta);
+set(gca,'fontsize',16);
+ax = gca;
+plot([mean_delta+3*st_dev_delta mean_delta+3*st_dev_delta],ax.YLim,'r','linewidth',2);
+plot([mean_delta-3*st_dev_delta mean_delta-3*st_dev_delta],ax.YLim,'r','linewidth',2);
+xlabel('Float [O_{2}] - WOA [O_{2}]');
+exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
+close
 % clean up
 clear WOA_match WOA_delta WOA_delta_per mean_delta st_dev_delta idx_rem v vars
+
+% prof_ids = unique(float_data.PROF_ID);
+% for p = 1:length(prof_ids)
+%     idx = prof_ids(p) == float_data.PROF_ID;
+%     figure;
+%     plot(float_data.OXY(idx),float_data.PRES(idx));
+%     set(gca,'ydir','reverse');
+%     keyboard
+%     close
+% end
 
 %% determine histogram counts and indices
 % % establish edges of bins

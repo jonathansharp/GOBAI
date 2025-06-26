@@ -8,7 +8,7 @@
 %
 % DATE: 6/18/2024
 
-function TS = load_monthly_TS_data(temp_path,sal_path,base_grid,m,w,start_year,date_str)
+function TS = load_monthly_TS_data(temp_path,sal_path,base_grid,m,w,start_year,end_year,date_str)
 
 %% load monthly data
 if strcmp(base_grid,'RG')
@@ -30,13 +30,13 @@ if strcmp(base_grid,'RG')
         gsw_CT_from_t(TS.salinity_abs(idx),TS.temperature(idx),TS.pressure(idx));
 elseif strcmp(base_grid,'RFROM')
     % load dimensions
-    TS = load_RFROM_dim(temp_path,2004,2022);
+    TS = load_RFROM_dim(temp_path,start_year,end_year);
     TS = replicate_dims(base_grid,TS,1);
     % get RFROM absolute salinity and conservative temperature
-    TS.temperature_cns = ncread([temp_path 'RFROM_TEMP_v0.1/RFROM_TEMP_STABLE_' ...
+    TS.temperature_cns = ncread([temp_path 'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
     num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
         'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
-    TS.salinity_abs = ncread([sal_path 'RFROM_SAL_v0.1/RFROM_SAL_STABLE_' ...
+    TS.salinity_abs = ncread([sal_path 'RFROM_SAL_v2.2/RFROMV22_SAL_STABLE_' ...
     num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
         'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
 else

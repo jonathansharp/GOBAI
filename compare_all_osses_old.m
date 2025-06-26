@@ -26,8 +26,21 @@ xlabel('Year');
 ylabel('\Delta[O_{2}] (GOBAI - CMIP)');
 hold off;
 
-% establish timeseries of global means figure
+% establish detailed timeseries of residuals figure
 figure(2); fig = gcf; hold on;
+fig.Position(3) = fig.Position(3).*2;
+fig.Position(4) = fig.Position(4).*1.3;
+set(gca,'fontsize',18);
+xlim([datenum(2003,1,1) datenum(2025,1,1)]);
+datetick('x');
+ylim([-2 2]);
+plot([datenum(2003,1,1) datenum(2025,1,1)],[0 0],'k--')
+xlabel('Year');
+ylabel('\Delta[O_{2}] (GOBAI - CMIP)');
+hold off;
+
+% establish timeseries of global means figure
+figure(3); fig = gcf; hold on;
 fig.Position(3) = fig.Position(3).*2;
 fig.Position(4) = fig.Position(4).*1.3;
 set(gca,'fontsize',18);
@@ -39,7 +52,7 @@ ylabel('[O_{2}] (\mumol kg^{-1})');
 hold off;
 
 % establish profile figure
-figure(3); fig = gcf; hold on;
+figure(4); fig = gcf; hold on;
 fig.Position(3) = fig.Position(3).*0.6;
 fig.Position(4) = fig.Position(4).*2;
 set(gca,'fontsize',16);
@@ -63,6 +76,11 @@ for m = 1:length(model_types)
         num2str(100*test_ratio) '/gobai-' param_props.file_name '.nc'];
     delta_filepath = [fpath model_types{m} '/GOBAI/' model_types{m} '/DELTA/c' ...
         num2str(num_clusters) '_' file_date float_file_ext];
+    % gobai_filepath = [fpath model_types{m} '/GOBAI/' model_types{m} '/AVG/' ...
+    %     'multiple_clusters_' file_date float_file_ext '/gobai-' ...
+    %     param_props.file_name '.nc'];
+    % delta_filepath = [fpath model_types{m} '/GOBAI/' model_types{m} '/DELTA/' ...
+    %     'multiple_clusters_' file_date float_file_ext];
 
     % load time and depth
     time = ncread(gobai_filepath,'time')+datenum(1950,0,0);
@@ -75,22 +93,57 @@ for m = 1:length(model_types)
     % plot timeseries of residuals
     figure(1); hold on;
     idx = ~isnan(gobai_mean) & ~isnan(cmip_mean);
+    % % FFNN, RFR, and GBM
+    % var1 = (gobai_mean-cmip_mean)+std([rfr_mean-cmip_mean,ffnn_mean-cmip_mean,gbm_mean-cmip_mean],[],2,'omitnan');
+    % var2 = (gobai_mean-cmip_mean)-std([rfr_mean-cmip_mean,ffnn_mean-cmip_mean,gbm_mean-cmip_mean],[],2,'omitnan');
+    % % FFNNs with different configurations
+    % var1 = (gobai_mean-cmip_mean)+std([ffnn_mean_1-cmip_mean,ffnn_mean_2-cmip_mean,ffnn_mean_3-cmip_mean],[],2,'omitnan');
+    % var2 = (gobai_mean-cmip_mean)-std([ffnn_mean_1-cmip_mean,ffnn_mean_2-cmip_mean,ffnn_mean_3-cmip_mean],[],2,'omitnan');
+    % just FFNN
+    % var1 = (gobai_mean-cmip_mean)+std([ffnn_mean-cmip_mean],[],2,'omitnan');
+    % var2 = (gobai_mean-cmip_mean)-std([ffnn_mean-cmip_mean],[],2,'omitnan');
+    % pp=patch([time(idx);flipud(time(idx))],[var1(idx);flipud(var2(idx))],...
+    %     clrs(m,:),'facealpha',0.3,'linestyle','none');
+    % uistack(pp,'bottom');
     ts_plot(m) = plot(time,gobai_mean-cmip_mean,'color',clrs(m,:),'linewidth',3);
     hold off;
 
-    % plot timeseries of each global mean
+    % plot detailed timeseries of residuals
     figure(2); hold on;
-    ylim([floor(min([cmip_mean;gobai_mean])) ceil(max([cmip_mean;gobai_mean]))]);
-    p1=plot(time,cmip_mean,':','color',clrs(m,:),'linewidth',3);
-    p2=plot(time,gobai_mean,'color',clrs(m,:),'linewidth',3);
-    legend([p1 p2 ],{model_types{m} ['GOBAI-O_{2(' model_types{m} ')}']});
-    export_fig(gcf,[param_props.dir_name '/Figures/osse_global_mean_timeseries_' ...
+    plot(time,gobai_mean-cmip_mean,'color',clrs(m,:),'linewidth',3);
+    % p1=plot(time,rfr_mean-cmip_mean,'--','color',clrs(m,:),'linewidth',1);
+    p2=plot(time,ffnn_mean-cmip_mean,':','color',clrs(m,:),'linewidth',1);
+    % p3=plot(time,gbm_mean-cmip_mean,'-.','color',clrs(m,:),'linewidth',1);
+    % p1=plot(time,ffnn_mean_1-cmip_mean,'--','color',clrs(m,:),'linewidth',1);
+    % p2=plot(time,ffnn_mean_2-cmip_mean,':','color',clrs(m,:),'linewidth',1);
+    % p3=plot(time,ffnn_mean_3-cmip_mean,'-.','color',clrs(m,:),'linewidth',1);
+    % legend([p1 p2 p3],{'RFR' 'FFNN' 'GBM'});
+    legend([p1 p2 p3],{'FFNN-15' 'FFNN-20' 'FFNN-25'});
+    export_fig(gcf,[param_props.dir_name '/Figures/osse_detailed_timeseries_' ...
         model_types{m} '.png'],'-transparent');
     figure(2); cla;
     hold off;
 
-    % plot depth profile
+    % plot timeseries of each global mean
     figure(3); hold on;
+    ylim([floor(min([cmip_mean;gobai_mean])) ceil(max([cmip_mean;gobai_mean]))]);
+    p1=plot(time,cmip_mean,':','color',clrs(m,:),'linewidth',3);
+    p2=plot(time,gobai_mean,'color',clrs(m,:),'linewidth',3);
+    % p3=plot(time,rfr_mean,'--','color',clrs(m,:),'linewidth',1);
+    p3=plot(time,ffnn_mean,':','color',clrs(m,:),'linewidth',1);
+    % p5=plot(time,gbm_mean,'-.','color',clrs(m,:),'linewidth',1);
+    % p3=plot(time,ffnn_mean_1,'--','color',clrs(m,:),'linewidth',1);
+    % p4=plot(time,ffnn_mean_2,':','color',clrs(m,:),'linewidth',1);
+    % p5=plot(time,ffnn_mean_3,'-.','color',clrs(m,:),'linewidth',1);
+    legend([p1 p2 p3],{model_types{m} ['GOBAI-O_{2(' model_types{m} ')}'] ...
+        ['GOBAI-FFNN-O_{2(' model_types{m} ')}']});
+    export_fig(gcf,[param_props.dir_name '/Figures/osse_global_mean_timeseries_' ...
+        model_types{m} '.png'],'-transparent');
+    figure(3); cla;
+    hold off;
+
+    % plot depth profile
+    figure(4); hold on;
     diff = gobai_depth_mean-cmip_depth_mean;
     var1 = mean(diff,1,'omitnan')+std(diff,[],1,'omitnan');
     var2 = mean(diff,1,'omitnan')-std(diff,[],1,'omitnan');
@@ -111,9 +164,18 @@ for m = 1:length(model_types)
     % load delta values
     delta = ncread([delta_filepath '/delta_gobai-' param_props.file_name '.nc'],['delta_' param_props.file_name]);
     delta_mean = double(mean(delta,4,'omitnan'));
+    % delta_rfr = ncread([delta_filepath '/delta_gobai-rfr-' param_props.file_name '.nc'],['delta_' param_props.file_name]);
+    % delta_mean_rfr = double(mean(delta_rfr,4,'omitnan'));
+    % delta_ffnn = ncread([delta_filepath '/delta_gobai-ffnn-' param_props.file_name '.nc'],['delta_' param_props.file_name]);
+    % delta_mean_ffnn = double(mean(delta_ffnn,4,'omitnan'));
+    % delta_gbm = ncread([delta_filepath '/delta_gobai-gbm-' param_props.file_name '.nc'],['delta_' param_props.file_name]);
+    % delta_mean_gbm = double(mean(delta_gbm,4,'omitnan'));
     vol = weights3d(lon,lat,depth);
     vol(isnan(delta_mean)) = NaN;
     delta_wtd_mean(:,:,m) = sum(delta_mean.*vol,3,'omitnan')./sum(vol,3,'omitnan');
+    % delta_wtd_mean_rfr(:,:,m) = sum(delta_mean_rfr.*vol,3,'omitnan')./sum(vol,3,'omitnan');
+    % delta_wtd_mean_ffnn(:,:,m) = sum(delta_mean_ffnn.*vol,3,'omitnan')./sum(vol,3,'omitnan');
+    % delta_wtd_mean_gbm(:,:,m) = sum(delta_mean_gbm.*vol,3,'omitnan')./sum(vol,3,'omitnan');
 
     % load parameter from gobai
     var = ncread(gobai_filepath,param_props.file_name);
@@ -124,7 +186,7 @@ for m = 1:length(model_types)
     var_wtd_mean(:,:,m) = sum(var_mean(:,:,1:idx_depth).*vol(:,:,1:idx_depth),3,'omitnan')./...
         sum(vol(:,:,1:idx_depth),3,'omitnan');
     
-    % plot GOBAI differences
+    % plot AVG differences
     figure; hold on;
     worldmap([-90 90],[20 380]);
     set(gca,'fontsize',12);
@@ -143,6 +205,66 @@ for m = 1:length(model_types)
     export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
         '/delta.png'],'-transparent');
     close;
+
+    % % plot RFR differences
+    % figure; hold on;
+    % worldmap([-90 90],[20 380]);
+    % set(gca,'fontsize',12);
+    % pcolorm(lat,[lon;lon(end)+1],[delta_wtd_mean_rfr(:,:,m);delta_wtd_mean_rfr(end,:,m)]');
+    % title(model_types{m});
+    % plot_land('map');
+    % c=colorbar;
+    % caxis([-25 25]);
+    % colormap(cmocean('balance'));
+    % c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - RFR - ' model_types{m} ')}'];
+    % mlabel off;
+    % plabel off;
+    % if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
+    %     mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+    % end
+    % export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+    %     '/delta-rfr.png'],'-transparent');
+    % close;
+    % 
+    % % plot FFNN differences
+    % figure; hold on;
+    % worldmap([-90 90],[20 380]);
+    % set(gca,'fontsize',12);
+    % pcolorm(lat,[lon;lon(end)+1],[delta_wtd_mean_ffnn(:,:,m);delta_wtd_mean_ffnn(end,:,m)]');
+    % title(model_types{m});
+    % plot_land('map');
+    % c=colorbar;
+    % caxis([-25 25]);
+    % colormap(cmocean('balance'));
+    % c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - FFNN - ' model_types{m} ')}'];
+    % mlabel off;
+    % plabel off;
+    % if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
+    %     mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+    % end
+    % export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+    %     '/delta-ffnn.png'],'-transparent');
+    % close;
+    % 
+    % % plot GBM differences
+    % figure; hold on;
+    % worldmap([-90 90],[20 380]);
+    % set(gca,'fontsize',12);
+    % pcolorm(lat,[lon;lon(end)+1],[delta_wtd_mean_gbm(:,:,m);delta_wtd_mean_gbm(end,:,m)]');
+    % title(model_types{m});
+    % plot_land('map');
+    % c=colorbar;
+    % caxis([-25 25]);
+    % colormap(cmocean('balance'));
+    % c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - GBM - ' model_types{m} ')}'];
+    % mlabel off;
+    % plabel off;
+    % if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
+    %     mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+    % end
+    % export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+    %     '/delta-gbm.png'],'-transparent');
+    % close;
 
     % plot mean to 500m
     figure(5); hold on;
@@ -195,6 +317,32 @@ for m = 1:length(model_types)
     disp([model_types{m} ' Trend Diff. = ' num2str((x_gobai(2)-x_cmip(2))*365.2424*10) ...
         ' umol/kg/year']);
 
+    %% display algorith-specific statistics
+    % % global monthly (rfr)
+    % disp([model_types{m} ' RFR Avg. Diff. (Global Monthly Means) = ' ...
+    %     num2str(mean(rfr_mean-cmip_mean,1,'omitnan')) ' +/- ' ...
+    %     num2str(std(rfr_mean-cmip_mean,1,'omitnan')) ' umol/kg']);
+    % % global monthly (ffnn)
+    % disp([model_types{m} ' FFNN Avg. Diff. (Global Monthly Means) = ' ...
+    %     num2str(mean(ffnn_mean-cmip_mean,1,'omitnan')) ' +/- ' ...
+    %     num2str(std(ffnn_mean-cmip_mean,1,'omitnan')) ' umol/kg']);
+    % % global monthly (gbm)
+    % disp([model_types{m} ' GBM Avg. Diff. (Global Monthly Means) = ' ...
+    %     num2str(mean(gbm_mean-cmip_mean,1,'omitnan')) ' +/- ' ...
+    %     num2str(std(gbm_mean-cmip_mean,1,'omitnan')) ' umol/kg']);
+    % global monthly (ffnn-1)
+    disp([model_types{m} ' FFNN Avg. Diff. (Global Monthly Means) = ' ...
+        num2str(mean(ffnn_mean_1-cmip_mean,1,'omitnan')) ' +/- ' ...
+        num2str(std(ffnn_mean_1-cmip_mean,1,'omitnan')) ' umol/kg']);
+    % global monthly (ffnn-2)
+    disp([model_types{m} ' FFNN Avg. Diff. (Global Monthly Means) = ' ...
+        num2str(mean(ffnn_mean_2-cmip_mean,1,'omitnan')) ' +/- ' ...
+        num2str(std(ffnn_mean_2-cmip_mean,1,'omitnan')) ' umol/kg']);
+    % global monthly (ffnn-3)
+    disp([model_types{m} ' FFNN Avg. Diff. (Global Monthly Means) = ' ...
+        num2str(mean(ffnn_mean_3-cmip_mean,1,'omitnan')) ' +/- ' ...
+        num2str(std(ffnn_mean_3-cmip_mean,1,'omitnan')) ' umol/kg']);
+
 end
 
 figure(1); hold on;
@@ -203,7 +351,9 @@ export_fig(gcf,[param_props.dir_name '/Figures/osse_timeseries_residuals.png'],'
 
 figure(2); hold on; close;
 
-figure(3); hold on;
+figure(3); hold on; close;
+
+figure(4); hold on;
 legend(prof_plot,model_types,'location','northoutside','FontSize',12);
 export_fig(gcf,[param_props.dir_name '/Figures/osse_profile_delta.png'],'-transparent'); close;
 

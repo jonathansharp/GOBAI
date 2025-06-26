@@ -25,6 +25,7 @@ for n = 1:numNets
     net.trainParam.mu_max = 1e+10; % default: 1e+10
     net.trainParam.min_grad = 1e-7; % default: 1e-7
     net.trainParam.epochs = 1000; % default: 1000
+    net.trainParam.showWindow = false;
     % Set performance parameters
     net.performParam.regularization = 0;
     % Setup Division of Data for Training, Validation, Testing
