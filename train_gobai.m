@@ -151,7 +151,7 @@ folds = repelem(1:num_folds,1,num_clusters)';
 clusters = repmat(1:num_clusters,1,num_folds)';
 
 % fit models
-if num_folds == 1 & strcmp(alg_type,'FFNN')
+% if num_folds == 1 & strcmp(alg_type,'FFNN')
     % set up parallel pool
     % tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
     for cnt = 1:num_folds*num_clusters
@@ -161,17 +161,17 @@ if num_folds == 1 & strcmp(alg_type,'FFNN')
             numtrees,minLeafSize,numstumps,numbins,thresh,'yes',...
             folds(cnt),clusters(cnt));
     end
-else
-    % set up parallel pool
-    tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
-    parfor cnt = 1:num_folds*num_clusters
-        train_models(param_props,num_folds,...
-            alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
-            train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
-            numtrees,minLeafSize,numstumps,numbins,thresh,'no',...
-            folds(cnt),clusters(cnt));
-    end
-end
+% else
+%     % set up parallel pool
+%     tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+%     parfor cnt = 1:num_folds*num_clusters
+%         train_models(param_props,num_folds,...
+%             alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
+%             train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
+%             numtrees,minLeafSize,numstumps,numbins,thresh,'no',...
+%             folds(cnt),clusters(cnt));
+%     end
+% end
 
 % end parallel session
 delete(gcp('nocreate'));
@@ -348,7 +348,7 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
     %% fit model for each cluster
     if strcmp(alg_type,'FFNN')
         % define model parameters and train FFNN
-        nodes1 = [10 20 30]; nodes2 = [30 20 10];
+        nodes1 = [10 15 20]; nodes2 = [20 15 10];
         alg = fit_FFNN(param_props.file_name,all_data,all_data_clusters.(['c' num2str(c)]),...
             obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,...
             thresh,par_use);

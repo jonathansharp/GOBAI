@@ -163,68 +163,6 @@ clear WOA_match WOA_delta WOA_delta_per mean_delta st_dev_delta idx_rem v vars
 %     close
 % end
 
-%% determine histogram counts and indices
-% % establish edges of bins
-% x_edges = -180:180;
-% x_bins = -179.5:179.5;
-% y_edges = -85:85;
-% y_bins = -84.5:84.5;
-% z_edges = [0 5:10:175 190:20:450 475:50:1375 1450:100:1950 2000];
-% z_bins = [2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975];
-% mn_edges = 1:12;
-% yr_edges = 2004:glodap_year;
-% t_edges = datenum([[repelem(yr_edges,1,length(mn_edges)) yr_edges(end)+1]', ...
-%                   [repmat(mn_edges,1,length(yr_edges)) 1]', ...
-%                   [zeros(1,length(mn_edges)*length(yr_edges)+1)]']);
-% t_bins = datenum([[repelem(yr_edges,1,length(mn_edges))]', ...
-%                   [repmat(mn_edges,1,length(yr_edges))]', ...
-%                   [repmat(15,1,length(mn_edges)*length(yr_edges))]']);
-% % get histogram counts in each bin
-% [~,~,Xnum_float] = histcounts(float_data.LON,x_edges);
-% [~,~,Ynum_float] = histcounts(float_data.LAT,y_edges);
-% [~,~,Znum_float] = histcounts(float_data.PRES,z_edges);
-% [~,~,Tnum_float] = histcounts(float_data.TIME,t_edges);
-% [~,~,Xnum_glodap] = histcounts(glodap_data.LON,x_edges);
-% [~,~,Ynum_glodap] = histcounts(glodap_data.LAT,y_edges);
-% [~,~,Znum_glodap] = histcounts(glodap_data.PRES,z_edges);
-% [~,~,Tnum_glodap] = histcounts(glodap_data.TIME,t_edges);
-% % accumulate index of counts
-% subs_float = [Xnum_float,Ynum_float,Znum_float,Tnum_float];
-% idx_float = ~any(subs_float==0,2);
-% subs_glodap = [Xnum_glodap,Ynum_glodap,Znum_glodap,Tnum_glodap];
-% idx_glodap = ~any(subs_glodap==0,2);
-% clear Xnum_float Ynum_float Znum_float Tnum_float
-% clear Xnum_glodap Ynum_glodap Znum_glodap Tnum_glodap
-% % determine size of 4D grid
-% sz = [length(x_bins),length(y_bins),length(z_bins),length(t_bins)];
-% % clean up
-% clear x_edges y_edges z_edges mn_edges yr_edges t_edges
-% 
-% %% Bin float and glodap data
-% binned_data.oxy_float = single(nan(sz));
-% binned_data.oxy_glodap = single(nan(sz));
-% for m = 1:length(t_bins)
-%     % month-specific float index
-%     idx_float_tmp = idx_float;
-%     idx_float_tmp(subs_float(:,4)~=m) = false;
-%     % month-specific glodap index
-%     idx_glodap_tmp = idx_glodap;
-%     idx_glodap_tmp(subs_glodap(:,4)~=m) = false;
-%     % bin oxygen data
-%     binned_data.oxy_float(:,:,:,m) = single(accumarray(subs_float(idx_float_tmp,1:3),float_data.OXY(idx_float_tmp),sz(1:3),@nanmean,nan));
-%     binned_data.oxy_glodap(:,:,:,m) = single(accumarray(subs_glodap(idx_glodap_tmp,1:3),glodap_data.OXY(idx_glodap_tmp),sz(1:3),@nanmean,nan));
-% end
-% % add pressure bins
-% binned_data.pres = repmat(permute(single(z_bins),[3 1 2]),length(x_bins),length(y_bins),1,length(t_bins));
-% % save binned data
-% if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-% save(['O2/Data/binned_data_' file_date float_file_ext],'binned_data','-v7.3')
-% 
-% % clean up
-% clear binned_data idx_float idx_glodap
-% clear idx_float_tmp idx_glodap_tmp m sz subs_float subs_glodap
-% clear x_edges x_bins y_bins z_edges z_bins t_bins
-
 %% Co-locate and compare float and glodap data (via profile crossovers)
 pres_levels = [2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975]';
 float_profile_IDs = unique(float_data.PROF_ID);
@@ -369,40 +307,6 @@ save(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx','-v7
 if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
 save(['O2/Data/float_corr_' file_date float_file_ext],'slp','int');
 clear slp int
-
-%% Co-locate and compare float and glodap data (via bins)
-% % load binned data
-% load(['O2/Data/binned_data_' file_date float_file_ext],'binned_data')
-% % index where binned float and glodap data overlap under 300 dbars
-% idx = ~isnan(binned_data.oxy_float) & ~isnan(binned_data.oxy_glodap) & ...
-%     binned_data.pres > 300;
-% % add matched data to structure
-% matched_data.oxy_float = binned_data.oxy_float(idx);
-% matched_data.oxy_glodap = binned_data.oxy_glodap(idx);
-% matched_data.oxy_delta = matched_data.oxy_glodap-matched_data.oxy_float;
-% matched_data.oxy_delta_per = (matched_data.oxy_glodap-matched_data.oxy_float)./matched_data.oxy_glodap;
-% matched_data.pres = binned_data.pres(idx);
-% % fit delta against [O2]
-% mdl = fitlm(matched_data.oxy_float,matched_data.oxy_delta_per,'Intercept',true);
-% slp = mdl.Coefficients.Estimate(2);
-% int = mdl.Coefficients.Estimate(1);
-% % apply linear correction to float O2
-% matched_data.oxy_float_corr = matched_data.oxy_float + ...
-%     (slp.*matched_data.oxy_float + int).*matched_data.oxy_float;
-% % re-calculate delta
-% matched_data.oxy_delta_corr = matched_data.oxy_glodap-matched_data.oxy_float_corr;
-% matched_data.oxy_delta_per_corr = matched_data.oxy_glodap-matched_data.oxy_float_corr;
-% % clean up
-% clear idx mdl binned_data
-% 
-% % save matched float and glodap data
-% if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-% save(['O2/Data/matched_data_' file_date float_file_ext],'matched_data','-v7.3');
-% clear matched_data
-% % save correction factors
-% if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-% save(['O2/Data/float_corr_' file_date float_file_ext],'slp','int');
-% clear slp int
 
 %% plot uncorrected float vs. glodap residuals
 load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx');

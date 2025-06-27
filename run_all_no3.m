@@ -10,7 +10,7 @@ numWorkers_predict = 30;
 numWorkers_cluster = 30;
 % float snapshot configuration
 snap_download = 1;
-snap_date = 202504;
+snap_date = 202505;
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_year = 2023;
@@ -45,15 +45,15 @@ base_grid = 'RFROM';
 [model_path,param_path,temp_path,sal_path] = path_config(base_grid,param);
 
 %% load and process data
-% % acquire data
-% acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
-% acquire_glodap_data(param_props,glodap_year);
+% acquire data
+acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
+acquire_glodap_data(param_props,glodap_year);
 % %acquire_wod_ctd_data(param_props,glodap_year);
-% % display data
-% display_data(param_props,float_file_ext,glodap_year,snap_date);
-% % adjust and combine data
-% adjust_no3_float_data(float_file_ext,glodap_year,snap_date);
-% combine_data(param_props,float_file_ext,glodap_year,snap_date);
+% display data
+display_data(param_props,float_file_ext,glodap_year,snap_date);
+% adjust and combine data
+adjust_no3_float_data(float_file_ext,glodap_year,snap_date);
+combine_data(param_props,float_file_ext,glodap_year,snap_date);
 
 %% create time-varying clusters and assign data points to them
 % form clusters
@@ -78,10 +78,10 @@ kfold_split_data(param_props,file_date,float_file_ext,...
 
 %% k-fold train models for evaluation statistics
 % feed-forward neural networks
-train_gobai('FFNN',param_props,base_grid,file_date,float_file_ext,...
-    num_clusters,variables,thresh,numWorkers_train,snap_date,'reduce_data',...
-    data_per,'train_ratio',train_ratio,'val_ratio',val_ratio,...
-    'test_ratio',test_ratio,'num_folds',num_folds);
+% train_gobai('FFNN',param_props,base_grid,file_date,float_file_ext,...
+%     num_clusters,variables,thresh,numWorkers_train,snap_date,'reduce_data',...
+%     data_per,'train_ratio',train_ratio,'val_ratio',val_ratio,...
+%     'test_ratio',test_ratio,'num_folds',num_folds);
 % % random forest regressions
 % train_gobai('RFR',param_props,base_grid,file_date,float_file_ext,...
 %     num_clusters,variables,thresh,numWorkers_train,snap_date,'reduce_data',...

@@ -15,16 +15,9 @@ function compare_osse(param_props,fpath,base_grid,file_date,...
 %% process date
 date_str = num2str(snap_date);
 
-%% create directory names (multiple models)
-gobai_filepath = ... % FFNN
-    [fpath 'GOBAI/' base_grid '/FFNN/c' ...
-    num2str(num_clusters) '_' file_date float_file_ext '/train' ...
-    num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' ...
-    num2str(100*test_ratio) '/gobai-' param_props.file_name '.nc'];
-
 %% combined filepath
-% gobai
-gobai_filepath = ...
+% osse
+osse_filepath = ...
     [fpath 'GOBAI/' base_grid '/FFNN/c' ...
     num2str(num_clusters) '_' file_date float_file_ext '/train' ...
         num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' ...
@@ -41,10 +34,10 @@ delta_filepath = [fpath 'GOBAI/' base_grid '/DELTA/c' ...
 %     'multiple_clusters_' file_date float_file_ext];
 
 %% load dimensions
-lat = ncread(gobai_filepath,'lat');
-lon = ncread(gobai_filepath,'lon');
-depth = ncread(gobai_filepath,'depth');
-time = ncread(gobai_filepath,'time');
+lat = ncread(osse_filepath,'lat');
+lon = ncread(osse_filepath,'lon');
+depth = ncread(osse_filepath,'depth');
+time = ncread(osse_filepath,'time');
 
 %% load and evaluate monthly reconstructed gobai in relation to cmip
 gobai_mean = nan(length(time),1);
@@ -52,27 +45,30 @@ gobai_depth_mean = nan(length(time),length(depth));
 cmip_mean = nan(length(time),1);
 cmip_depth_mean = nan(length(time),length(depth));
 
+% %% load T/S timeframe
+% rg_time = [pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'];
+
 %% loop through each month
 for m = 1:length(time)
 
     %% load monthly output
-    gobai = ncread(gobai_filepath,param_props.file_name,[1 1 1 m],[Inf Inf Inf 1]);
+    gobai = ncread(osse_filepath,param_props.file_name,[1 1 1 m],[Inf Inf Inf 1]);
     cmip = ncread(cmip_filepath,param_props.file_name,[1 1 1 m],[Inf Inf Inf 1]);
 
     %% apply RG mask
-    % load RG grid
-    lat_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],'Latitude');
-    lon_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],'Longitude');
-    temp_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],...
-        'Temperature',[1 1 1 m],[Inf Inf 1 1]);
-    mask_rg = (isnan(temp_rg));
-    % reorder and pad mask
-    mask_cmip = [mask_rg(341:end,:,:);mask_rg(1:340,:,:)];
-    mask_cmip = [true(length(lon),25,length(depth)),...
-        repmat(mask_cmip,1,1,length(depth)),true(length(lon),10,length(depth))];
-    % apply mask to monthly output
-    gobai(mask_cmip) = NaN;
-    cmip(mask_cmip) = NaN;
+    % % load RG grid
+    % lat_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],'Latitude');
+    % lon_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],'Longitude');
+    % temp_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],...
+    %     'Temperature',[1 1 1 m],[Inf Inf 1 1]);
+    % mask_rg = (isnan(temp_rg));
+    % % reorder and pad mask
+    % mask_cmip = [mask_rg(341:end,:,:);mask_rg(1:340,:,:)];
+    % mask_cmip = [true(length(lon),25,length(depth)),...
+    %     repmat(mask_cmip,1,1,length(depth)),true(length(lon),10,length(depth))];
+    % % apply mask to monthly output
+    % gobai(mask_cmip) = NaN;
+    % cmip(mask_cmip) = NaN;
 
     %% determine differences between masked grids
     delta = gobai-cmip;
@@ -145,7 +141,7 @@ save([param_props.dir_name '/Data/' base_grid '/' rlz '_gr/statistics.mat'],...
 
 %% plot timeseries
 figure;
-plot(datenum(1950,1,1)+time,cmip_mean,time,gobai_mean,'LineWidth',2);
+plot(datenum(1950,1,1)+time,cmip_mean,datenum(1950,1,1)+time,gobai_mean,'LineWidth',2);
 legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']});
 datetick('x','keeplimits');
 if ~isfolder([param_props.dir_name '/Figures/' base_grid '/' rlz '_gr'])
