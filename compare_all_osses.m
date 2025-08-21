@@ -8,7 +8,8 @@
 % DATE: 11/7/2024
 
 function compare_all_osses(param_props,fpath,model_types,realizations,...
-    num_clusters,file_date,float_file_ext,train_ratio,val_ratio,test_ratio)
+    num_clusters,file_date,float_file_ext,train_ratio,val_ratio,test_ratio,...
+    float_ext,glodap_ext,ctd_ext)
 
 % establish colors
 clrs = colororder;
@@ -18,10 +19,9 @@ figure(1); fig = gcf; hold on;
 fig.Position(3) = fig.Position(3).*2;
 fig.Position(4) = fig.Position(4).*1.3;
 set(gca,'fontsize',18);
-xlim([datenum(2003,1,1) datenum(2025,1,1)]);
-datetick('x');
 ylim([-2 2]);
-plot([datenum(2003,1,1) datenum(2025,1,1)],[0 0],'k--')
+plot([datenum(1990,1,1) datenum(2025,1,1)],[0 0],'k--');
+datetick('x');
 xlabel('Year');
 ylabel('\Delta[O_{2}] (GOBAI - CMIP)');
 hold off;
@@ -31,9 +31,8 @@ figure(2); fig = gcf; hold on;
 fig.Position(3) = fig.Position(3).*2;
 fig.Position(4) = fig.Position(4).*1.3;
 set(gca,'fontsize',18);
-xlim([datenum(2003,1,1) datenum(2025,1,1)]);
+plot([datenum(1990,1,1) datenum(2025,1,1)],[0 0],'k--')
 datetick('x');
-plot([datenum(2003,1,1) datenum(2025,1,1)],[0 0],'k--')
 xlabel('Year');
 ylabel('[O_{2}] (\mumol kg^{-1})');
 hold off;
@@ -57,12 +56,14 @@ for m = 1:length(model_types)
     %% plot summary figures
 
     % define filepaths
-    gobai_filepath = [fpath model_types{m} '/GOBAI/' model_types{m} '/FFNN/c' ...
+    gobai_filepath = [fpath.param_path 'GOBAI/' model_types{m} '/FFNN/c' ...
         num2str(num_clusters) '_' file_date float_file_ext '/train' ...
         num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' ...
-        num2str(100*test_ratio) '/gobai-' param_props.file_name '.nc'];
-    delta_filepath = [fpath model_types{m} '/GOBAI/' model_types{m} '/DELTA/c' ...
-        num2str(num_clusters) '_' file_date float_file_ext];
+        num2str(100*test_ratio) '/' float_ext glodap_ext ctd_ext ...
+        '/gobai-' param_props.file_name '.nc'];
+    delta_filepath = [fpath.param_path 'GOBAI/' model_types{m} '/DELTA/c' ...
+        num2str(num_clusters) '_' file_date float_file_ext '/' ...
+        float_ext glodap_ext ctd_ext];
 
     % load time and depth
     time = ncread(gobai_filepath,'time')+datenum(1950,0,0);
@@ -70,7 +71,7 @@ for m = 1:length(model_types)
 
     % load global means
     load([param_props.dir_name '/Data/' model_types{m} '/' realizations{m} ...
-        '_gr/statistics.mat']);
+        '_gr/statistics_' float_ext glodap_ext ctd_ext '.mat']);
 
     % plot timeseries of residuals
     figure(1); hold on;
@@ -85,7 +86,7 @@ for m = 1:length(model_types)
     p2=plot(time,gobai_mean,'color',clrs(m,:),'linewidth',3);
     legend([p1 p2 ],{model_types{m} ['GOBAI-O_{2(' model_types{m} ')}']});
     export_fig(gcf,[param_props.dir_name '/Figures/osse_global_mean_timeseries_' ...
-        model_types{m} '.png'],'-transparent');
+        float_ext glodap_ext ctd_ext '_' model_types{m} '.png'],'-transparent');
     figure(2); cla;
     hold off;
 
@@ -111,9 +112,11 @@ for m = 1:length(model_types)
     % load delta values
     delta = ncread([delta_filepath '/delta_gobai-' param_props.file_name '.nc'],['delta_' param_props.file_name]);
     delta_mean = double(mean(delta,4,'omitnan'));
+    rmsd = double(sqrt(mean(delta.^2,4,'omitnan')));
     vol = weights3d(lon,lat,depth);
     vol(isnan(delta_mean)) = NaN;
     delta_wtd_mean(:,:,m) = sum(delta_mean.*vol,3,'omitnan')./sum(vol,3,'omitnan');
+
 
     % load parameter from gobai
     var = ncread(gobai_filepath,param_props.file_name);
@@ -124,7 +127,7 @@ for m = 1:length(model_types)
     var_wtd_mean(:,:,m) = sum(var_mean(:,:,1:idx_depth).*vol(:,:,1:idx_depth),3,'omitnan')./...
         sum(vol(:,:,1:idx_depth),3,'omitnan');
     
-    % plot GOBAI differences
+    % plot depth-averaged GOBAI differences
     figure; hold on;
     worldmap([-90 90],[20 380]);
     set(gca,'fontsize',12);
@@ -132,7 +135,7 @@ for m = 1:length(model_types)
     title(model_types{m});
     plot_land('map');
     c=colorbar;
-    caxis([-25 25]);
+    clim([-25 25]);
     colormap(cmocean('balance'));
     c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - ' model_types{m} ')}'];
     mlabel off;
@@ -141,8 +144,52 @@ for m = 1:length(model_types)
         mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
     end
     export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
-        '/delta.png'],'-transparent');
+        '/delta_' float_ext glodap_ext ctd_ext '.png'],'-transparent');
     close;
+
+    % plot GOBAI differences and RMSDs on depth levels
+    parpool(length(depth));
+    parfor dd = 1:length(depth)
+        figure; hold on;
+        worldmap([-90 90],[20 380]);
+        set(gca,'fontsize',12);
+        pcolorm(lat,[lon;lon(end)+1],[delta_mean(:,:,dd);delta_mean(end,:,dd)]');
+        title([model_types{m} ', (' num2str(depth(dd)) 'm)']);
+        plot_land('map');
+        c=colorbar;
+        clim([-25 25]);
+        colormap(cmocean('balance'));
+        c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - ' model_types{m} ')}'];
+        mlabel off;
+        plabel off;
+        if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
+            mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+        end
+        export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+            '/delta_' float_ext glodap_ext ctd_ext '_' num2str(depth(dd)) 'm.png'],'-transparent');
+        close;
+        figure; hold on;
+        worldmap([-90 90],[20 380]);
+        set(gca,'fontsize',12);
+        pcolorm(lat,[lon;lon(end)+1],[rmsd(:,:,dd);rmsd(end,:,dd)]');
+        title([model_types{m} ', (' num2str(depth(dd)) 'm)']);
+        plot_land('map');
+        c=colorbar;
+        clim([0 20]);
+        colormap(cmocean('tempo'));
+        c.Label.String = ['RMSD \Delta[O_{2}]_{(GOBAI - ' model_types{m} ')}'];
+        mlabel off;
+        plabel off;
+        if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
+            mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+        end
+        export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+            '/rmsd_' float_ext glodap_ext ctd_ext '_' num2str(depth(dd)) 'm.png'],'-transparent');
+        close;
+    end
+    % end parallel session
+    delete(gcp('nocreate'));
+
 
     % plot mean to 500m
     figure(5); hold on;
@@ -161,7 +208,7 @@ for m = 1:length(model_types)
         mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
     end
     export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
-        '/' param_props.fig_name '.png'],'-transparent');
+        '/' param_props.fig_name '_' float_ext glodap_ext ctd_ext '.png'],'-transparent');
     close;
 
     %% display statistics
@@ -199,13 +246,15 @@ end
 
 figure(1); hold on;
 %legend(ts_plot,model_types,'location','northoutside','numcolumns',5,'FontSize',12);
-export_fig(gcf,[param_props.dir_name '/Figures/osse_timeseries_residuals.png'],'-transparent'); close;
+export_fig(gcf,[param_props.dir_name '/Figures/osse_timeseries_residuals_' ...
+    float_ext glodap_ext ctd_ext '.png'],'-transparent'); close;
 
 figure(2); hold on; close;
 
 figure(3); hold on;
 legend(prof_plot,model_types,'location','northoutside','FontSize',12);
-export_fig(gcf,[param_props.dir_name '/Figures/osse_profile_delta.png'],'-transparent'); close;
+export_fig(gcf,[param_props.dir_name '/Figures/osse_profile_delta_' ...
+    float_ext glodap_ext ctd_ext '.png'],'-transparent'); close;
 
 % plot ensemble mean differences
 figure('visible','on');
@@ -220,7 +269,8 @@ colormap(cmocean('balance'));
 c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - ' model_types{m} ')}'];
 mlabel off;
 plabel off;
-export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_delta.png'],'-transparent');
+export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_delta_' ...
+    float_ext glodap_ext ctd_ext '.png'],'-transparent');
 close
 
 % plot ensemble variability
@@ -236,5 +286,24 @@ colormap(cmocean('tempo'));
 c.Label.String = ['\Delta[O_{2}]_{(GOBAI - ESM)} Var.'];
 mlabel off;
 plabel off;
-export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_variability.png'],'-transparent');
+export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_variability_' ...
+    float_ext glodap_ext ctd_ext '.png'],'-transparent');
+close
+
+% plot ensemble rmsd
+figure('visible','on');
+worldmap([-90 90],[20 380]);
+set(gca,'fontsize',12);
+pcolorm(lat,[lon;lon(end)+1],[sqrt(mean(delta_wtd_mean.^2,3,'omitnan'));...
+    sqrt(mean(delta_wtd_mean(end,:,:).^2,3,'omitnan'))]');
+title('Ensemble RMSD');
+plot_land('map');
+c=colorbar;
+caxis([0 20]);
+colormap(cmocean('tempo'));
+c.Label.String = ['\Delta[O_{2}]_{(GOBAI - ESM)} RMSD'];
+mlabel off;
+plabel off;
+export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_rmsd_' ...
+    float_ext glodap_ext ctd_ext '.png'],'-transparent');
 close

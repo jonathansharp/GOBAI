@@ -8,7 +8,7 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 4/11/2025
+% DATE: 07/02/2025
 
 function acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download)
 
@@ -122,6 +122,7 @@ clear today_date mnth folderinfo
 %% pre-allocate float data structure
 if strcmp(param_props.argo_name,'PH_IN_SITU_TOTAL')
     float_data.OXY = [];
+    float_data.NIT = [];
 elseif strcmp(param_props.argo_name,'NITRATE')
     float_data.OXY = [];
 end
@@ -144,7 +145,7 @@ m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
 
 %% Define interpolation parameters
 if strcmp(param_props.argo_name,'PH_IN_SITU_TOTAL')
-    vars = {'PSAL' 'TEMP' 'DOXY' param_props.argo_name}; % define variables to interpolate
+    vars = {'PSAL' 'TEMP' 'DOXY' 'NITRATE' param_props.argo_name}; % define variables to interpolate
 elseif strcmp(param_props.argo_name,'NITRATE')
     vars = {'PSAL' 'TEMP' 'DOXY' param_props.argo_name}; % define variables to interpolate
 else
@@ -342,6 +343,7 @@ for n = 1:length(idx_folders) % for each DAC
     
             %% drop empty interpolated profiles
             if strcmp(param_props.argo_name,'PH_IN_SITU_TOTAL')
+                float.(['F' floatnum]).NITRATE_ADJUSTEDi(:,nan_idx) = [];
                 float.(['F' floatnum]).DOXY_ADJUSTEDi(:,nan_idx) = [];
             elseif strcmp(param_props.argo_name,'NITRATE')
                 float.(['F' floatnum]).DOXY_ADJUSTEDi(:,nan_idx) = [];
@@ -361,6 +363,7 @@ for n = 1:length(idx_folders) % for each DAC
             %% add interpolated data to float data structure
             if strcmp(param_props.argo_name,'PH_IN_SITU_TOTAL')
                 float_data.OXY = [float_data.OXY;float.(['F' floatnum]).DOXY_ADJUSTEDi(:)];
+                float_data.NIT = [float_data.NIT;float.(['F' floatnum]).NITRATE_ADJUSTEDi(:)];
             elseif strcmp(param_props.argo_name,'NITRATE')
                 float_data.OXY = [float_data.OXY;float.(['F' floatnum]).DOXY_ADJUSTEDi(:)];
             end
@@ -394,7 +397,9 @@ end
 clear foldernames snapshot_path idx_folders n vars zi
 
 %% remove nan data points
-if strcmp(param_props.argo_name,'NITRATE')
+if strcmp(param_props.argo_name,'PH_IN_SITU_TOTAL')
+    idx = isnan(float_data.OXY) & isnan(float_data.NIT) & isnan(float_data.(param_props.temp_name));
+elseif strcmp(param_props.argo_name,'NITRATE')
     idx = isnan(float_data.OXY) & isnan(float_data.(param_props.temp_name));
 else
     idx = isnan(float_data.(param_props.temp_name));

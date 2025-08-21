@@ -8,7 +8,13 @@
 % DATE: 6/25/2025
 
 function train_gobai(alg_type,param_props,base_grid,file_date,...
-    float_file_ext,num_clusters,variables,thresh,numWorkers_train,snap_date,varargin)
+    float_file_ext,num_clusters,variables,thresh,numWorkers_train,...
+    snap_date,flt,gld,ctd,varargin)
+
+%% define dataset extensions
+if flt == 1; float_ext = 'f'; else float_ext = ''; end
+if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
+if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
 
 %% set defaults and process optional input arguments
 num_folds = 1;
@@ -81,20 +87,33 @@ end
 
 %% load data
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    load([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'all_data');
+    load([param_props.dir_name '/Data/processed_all_' ...
+        param_props.file_name '_data_' float_ext glodap_ext ctd_ext ...
+        '_' file_date float_file_ext '.mat'],'all_data');
 else
-    load([param_props.dir_name '/Data/' base_grid '_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'all_data');
+    load([param_props.dir_name '/Data/' base_grid '_' ...
+        param_props.file_name '_data_' float_ext glodap_ext ctd_ext ...
+        '_' file_date float_file_ext '.mat'],'all_data');
 end
 
 %% load data clusters
-load([param_props.dir_name '/Data/all_data_clusters_' num2str(num_clusters) '_' ...
-    file_date float_file_ext '.mat'],'all_data_clusters');
+if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+    load([param_props.dir_name '/Data/GMM_' num2str(num_clusters) ...
+        '/all_data_clusters_' num2str(num_clusters) '_' ...
+        float_ext glodap_ext ctd_ext '_' file_date float_file_ext ...
+        '.mat'],'all_data_clusters');
+else
+    load([param_props.dir_name '/Data/GMM_' base_grid '_' ...
+        num2str(num_clusters) '/all_data_clusters_' ...
+        num2str(num_clusters) '_' float_ext glodap_ext ctd_ext '_' ...
+        file_date float_file_ext '.mat'],'all_data_clusters');
+end
 
 %% load data cluster indices (for k-fold testing)
 if num_folds > 1
     load([param_props.dir_name '/Data/k_fold_data_indices_' num2str(num_clusters) ...
-        '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],...
-        'num_folds','train_idx','test_idx');
+        '_' num2str(num_folds) '_' float_ext glodap_ext ctd_ext '_' ...
+        file_date float_file_ext '.mat'],'num_folds','train_idx','test_idx');
 else
     % set NaNs so parloops run
     train_idx = NaN; test_idx = NaN;
@@ -110,14 +129,20 @@ if glodap_only
 end
 
 %% create directory and file names
-alg_dir = [param_props.dir_name '/Models/' dir_base];
+if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+    alg_dir = [param_props.dir_name '/Models/' dir_base];
+else
+    alg_dir = [param_props.dir_name '/Models/' base_grid '/' dir_base];
+end
 alg_fnames = cell(num_folds,num_clusters);
 for f = 1:num_folds
     for c = 1:num_clusters
         if num_folds > 1
-            alg_fnames(f,c) = {[alg_type '_' param_props.file_name '_C' num2str(c) '_F' num2str(f) '_test']};
+            alg_fnames(f,c) = {[alg_type '_' param_props.file_name '_C' ...
+                num2str(c) '_F' num2str(f) '_test_' float_ext glodap_ext ctd_ext]};
         else
-            alg_fnames(c) = {[alg_type '_' param_props.file_name '_C' num2str(c)]};
+            alg_fnames(c) = {[alg_type '_' param_props.file_name '_C' ...
+                num2str(c) '_' float_ext glodap_ext ctd_ext]};
         end
     end
 end
@@ -128,16 +153,24 @@ if num_folds > 1
     fig_dir = [param_props.dir_name '/Figures/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
     if strcmp(alg_type,'RFR')
         kfold_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
-        fig_name_1 = ['k_fold_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];
-        fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];
+        fig_name_1 = ['k_fold_comparison_tr' num2str(numtrees) '_lf' ...
+            num2str(minLeafSize) '_' float_ext glodap_ext ctd_ext '.png'];
+        fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numtrees) ...
+            '_lf' num2str(minLeafSize) '_' float_ext glodap_ext ctd_ext '.png'];
     elseif strcmp(alg_type,'FFNN')
         kfold_name = ['FFNN_output_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio)];
-        fig_name_1 = ['k_fold_comparison_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) '.png'];
-        fig_name_2 = ['k_fold_spatial_comparison_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) '.png'];
+        fig_name_1 = ['k_fold_comparison_train' num2str(100*train_ratio) ...
+            '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) ...
+            '_' float_ext glodap_ext ctd_ext '.png'];
+        fig_name_2 = ['k_fold_spatial_comparison_train' num2str(100*train_ratio) ...
+            '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) ...
+            '_' float_ext glodap_ext ctd_ext '.png'];
     elseif strcmp(alg_type,'GBM')
         kfold_name = ['GBM_output_tr' num2str(numstumps) '_bin' num2str(numbins)];
-        fig_name_1 = ['k_fold_comparison_tr' num2str(numstumps) '_bin' num2str(numbins) '.png'];
-        fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numstumps) '_bin' num2str(numbins) '.png'];
+        fig_name_1 = ['k_fold_comparison_tr' num2str(numstumps) '_bin' ...
+            num2str(numbins) '_' float_ext glodap_ext ctd_ext '.png'];
+        fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numstumps) ...
+            '_bin' num2str(numbins) '_' float_ext glodap_ext ctd_ext '.png'];
     end
 end
 
@@ -153,13 +186,13 @@ clusters = repmat(1:num_clusters,1,num_folds)';
 % fit models
 % if num_folds == 1 & strcmp(alg_type,'FFNN')
     % set up parallel pool
-    % tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+    tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
     for cnt = 1:num_folds*num_clusters
         train_models(param_props,num_folds,...
             alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
             train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
             numtrees,minLeafSize,numstumps,numbins,thresh,'yes',...
-            folds(cnt),clusters(cnt));
+            folds(cnt),clusters(cnt),base_grid);
     end
 % else
 %     % set up parallel pool
@@ -311,7 +344,7 @@ end
 function train_models(param_props,num_folds,...
     alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
     train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
-    numtrees,minLeafSize,numstumps,numbins,thresh,par_use,f,c)
+    numtrees,minLeafSize,numstumps,numbins,thresh,par_use,f,c,base_grid)
 
 %% define index for observations
 if num_folds > 1
@@ -326,6 +359,28 @@ num_obs = length(obs_index_train);
 rng(f); numbers = randperm(num_obs);
 % adjust observation index to fraction (i.e., 'data_per') its current sum
 obs_index_train(numbers > (data_per.*num_obs)) = false;
+
+% exclude Mediterranean cluster data before 2000 (for v2.3)
+if strcmp(base_grid,'RG')
+    in_med_new_idx = (all_data.longitude > -7 & all_data.longitude < 36) & ...
+        (all_data.latitude > 30 & all_data.latitude < 45) & all_data.year > 2000;
+    if c == 13
+        obs_index_train(all_data_clusters.clusters == 13 & ...
+            ~in_med_new_idx) = false;
+        variables(strcmp(variables,'year')) = [];
+    % elseif c == 5
+    end
+    % figure; scatter(all_data.year(all_data_clusters.clusters == 5 & in_med_new_idx),...
+    %      all_data.o2(all_data_clusters.clusters == 5 & in_med_new_idx));
+    % 
+    % figure; scatter(all_data.longitude(all_data_clusters.clusters == 9 & in_med_new_idx),...
+    %      all_data.latitude(all_data_clusters.clusters == 9 & in_med_new_idx)); plot_land('xy');
+    % 
+    % figure; scatter(all_data.longitude(all_data_clusters.clusters == 5),...
+    %      all_data.latitude(all_data_clusters.clusters == 5),5,...
+    %      all_data.o2(all_data_clusters.clusters == 5));
+    %     plot_land('xy'); colorbar;
+end
 
 %% define observations index for k-fold testing
 if num_folds > 1

@@ -6,8 +6,8 @@ start_year = 1993;
 end_year = 2024;
 % system-specific worker configuration
 numWorkers_train = 20;
-numWorkers_predict = 30;
-numWorkers_cluster = 30;
+numWorkers_predict = 20;
+numWorkers_cluster = 20;
 % float snapshot configuration
 snap_download = 1;
 snap_date = 202505;
@@ -27,16 +27,17 @@ variables = ... % variables for algorithms
     {'latitude' 'lon_cos_1' 'lon_cos_2' 'pressure' 'sigma' ...
     'temperature_cns' 'salinity_abs' 'day_sin' 'day_cos' 'year' 'o2'};
 % random forest regression configuration
-% numtrees = 500;
-% minLeafSize = 10;
+numtrees = 500;
+minLeafSize = 10;
 % shallow neural network configuration
 train_ratio = 0.8;
 val_ratio = 0.1;
 test_ratio = 0.1;
 % gradient boosting configuration
-% numstumps = 500;
-% numbins = 50;
+numstumps = 500;
+numbins = 50;
 % data and parameter configuration
+data_per_kfold = 0.2; % set data reduction to 20% for k-fold
 data_per = 1.0; % set data reduction to 100%
 param = 'no3';
 param_props = param_config(param);
@@ -80,7 +81,7 @@ kfold_split_data(param_props,file_date,float_file_ext,...
 % feed-forward neural networks
 % train_gobai('FFNN',param_props,base_grid,file_date,float_file_ext,...
 %     num_clusters,variables,thresh,numWorkers_train,snap_date,'reduce_data',...
-%     data_per,'train_ratio',train_ratio,'val_ratio',val_ratio,...
+%     data_per_kfold,'train_ratio',train_ratio,'val_ratio',val_ratio,...
 %     'test_ratio',test_ratio,'num_folds',num_folds);
 % % random forest regressions
 % train_gobai('RFR',param_props,base_grid,file_date,float_file_ext,...

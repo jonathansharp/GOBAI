@@ -8,9 +8,9 @@
 %
 % DATE: 11/7/2024
 
-function compare_osse(param_props,fpath,base_grid,file_date,...
+function compare_osse(param_props,fpaths,base_grid,file_date,...
     float_file_ext,num_clusters,start_year,snap_date,train_ratio,...
-    val_ratio,test_ratio,rlz)
+    val_ratio,test_ratio,rlz,float_ext,glodap_ext,ctd_ext)
 
 %% process date
 date_str = num2str(snap_date);
@@ -18,20 +18,20 @@ date_str = num2str(snap_date);
 %% combined filepath
 % osse
 osse_filepath = ...
-    [fpath 'GOBAI/' base_grid '/FFNN/c' ...
-    num2str(num_clusters) '_' file_date float_file_ext '/train' ...
+    [fpaths.param_path 'GOBAI/' base_grid '/FFNN/c' ...
+        num2str(num_clusters) '_' file_date float_file_ext '/train' ...
         num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' ...
-        num2str(100*test_ratio) '/gobai-' param_props.file_name '.nc'];
+        num2str(100*test_ratio) '/' float_ext glodap_ext ctd_ext ...
+        '/gobai-' param_props.file_name '.nc'];
 % cmip
 path2 = ['_Omon_' base_grid '_'];
 path3 = ['_' rlz '_gr'];
-cmip_filepath = [fpath 'combined/regridded/' param_props.file_name path2 ...
+cmip_filepath = [fpaths.model_path base_grid '/combined/regridded/' param_props.file_name path2 ...
     'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
 % delta
-delta_filepath = [fpath 'GOBAI/' base_grid '/DELTA/c' ...
-    num2str(num_clusters) '_' file_date float_file_ext];
-% delta_filepath = [fpath 'GOBAI/' base_grid '/DELTA/' ...
-%     'multiple_clusters_' file_date float_file_ext];
+delta_filepath = [fpaths.param_path 'GOBAI/' base_grid '/DELTA/c' ...
+    num2str(num_clusters) '_' file_date float_file_ext '/' ...
+    float_ext glodap_ext ctd_ext];
 
 %% load dimensions
 lat = ncread(osse_filepath,'lat');
@@ -136,7 +136,8 @@ end
 
 %% save global means
 if ~isfolder([param_props.dir_name '/Data/' base_grid]); mkdir([param_props.dir_name '/Data/' base_grid '/' rlz '_gr']); end
-save([param_props.dir_name '/Data/' base_grid '/' rlz '_gr/statistics.mat'],...
+save([param_props.dir_name '/Data/' base_grid '/' rlz '_gr/statistics_' ...
+    float_ext glodap_ext ctd_ext '.mat'],...
     'gobai_mean','gobai_depth_mean','cmip_mean','cmip_depth_mean');
 
 %% plot timeseries
@@ -148,7 +149,7 @@ if ~isfolder([param_props.dir_name '/Figures/' base_grid '/' rlz '_gr'])
     mkdir([param_props.dir_name '/Figures/' base_grid '/' rlz '_gr']);
 end
 export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
-        '/timeseries.png'],'-transparent'); close;
+        '/timeseries_' float_ext glodap_ext ctd_ext '.png'],'-transparent'); close;
 
 %% plot average profile
 figure;
@@ -160,7 +161,7 @@ xlabel('[O_{2}] (\mumol kg^{-1})');
 ylabel('Depth (m)');
 legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']},'Location','southeast');
 export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
-        '/profile.png'],'-transparent'); close;
+        '/profile_' float_ext glodap_ext ctd_ext '.png'],'-transparent'); close;
 
 %% plot average profile difference
 figure; hold on;
@@ -173,6 +174,6 @@ xlim([-3 3]);
 xlabel('\Delta[O_{2}] (\mumol kg^{-1})');
 ylabel('Depth (m)');
 export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
-        '/profile_delta.png'],'-transparent'); close;
+        '/profile_delta_' float_ext glodap_ext ctd_ext '.png'],'-transparent'); close;
 
 end

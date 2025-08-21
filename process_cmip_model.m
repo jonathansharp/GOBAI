@@ -16,26 +16,31 @@ if ~isfolder([fpath 'combined/regridded']); mkdir([fpath 'combined/regridded']);
 if strcmp(model,'GFDL-ESM4') || strcmp(model,'MPI-ESM1-2-LR')
     ext_hist1 = '199001-200912';
     ext_hist2 = '201001-201412';
+    ext_hist3 = '';
     ext_ssp1 = '201501-203412';
     ext_ssp2 = ''; 
 elseif strcmp(model,'NorESM-LM')
-    ext_hist1 = '200001-200912';
-    ext_hist2 = '201001-201412';
+    ext_hist1 = '199001-199912';
+    ext_hist2 = '200001-200912';
+    ext_hist3 = '201001-201412';
     ext_ssp1 = '201501-202012';
     ext_ssp2 = '202101-203012';    
 elseif strcmp(model,'CanESM5')
-    ext_hist1 = '200101-201012';
-    ext_hist2 = '201101-201412';
+    ext_hist1 = '199101-200012';
+    ext_hist2 = '200101-201012';
+    ext_hist3 = '201101-201412';
     ext_ssp1 = '201501-202012';
     ext_ssp2 = '202101-203012';    
 elseif strcmp(model,'ACCESS-ESM1-5')
-    ext_hist1 = '200001-200912';
-    ext_hist2 = '201001-201412';
+    ext_hist1 = '199001-199912';
+    ext_hist2 = '200001-200912';
+    ext_hist3 = '201001-201412';
     ext_ssp1 = '201501-202412';
     ext_ssp2 = '202501-203412';
 elseif strcmp(model,'IPSL-CM6A-LR')
     ext_hist1 = '195001-201412';
     ext_hist2 = '';
+    ext_hist3 = '';
     ext_ssp1 = '201501-210012';
     ext_ssp2 = '';
 end
@@ -51,14 +56,18 @@ if strcmp(model,'IPSL-CM6A-LR')
     time_hist2 = []; else
 time_hist2 = ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist2 '.nc'],'time');
 end
+if strcmp(model,'GFDL-ESM4') || strcmp(model,'IPSL-CM6A-LR') || strcmp(model,'MPI-ESM1-2-LR')
+    time_hist3 = []; else
+time_hist3 = ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist3 '.nc'],'time');
+end
 % convert to matlab datenum
 calendar_idx = find(strcmp({time_inf_historical.Attributes.Name},'calendar'));
 if strcmp(time_inf_historical.Attributes(calendar_idx).Value,'365_day') || ...
     strcmp(time_inf_historical.Attributes(calendar_idx).Value,'noleap')
-    time_hist = daynoleap2datenum([time_hist1;time_hist2]-1,origin_date(1));
+    time_hist = daynoleap2datenum([time_hist1;time_hist2;time_hist3]-1,origin_date(1));
 elseif strcmp(time_inf_historical.Attributes(calendar_idx).Value,'gregorian') || ...
     strcmp(time_inf_historical.Attributes(calendar_idx).Value,'proleptic_gregorian')
-    time_hist = datenum(origin_date)+datenum([time_hist1;time_hist2]-1);
+    time_hist = datenum(origin_date)+datenum([time_hist1;time_hist2;time_hist3]-1);
 end
 
 %% load and process ssp time
@@ -117,13 +126,15 @@ idx_depth = find(depth < 2100); depth = depth(idx_depth);
 %% load, combine, and save potential temperature
 nc_filepath = [fpath 'combined/regridded/thetao' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
+nc_filepath_temp = [fpath 'combined/regridded/thetao' path2 ... % define temporary filepath
+    'combined_' rlz '_gr-'];
 % check if file exists and is the proper size
 if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
 % load and combine cmip output fields
 if l ~= length(time)
-    combine_cmip_field(model,nc_filepath,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
+    combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
         depth,time,time_strt,grid_label,'thetao',idx_depth,'Sea Water Potential Temperature',...
-        'degC',ext_hist1,ext_hist2,ext_ssp1,ext_ssp2);
+        'degC',ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2);
     % plot global mean timeseries
     thetao = ncread(nc_filepath,'thetao');
     plot_global_timeseries(lat,lon,depth,time,thetao,'thetao',...
@@ -134,13 +145,15 @@ end
 %% load, combine, and save salinity
 nc_filepath = [fpath 'combined/regridded/so' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
+nc_filepath_temp = [fpath 'combined/regridded/so' path2 ... % define temporary filepath
+    'combined_' rlz '_gr-'];
 % check if file exists and is the proper size
 if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
 % load and combine cmip output fields
 if l ~= length(time)
-    combine_cmip_field(model,nc_filepath,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
+    combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
         depth,time,time_strt,grid_label,'so',idx_depth,'Sea Water Salinity','n/a',...
-        ext_hist1,ext_hist2,ext_ssp1,ext_ssp2);
+        ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2);
     % plot global mean timeseries
     so = ncread(nc_filepath,'so');
     plot_global_timeseries(lat,lon,depth,time,so,'so','Salinity','n/a',model);
@@ -150,9 +163,11 @@ end
 %% load, combine, and save chlorophyll
 % nc_filepath = [fpath 'combined/regridded/chl' path2 ... % define filepath
 %     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
+% nc_filepath_temp = [fpath 'combined/regridded/chl' path2 ... % define temporary filepath
+%     'combined_' rlz '_gr-'];
 % if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
 % if l ~= length(time)
-%     combine_cmip_field(nc_filepath,path1_hist,path1_ssp,lon,lat,...
+%     combine_cmip_field(nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,lon,lat,...
 %         depth,time,time_strt,grid_label,'chl',idx_depth);
 %     limit chlorophyll to only surface values (to match observations)
 %     chl = repmat(chl(:,:,1,:),1,1,length(depth),1);
@@ -336,13 +351,15 @@ end
 %% load, combine, and save o2
 nc_filepath = [fpath 'combined/regridded/o2' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
+nc_filepath_temp = [fpath 'combined/regridded/o2' path2 ... % define temporary filepath
+    'combined_' rlz '_gr-'];
 % check if file exists and is the proper size
 if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
 % load and combine cmip output fields
 if l ~= length(time)
-    combine_cmip_field(model,nc_filepath,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
+    combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
         depth,time,time_strt,grid_label,'o2',idx_depth,'Dissolved Oxygen Content',...
-        'mL/L',ext_hist1,ext_hist2,ext_ssp1,ext_ssp2);
+        'mL/L',ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2);
     o2 = ncread(nc_filepath,'o2');
     dens = ncread([fpath 'combined/regridded/dens' path2 ...
         'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'],'dens');
@@ -454,17 +471,20 @@ end
 %% embedded functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% load and combine cmip model output
-function combine_cmip_field(model,nc_filepath,path1_hist,path1_ssp,path2,path3,...
+function combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,...
     lon,lat,lon2d,lat2d,depth,time,time_strt,grid_label,var_name,idx_depth,long_name,units,...
-    ext_hist1,ext_hist2,ext_ssp1,ext_ssp2)
+    ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2)
 
 if strcmp(model,'GFDL-ESM4') || strcmp(model,'MPI-ESM1-2-LR')
 
     % for models with two historical files and one ssp file
     dims_hist1 = ncinfo([path1_hist var_name path2 'historical' path3 '_' ext_hist1 '.nc'],var_name);
     dims_hist2 = ncinfo([path1_hist var_name path2 'historical' path3 '_' ext_hist2 '.nc'],var_name);
-    
-    for t = 1:length(time)
+
+    % set up parallel pool with 20 workers
+    tic; parpool; fprintf('Pool initiation: '); toc;
+
+    parfor t = 1:length(time)
         % read historical or ssp variable
         if t <= dims_hist1.Size(4)-time_strt
             idx_t = (time_strt-1)+t;
@@ -480,19 +500,24 @@ if strcmp(model,'GFDL-ESM4') || strcmp(model,'MPI-ESM1-2-LR')
                 var_name,[1 1 1 idx_t],[dims_hist1.Size(1) dims_hist1.Size(2) max(idx_depth) 1]);
         end
         % save variable to combined file
-        save_to_combined_file(nc_filepath,t,var,var_name,lon2d,lat2d,...
+        save_temp_files(nc_filepath_temp,t,var,var_name,lon2d,lat2d,...
             lon,lat,depth,time,grid_label,long_name,units);
     end
 
 elseif strcmp(model,'NorESM2-LM') || strcmp(model,'ACCESS-ESM1-5') || strcmp(model,'CanESM5')
 
-    % for models with two historical files and two ssp files
+    % for models with three historical files and two ssp files
 
     dims_hist1 = ncinfo([path1_hist var_name path2 'historical' path3 '_' ext_hist1 '.nc'],var_name);
     dims_hist2 = ncinfo([path1_hist var_name path2 'historical' path3 '_' ext_hist2 '.nc'],var_name);
+    dims_hist3 = ncinfo([path1_hist var_name path2 'historical' path3 '_' ext_hist3 '.nc'],var_name);
     dims_ssp1 = ncinfo([path1_ssp var_name path2 'ssp245' path3 '_' ext_ssp1 '.nc'],var_name);
+    dims_ssp2 = ncinfo([path1_ssp var_name path2 'ssp245' path3 '_' ext_ssp2 '.nc'],var_name);
 
-    for t = 1:length(time)
+    % set up parallel pool with 20 workers
+    tic; parpool; fprintf('Pool initiation: '); toc;
+
+    parfor t = 1:length(time)
         % read historical or ssp variable
         if t <= dims_hist1.Size(4)-time_strt
             idx_t = (time_strt-1)+t;
@@ -502,17 +527,21 @@ elseif strcmp(model,'NorESM2-LM') || strcmp(model,'ACCESS-ESM1-5') || strcmp(mod
             idx_t = time_strt+(t-dims_hist1.Size(4));
             var = ncread([path1_hist var_name path2 'historical' path3 '_' ext_hist2 '.nc'],...
                 var_name,[1 1 1 idx_t],[dims_hist2.Size(1) dims_hist2.Size(2) max(idx_depth) 1]);
-        elseif t <= dims_hist1.Size(4)-time_strt+dims_hist2.Size(4)+dims_ssp1.Size(4)
+        elseif t <= dims_hist1.Size(4)-time_strt+dims_hist2.Size(4)+dims_hist3.Size(4)
             idx_t = time_strt+(t-dims_hist1.Size(4)-dims_hist2.Size(4));
+            var = ncread([path1_hist var_name path2 'historical' path3 '_' ext_hist3 '.nc'],...
+                var_name,[1 1 1 idx_t],[dims_hist3.Size(1) dims_hist3.Size(2) max(idx_depth) 1]);
+        elseif t <= dims_hist1.Size(4)-time_strt+dims_hist2.Size(4)+dims_hist3.Size(4)+dims_ssp1.Size(4)
+            idx_t = time_strt+(t-dims_hist1.Size(4)-dims_hist2.Size(4)-dims_hist3.Size(4));
             var = ncread([path1_ssp var_name path2 'ssp245' path3 '_' ext_ssp1 '.nc'],...
-                var_name,[1 1 1 idx_t],[dims_hist1.Size(1) dims_hist1.Size(2) max(idx_depth) 1]);
+                var_name,[1 1 1 idx_t],[dims_ssp1.Size(1) dims_ssp1.Size(2) max(idx_depth) 1]);
         else
-            idx_t = time_strt+(t-dims_hist1.Size(4)-dims_hist2.Size(4)-dims_ssp1.Size(4));
+            idx_t = time_strt+(t-dims_hist1.Size(4)-dims_hist2.Size(4)-dims_hist3.Size(4)-dims_ssp1.Size(4));
             var = ncread([path1_ssp var_name path2 'ssp245' path3 '_' ext_ssp2 '.nc'],...
-                var_name,[1 1 1 idx_t],[dims_hist1.Size(1) dims_hist1.Size(2) max(idx_depth) 1]);
+                var_name,[1 1 1 idx_t],[dims_ssp2.Size(1) dims_ssp2.Size(2) max(idx_depth) 1]);
         end
         % save variable to combined file
-        save_to_combined_file(nc_filepath,t,var,var_name,lon2d,lat2d,...
+        save_temp_files(nc_filepath_temp,t,var,var_name,lon2d,lat2d,...
             lon,lat,depth,time,grid_label,long_name,units);
     end
 
@@ -521,7 +550,10 @@ elseif strcmp(model,'IPSL-CM6A-LR')
     % for models with one historical file and one ssp file
     dims_hist1 = ncinfo([path1_hist var_name path2 'historical' path3 '_' ext_hist1 '.nc'],var_name);
 
-    for t = 1:length(time)
+    % set up parallel pool with 20 workers
+    tic; parpool; fprintf('Pool initiation: '); toc;
+
+    parfor t = 1:length(time)
         % read historical or ssp variable
         if t <= dims_hist1.Size(4)-time_strt
             idx_t = (time_strt-1)+t;
@@ -533,16 +565,38 @@ elseif strcmp(model,'IPSL-CM6A-LR')
                 var_name,[1 1 1 idx_t],[dims_hist1.Size(1) dims_hist1.Size(2) max(idx_depth) 1]);
          end
         % save variable to combined file
-        save_to_combined_file(nc_filepath,t,var,var_name,lon2d,lat2d,...
+        save_temp_files(nc_filepath_temp,t,var,var_name,lon2d,lat2d,...
             lon,lat,depth,time,grid_label,long_name,units);
     end
 
 end
 
+% end parallel session
+delete(gcp('nocreate'));
+
+% combine temporary files in main file
+files = dir([nc_filepath_temp '*.nc']); % count files in folder
+for t = 1:length(files)
+    filename_temp = [nc_filepath_temp num2str(t) '.nc'];
+    var_temp = ncread(filename_temp,var_name); % read
+    if t == 1
+        ncsave_4d(nc_filepath,{'lon' lon 'longitude' 'degrees east'},...
+            {'lat' lat 'latitude' 'degrees north'},...
+            {'depth' depth 'depth' 'meters'},...
+            {'time' time(t) 'time' 'days since 0000-01-01'},...
+            {var_name var_temp long_name units});
+    else
+        ncwrite(nc_filepath,'time',time(t),t);
+        ncwrite(nc_filepath,var_name,var_temp,[1 1 1 t]);
+    end
+    % delete temporary file
+    delete(filename_temp);
+end
+
 end
 
 %% save variable to combined file
-function save_to_combined_file(nc_filepath,t,var,var_name,lon2d,lat2d,...
+function save_temp_files(nc_filepath_temp,t,var,var_name,lon2d,lat2d,...
     lon,lat,depth,time,grid_label,long_name,units)
 
     % interpolate
@@ -565,18 +619,16 @@ function save_to_combined_file(nc_filepath,t,var,var_name,lon2d,lat2d,...
             warning('on','all');
        end
     end
-    
-    % save variable to file
-    if t == 1    
-        ncsave_4d(nc_filepath,{'lon' lon 'longitude' 'degrees east'},...
-            {'lat' lat 'latitude' 'degrees north'},...
-            {'depth' depth 'depth' 'meters'},...
-            {'time' time 'time' 'days since 0000-01-01'},...
-            {var_name var_interp long_name units});
-    else
-        ncwrite(nc_filepath,'time',time(2),t);
-        ncwrite(nc_filepath,var_name,var_interp,[1 1 1 t]);
-    end
+
+    % Write output in temporary files
+    filename = [nc_filepath_temp num2str(t) '.nc'];
+    if exist(filename,'file')==2; delete(filename); end
+    nccreate(filename,'time','Dimensions',{'time' 1});
+    ncwrite(filename,'time',time(t));
+    nccreate(filename,var_name,'Dimensions',...
+        {'lon' length(lon) 'lat' length(lat) 'depth' length(depth)});
+    ncwrite(filename,var_name,var_interp);
+
 
 end
 

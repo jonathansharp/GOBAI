@@ -35,7 +35,7 @@ set(gcf,'visible','on','position',[100 100 1600 800]);
 m_proj('robinson','lon',[20 380]);
 m_coast('patch',rgb('gray'));
 m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
-lon_temp = convert_lon(convert_lon(glodap_data.G2longitude));
+lon_temp = convert_lon(glodap_data.G2longitude,'format','-180-180');
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,glodap_data.G2latitude,'.k');
 hold off;

@@ -19,10 +19,10 @@ if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
     TS.pressure = repmat(permute(TS.Pressure,[3 2 1]),TS.xdim,TS.ydim,1,tdim);
 else
     TS.depth = repmat(permute(TS.Depth,[3 2 1]),TS.xdim,TS.ydim,1,tdim);
-    if strcmp(base_grid,'MPI-ESM1-2-LR')
+    if mean(TS.depth(:),'omitnan') > 0
        TS.pressure = gsw_p_from_z(-TS.depth,TS.latitude); 
     else
-        TS.pressure = -gsw_p_from_z(TS.depth,TS.latitude);
+       TS.pressure = gsw_p_from_z(TS.depth,TS.latitude);
     end
 end
 if strcmp(base_grid,'RG')

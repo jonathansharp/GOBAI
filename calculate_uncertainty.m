@@ -8,8 +8,10 @@
 %
 % DATE: 11/7/2024
 
-function calculate_uncertainty(param_props,base_grid,param_path,fpath,model_types,realizations,...
-    num_clusters,numWorkers_predict,file_date,float_file_ext,glodap_year,train_ratio,val_ratio,test_ratio)
+function calculate_uncertainty(param_props,base_grid,param_path,...
+    temp_path,sal_path,fpath,model_types,num_clusters,...
+    numWorkers_predict,file_date,float_file_ext,glodap_year,...
+    train_ratio,val_ratio,test_ratio)
 
 %% define gobai filepaths
 gobai_alg_dir = ...
@@ -27,11 +29,8 @@ lon_0_360 = convert_lon(lon,'format','0-360');
 [lon_0_360_3d,lat_3d,pres_3d] = ndgrid(lon_0_360,lat,pres);
 
 %% determine coefficients to calculate gridding uncertainty
-% [b,stats] = calculate_gridding_uncertainty_coeffs(file_date,...
-%     float_file_ext,glodap_year,lon,lat,time,lon_0_360_3d,lat_3d,pres_3d);
-
-%% create NetCDF that will be end result
-create_nc_file(gobai_alg_dir,param_props,lon,lat,pres);
+[b,stats] = calculate_gridding_uncertainty_coeffs(file_date,...
+    temp_path,sal_path,float_file_ext,glodap_year,lon,lat,time,lon_0_360_3d,lat_3d,pres_3d);
 
 %% loop through each model
 for m = 1:length(model_types)
@@ -62,10 +61,10 @@ for m = 1:length(model_types)
 end
 
 %% set up parallel pool
-%tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% loop through each month
-for t = 1:length(time)
+parfor t = 1:length(time)
 
     % read in gobai for timestep and pre-define delta
     gobai = ncread(gobai_filepath,param_props.file_name,...
@@ -93,15 +92,16 @@ for t = 1:length(time)
 
     end
 
-    % calculate algorithm uncertainty as spread in difference
+    % calculate algorithm uncertainty as root mean squared differences
     % between models and reconstructions
-    gobai_alg_uncer = std(gobai_delta,[],4,'omitnan');
+    gobai_alg_uncer = sqrt(mean(gobai_delta.^2,4,'omitnan'));
 
     % calculate measurement uncertainty as 3% of [O2]
     gobai_meas_uncer = gobai.*0.03;
 
     % calculate gridding uncertainty
-    bot_3d  = bottom_depth(lat_3d,lon_0_360_3d);
+    bot_3d = bottom_depth(lat_3d,lon_0_360_3d);
+    bot_3d(bot_3d > 2000) = 2000;
     gobai_grid_uncer = b(1) + b(2).*pres_3d + b(3).*bot_3d;
     gobai_grid_uncer(~idx_gobai) = NaN;
     % figure; pcolor(lon,lat,gobai_grid_uncer(:,:,11)'); shading flat; colorbar; clim([0 15]);
@@ -139,7 +139,10 @@ end
 % end parallel session
 delete(gcp('nocreate'));
 
-% concatenate gobai uncertainty in main file
+%% concatenate gobai uncertainty in main file
+% create NetCDF that will be end result
+create_nc_file(gobai_alg_dir,param_props,lon,lat,pres);
+% 
 files = dir([gobai_alg_dir 'gobai-' param_props.file_name '-uncer-*.nc']); % count uncertainty files in folder
 filename = [gobai_alg_dir 'gobai-' param_props.file_name '-uncer.nc'];
 for cnt = 1:length(files)
@@ -163,7 +166,7 @@ end
 end
 
 %% subfunction for calculating coefficients for gridding uncertainty
-function [b,stats] = calculate_gridding_uncertainty_coeffs(file_date,...
+function [b,stats] = calculate_gridding_uncertainty_coeffs(file_date,temp_path,sal_path,...
     float_file_ext,glodap_year,lon,lat,time,lon_0_360_3d,lat_3d,pres_3d)
 
 %% load interpolated float and glodap data
@@ -209,6 +212,14 @@ clear float_oxy_std glodap_oxy_std
 idx = ~isnan(oxy_std); % index when oxygen variability exists
 oxy_std = double(oxy_std(idx));
 
+% temperature and salinity variability
+tmp = ncread([temp_path 'RG_Climatology_Temp.nc'],'Temperature');
+tmp_var = repmat(double(std(tmp,[],4)),1,1,1,length(time)); clear tmp;
+tmp_var_fit = tmp_var(idx);
+sal = ncread([temp_path 'RG_Climatology_Sal.nc'],'Salinity');
+sal_var = repmat(double(std(sal,[],4)),1,1,1,length(time)); clear sal;
+sal_var_fit = sal_var(idx);
+
 % get mean within each grid cell (sigma)
 float_sig = single(accumarray(subs_float(idx_float,:),float_data.SIGMA(idx_float),sz,@nanmean,nan));
 glodap_sig = single(accumarray(subs_glodap(idx_glodap,:),glodap_data.SIGMA(idx_glodap),sz,@nanmean,nan));
@@ -239,6 +250,9 @@ sig_fit(oxygen_count_idx) = [];
 pres_fit(oxygen_count_idx) = [];
 dist_fit(oxygen_count_idx) = [];
 bot_fit(oxygen_count_idx) = [];
+bot_fit(bot_fit>2000) = 2000;
+tmp_var_fit(oxygen_count_idx) = [];
+sal_var_fit(oxygen_count_idx) = [];
 % scatter different parameters against std
 % figure; scatter(sig_fit,oxy_std);
 % fit model of variability vs depth and distance from shore
