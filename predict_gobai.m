@@ -397,8 +397,10 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         % load model for this cluster
         alg_struct = load([alg_dir '/' alg_fnames{c}],alg_type);
     
+        % define temporary variable list
+        variables_TS_tmp = variables_TS;
+        
         % % remove year for cluster 13 for RG grid
-        % variables_TS_tmp = variables_TS;
         % if c == 13
         %     variables_TS_tmp(strcmp(variables_TS_tmp,'year_array'))=[];
         % end

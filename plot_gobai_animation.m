@@ -2,7 +2,12 @@
 %% Plot GOBAI over time
 
 function plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,...
-    alg_type,file_date,float_file_ext,numWorkers_predict,varargin)
+    alg_type,file_date,float_file_ext,numWorkers_predict,flt,gld,ctd,varargin)
+
+%% define dataset extensions
+if flt == 1; float_ext = 'f'; else float_ext = ''; end
+if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
+if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
 
 %% set pressures
 pressures = [2.5 10 50 100 200 300 500 1000 1500 1975];
@@ -70,10 +75,10 @@ else
 end
 
 %% set up parallel pool
-tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+%tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% plot frames
-parfor d = 1:length(pressures)
+for d = 1:length(pressures)
     % create folder for figures
     dname = [param_props.dir_name '/Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
@@ -97,7 +102,8 @@ parfor d = 1:length(pressures)
     % establish file name
     if uncer == 0 && anom == 0
         fname = ['gobai_animation_' num2str(pressures(d)) 'dbar.gif'];
-        gobai_fname = [dir_base '/gobai-' param_props.file_name '.nc'];
+        gobai_fname = [dir_base '/' float_ext glodap_ext ctd_ext ...
+            '/gobai-' param_props.file_name '.nc'];
     elseif uncer == 1
         fname = ['gobai_uncer_animation_' num2str(pressures(d)) 'dbar.gif'];
         gobai_fname = [dir_base '/gobai-' param_props.file_name '-uncer.nc'];

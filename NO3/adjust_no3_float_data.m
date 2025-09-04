@@ -25,7 +25,7 @@ load(['NO3/Data/processed_glodap_no3_data_' num2str(glodap_year) '.mat'],...
 
 
 %%%%%%%%%%%%%%%%%%%
-error('FIX WOA match issue');
+%error('FIX WOA match issue');
 
 %% import WOA climatologies
 temp_path = [pwd '/Data/WOA/TEMPERATURE/'];
@@ -43,7 +43,7 @@ WOA.LAT   = ncread([nit_path 'woa18_all_n01_01.nc'],'lat');
 WOA.LON   = ncread([nit_path 'woa18_all_n01_01.nc'],'lon');
 WOA.DEPTH = ncread([oxy_path 'woa18_all_o01_01.nc'],'depth');
 [~,lat_3d,depth_3d] = ndgrid(WOA.LON,WOA.LAT,WOA.DEPTH);
-WOA.PRES = gsw_p_from_z(WOA.DEPTH,WOA.LAT)
+WOA.PRES = -gsw_p_from_z(depth_3d,lat_3d);
 % clean up
 clear m temp_path sal_path nit_path
 
@@ -65,8 +65,8 @@ for i=1:length(idx)
         abs(WOA.LON - float_data.LON(idx(i))));
     idx_lat = find(min(abs(WOA.LAT - float_data.LAT(idx(i)))) == ...
         abs(WOA.LAT - float_data.LAT(idx(i))));
-    idx_pres = find(min(abs(WOA.DEPTH - float_data.PRES(idx(i)))) == ...
-        abs(WOA.DEPTH - float_data.PRES(idx(i))));
+    idx_pres = find(min(abs(squeeze(WOA.PRES(idx_lon,idx_lat,:)) - float_data.PRES(idx(i)))) == ...
+        abs(squeeze(WOA.PRES(idx_lon,idx_lat,:)) - float_data.PRES(idx(i))));
     idx_mnth = find(min(abs((1:12)' - float_data.MONTH(idx(i)))) == ...
         abs((1:12)' - float_data.MONTH(idx(i))));
     WOA_OXY_match(idx(i)) = WOA.OXY(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));

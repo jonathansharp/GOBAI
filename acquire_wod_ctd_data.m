@@ -93,7 +93,7 @@ for y = 1993:end_year
 end
 
 %% adjust time
-wod.time = datenum(1900,1,1+wod.time);
+wod.time = datenum(1900,1,wod.time);
 
 %% calculate pressure from depth
 wod.pres = gsw_p_from_z(-wod.depth,wod.lat);
@@ -130,6 +130,7 @@ for f = 1:length(stations) % for each unique station id
     overlap_idx = any(abs(glodap_data.LAT-mean(wod.lat(idx))) < 0.01 & ...
         abs(glodap_data.LON-mean(wod.lon(idx))) < 0.01 & ...
         abs(glodap_data.TIME-mean(wod.time(idx))) == 0);
+    
     if ~overlap_idx
 
         % loop through station ids, interpolate profiles and log data
