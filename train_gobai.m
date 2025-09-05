@@ -5,10 +5,16 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 3/13/2025
+% DATE: 6/25/2025
 
 function train_gobai(alg_type,param_props,base_grid,file_date,...
-    float_file_ext,num_clusters,variables,thresh,numWorkers_train,snap_date,varargin)
+    float_file_ext,num_clusters,variables,thresh,numWorkers_train,...
+    snap_date,flt,gld,ctd,varargin)
+
+%% define dataset extensions
+if flt == 1; float_ext = 'f'; else float_ext = ''; end
+if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
+if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
 
 %% set defaults and process optional input arguments
 num_folds = 1;
@@ -69,32 +75,45 @@ date_str = num2str(snap_date);
 
 %% directory base
 if strcmp(alg_type,'FFNN')
-    dir_base = create_dir_base(alg_type,{base_grid;num_clusters;file_date;...
+    dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
         float_file_ext;train_ratio;val_ratio;test_ratio});
 elseif strcmp(alg_type,'RFR')
-    dir_base = create_dir_base(alg_type,{base_grid;num_clusters;file_date;...
+    dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
         float_file_ext;numtrees;minLeafSize});
 elseif strcmp(alg_type,'GBM')
-    dir_base = create_dir_base(alg_type,{base_grid;num_clusters;file_date;...
+    dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
         float_file_ext;numstumps;numbins});
 end
 
 %% load data
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    load([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'all_data');
+    load([param_props.dir_name '/Data/processed_all_' ...
+        param_props.file_name '_data_' float_ext glodap_ext ctd_ext ...
+        '_' file_date float_file_ext '.mat'],'all_data');
 else
-    load([param_props.dir_name '/Data/' base_grid '_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'all_data');
+    load([param_props.dir_name '/Data/' base_grid '_' ...
+        param_props.file_name '_data_' float_ext glodap_ext ctd_ext ...
+        '_' file_date float_file_ext '.mat'],'all_data');
 end
 
 %% load data clusters
-load([param_props.dir_name '/Data/all_data_clusters_' base_grid '_' num2str(num_clusters) '_' ...
-    file_date float_file_ext '.mat'],'all_data_clusters');
+if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+    load([param_props.dir_name '/Data/GMM_' num2str(num_clusters) ...
+        '/all_data_clusters_' num2str(num_clusters) '_' ...
+        float_ext glodap_ext ctd_ext '_' file_date float_file_ext ...
+        '.mat'],'all_data_clusters');
+else
+    load([param_props.dir_name '/Data/GMM_' base_grid '_' ...
+        num2str(num_clusters) '/all_data_clusters_' ...
+        num2str(num_clusters) '_' float_ext glodap_ext ctd_ext '_' ...
+        file_date float_file_ext '.mat'],'all_data_clusters');
+end
 
 %% load data cluster indices (for k-fold testing)
 if num_folds > 1
-    load([param_props.dir_name '/Data/k_fold_data_indices_'  base_grid '_' num2str(num_clusters) ...
-        '_' num2str(num_folds) '_' file_date float_file_ext '.mat'],...
-        'num_folds','train_idx','test_idx');
+    load([param_props.dir_name '/Data/k_fold_data_indices_' num2str(num_clusters) ...
+        '_' num2str(num_folds) '_' float_ext glodap_ext ctd_ext '_' ...
+        file_date float_file_ext '.mat'],'num_folds','train_idx','test_idx');
 else
     % set NaNs so parloops run
     train_idx = NaN; test_idx = NaN;
@@ -110,34 +129,48 @@ if glodap_only
 end
 
 %% create directory and file names
-alg_dir = [param_props.dir_name '/Models/' dir_base];
+if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
+    alg_dir = [param_props.dir_name '/Models/' dir_base];
+else
+    alg_dir = [param_props.dir_name '/Models/' base_grid '/' dir_base];
+end
 alg_fnames = cell(num_folds,num_clusters);
 for f = 1:num_folds
     for c = 1:num_clusters
         if num_folds > 1
-            alg_fnames(f,c) = {[alg_type '_' param_props.file_name '_C' num2str(c) '_F' num2str(f) '_test']};
+            alg_fnames(f,c) = {[alg_type '_' param_props.file_name '_C' ...
+                num2str(c) '_F' num2str(f) '_test_' float_ext glodap_ext ctd_ext]};
         else
-            alg_fnames(c) = {[alg_type '_' param_props.file_name '_C' num2str(c)]};
+            alg_fnames(c) = {[alg_type '_' param_props.file_name '_C' ...
+                num2str(c) '_' float_ext glodap_ext ctd_ext]};
         end
     end
 end
 
 %% variables for k-fold test
 if num_folds > 1
-    kfold_dir = [param_props.dir_name '/KFold/' alg_type '/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
-    fig_dir = [param_props.dir_name '/Figures/KFold/' alg_type '/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+    kfold_dir = [param_props.dir_name '/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
+    fig_dir = [param_props.dir_name '/Figures/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
     if strcmp(alg_type,'RFR')
         kfold_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
-        fig_name_1 = ['k_fold_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];
-        fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numtrees) '_lf' num2str(minLeafSize) '.png'];
+        fig_name_1 = ['k_fold_comparison_tr' num2str(numtrees) '_lf' ...
+            num2str(minLeafSize) '_' float_ext glodap_ext ctd_ext '.png'];
+        fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numtrees) ...
+            '_lf' num2str(minLeafSize) '_' float_ext glodap_ext ctd_ext '.png'];
     elseif strcmp(alg_type,'FFNN')
         kfold_name = ['FFNN_output_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio)];
-        fig_name_1 = ['k_fold_comparison_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) '.png'];
-        fig_name_2 = ['k_fold_spatial_comparison_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) '.png'];
+        fig_name_1 = ['k_fold_comparison_train' num2str(100*train_ratio) ...
+            '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) ...
+            '_' float_ext glodap_ext ctd_ext '.png'];
+        fig_name_2 = ['k_fold_spatial_comparison_train' num2str(100*train_ratio) ...
+            '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) ...
+            '_' float_ext glodap_ext ctd_ext '.png'];
     elseif strcmp(alg_type,'GBM')
         kfold_name = ['GBM_output_tr' num2str(numstumps) '_bin' num2str(numbins)];
-        fig_name_1 = ['k_fold_comparison_tr' num2str(numstumps) '_bin' num2str(numbins) '.png'];
-        fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numstumps) '_bin' num2str(numbins) '.png'];
+        fig_name_1 = ['k_fold_comparison_tr' num2str(numstumps) '_bin' ...
+            num2str(numbins) '_' float_ext glodap_ext ctd_ext '.png'];
+        fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numstumps) ...
+            '_bin' num2str(numbins) '_' float_ext glodap_ext ctd_ext '.png'];
     end
 end
 
@@ -146,28 +179,41 @@ end
 % start timing training
 tStart = tic;
 
-% set up parallel pool
-tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
 % parameter that matches fold number with cluster number
 folds = repelem(1:num_folds,1,num_clusters)';
 clusters = repmat(1:num_clusters,1,num_folds)';
+
 % fit models
-parfor cnt = 1:num_folds*num_clusters
-    train_models(param_props,num_folds,base_grid,...
-        alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
-        train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
-        numtrees,minLeafSize,numstumps,numbins,thresh,'no',...
-        folds(cnt),clusters(cnt));
-end
+% if num_folds == 1 & strcmp(alg_type,'FFNN')
+    % set up parallel pool
+    tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+    for cnt = 1:num_folds*num_clusters
+        train_models(param_props,num_folds,...
+            alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
+            train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
+            numtrees,minLeafSize,numstumps,numbins,thresh,'yes',...
+            folds(cnt),clusters(cnt),base_grid);
+    end
+% else
+%     % set up parallel pool
+%     tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
+%     parfor cnt = 1:num_folds*num_clusters
+%         train_models(param_props,num_folds,...
+%             alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
+%             train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
+%             numtrees,minLeafSize,numstumps,numbins,thresh,'no',...
+%             folds(cnt),clusters(cnt));
+%     end
+% end
 
 % end parallel session
 delete(gcp('nocreate'));
 
 % stop timing full script
 if num_folds > 1
-    fprintf([alg_type ' k-Fold Training for ' base_grid ': ']);
+    fprintf([alg_type ' k-Fold Training for: ']);
 else
-    fprintf([alg_type ' Training for ' base_grid ': ']);
+    fprintf([alg_type ' Training for: ']);
 end
 
 % print elapsed time in minutes
@@ -295,10 +341,10 @@ end
 end
 
 %% function to train ML models
-function train_models(param_props,num_folds,base_grid,...
+function train_models(param_props,num_folds,...
     alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
     train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
-    numtrees,minLeafSize,numstumps,numbins,thresh,par_use,f,c)
+    numtrees,minLeafSize,numstumps,numbins,thresh,par_use,f,c,base_grid)
 
 %% define index for observations
 if num_folds > 1
@@ -313,6 +359,28 @@ num_obs = length(obs_index_train);
 rng(f); numbers = randperm(num_obs);
 % adjust observation index to fraction (i.e., 'data_per') its current sum
 obs_index_train(numbers > (data_per.*num_obs)) = false;
+
+% exclude Mediterranean cluster data before 2000 (for v2.3)
+if strcmp(base_grid,'RG')
+    in_med_new_idx = (all_data.longitude > -7 & all_data.longitude < 36) & ...
+        (all_data.latitude > 30 & all_data.latitude < 45) & all_data.year > 2000;
+    if c == 13
+        obs_index_train(all_data_clusters.clusters == 13 & ...
+            ~in_med_new_idx) = false;
+        variables(strcmp(variables,'year')) = [];
+    % elseif c == 5
+    end
+    % figure; scatter(all_data.year(all_data_clusters.clusters == 5 & in_med_new_idx),...
+    %      all_data.o2(all_data_clusters.clusters == 5 & in_med_new_idx));
+    % 
+    % figure; scatter(all_data.longitude(all_data_clusters.clusters == 9 & in_med_new_idx),...
+    %      all_data.latitude(all_data_clusters.clusters == 9 & in_med_new_idx)); plot_land('xy');
+    % 
+    % figure; scatter(all_data.longitude(all_data_clusters.clusters == 5),...
+    %      all_data.latitude(all_data_clusters.clusters == 5),5,...
+    %      all_data.o2(all_data_clusters.clusters == 5));
+    %     plot_land('xy'); colorbar;
+end
 
 %% define observations index for k-fold testing
 if num_folds > 1
@@ -335,7 +403,7 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
     %% fit model for each cluster
     if strcmp(alg_type,'FFNN')
         % define model parameters and train FFNN
-        nodes1 = [10 20 30]; nodes2 = [30 20 10];
+        nodes1 = [10 15 20]; nodes2 = [20 15 10];
         alg = fit_FFNN(param_props.file_name,all_data,all_data_clusters.(['c' num2str(c)]),...
             obs_index_train,variables,nodes1,nodes2,train_ratio,val_ratio,test_ratio,...
             thresh,par_use);
@@ -353,9 +421,9 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
     
     %% stop timing fit
     if num_folds > 1
-        fprintf(['Train ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
+        fprintf(['Train ' alg_type ' for - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
     else
-        fprintf(['Train ' alg_type ' for ' base_grid ' - Cluster #' num2str(c) ': ']);
+        fprintf(['Train ' alg_type ' for - Cluster #' num2str(c) ': ']);
     end
     
     toc
@@ -387,7 +455,7 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
         end
 
         % stop timing predictions
-        fprintf(['Run ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
+        fprintf(['Run ' alg_type ' for - Fold #' num2str(f) ', Cluster #' num2str(c) ': ']);
         toc
 
     end
@@ -397,10 +465,10 @@ else
 
     % print information
     if num_folds > 1
-        fprintf(['Train ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+        fprintf(['Train ' alg_type ' for - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
         disp(' ');
     else
-        fprintf(['Train ' alg_type ' for ' base_grid ' - Cluster #' num2str(c) ': N/A']);
+        fprintf(['Train ' alg_type ' for - Cluster #' num2str(c) ': N/A']);
         disp(' ');
     end
 
@@ -411,7 +479,7 @@ else
         % output = nan(sum(test_idx.(['f' num2str(f)])),num_clusters);
 
         % print information
-        fprintf(['Run ' alg_type ' for ' base_grid ' - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
+        fprintf(['Run ' alg_type ' for - Fold #' num2str(f) ', Cluster #' num2str(c) ': N/A']);
         disp(' ');
 
     end

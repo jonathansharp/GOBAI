@@ -17,8 +17,25 @@ load(['O2/Data/processed_float_o2_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date');
 load(['O2/Data/processed_glodap_o2_data_' num2str(glodap_year) '.mat'],...
     'glodap_data');
-% load(['O2/Data/processed_wod_ctd_oxygen_data_' num2str(glodap_year) '.mat'],...
-%     'wod_data');
+load(['O2/Data/processed_wod_ctd_o2_data_' num2str(glodap_year) '.mat'],...
+    'wod_data');
+
+% idx_f = (float_data.LON > 0 & float_data.LON < 35) & ...
+%     (float_data.LAT > 18 & float_data.LAT < 43) & ...
+%     float_data.YEAR < 2009;
+% idx_g = (glodap_data.LON > 0 & glodap_data.LON < 35) & ...
+%     (glodap_data.LAT > 18 & glodap_data.LAT < 43) & ...
+%     glodap_data.YEAR < 2009;
+% figure; scatter(float_data.OXY(idx_f),float_data.PRES(idx_f));
+% figure; scatter(glodap_data.OXY(idx_g),glodap_data.PRES(idx_g));
+% 
+% prof_ids = unique(float_data.PROF_ID(idx_f));
+% figure; hold on;
+% set(gca,'ydir','reverse');
+% for p = 1:length(prof_ids)
+%     idx = prof_ids(p) == float_data.PROF_ID;
+%     plot(float_data.OXY(idx_f),float_data.PRES(idx_f)); 
+% end
 
 %% import WOA climatologies
 temp_path = [pwd '/Data/WOA/TEMPERATURE/'];
@@ -33,6 +50,8 @@ end
 WOA.LAT   = ncread([oxy_path 'woa18_all_o01_01.nc'],'lat');
 WOA.LON   = ncread([oxy_path 'woa18_all_o01_01.nc'],'lon');
 WOA.DEPTH = ncread([oxy_path 'woa18_all_o01_01.nc'],'depth');
+[~,lat_3d,depth_3d] = ndgrid(WOA.LON,WOA.LAT,WOA.DEPTH);
+WOA.PRES = -gsw_p_from_z(depth_3d,lat_3d);
 % clean up
 clear m temp_path sal_path oxy_path
 
@@ -53,8 +72,8 @@ for i=1:length(idx)
         abs(WOA.LON - float_data.LON(idx(i))));
     idx_lat = find(min(abs(WOA.LAT - float_data.LAT(idx(i)))) == ...
         abs(WOA.LAT - float_data.LAT(idx(i))));
-    idx_pres = find(min(abs(WOA.DEPTH - float_data.PRES(idx(i)))) == ...
-        abs(WOA.DEPTH - float_data.PRES(idx(i))));
+    idx_pres = find(min(abs(squeeze(WOA.PRES(idx_lon,idx_lat,:)) - float_data.PRES(idx(i)))) == ...
+        abs(squeeze(WOA.PRES(idx_lon,idx_lat,:)) - float_data.PRES(idx(i))));
     idx_mnth = find(min(abs((1:12)' - float_data.MONTH(idx(i)))) == ...
         abs((1:12)' - float_data.MONTH(idx(i))));
     WOA_match(idx(i)) = WOA.OXY(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
@@ -74,8 +93,8 @@ figure; hold on
 histogram(WOA_delta);
 set(gca,'fontsize',16);
 ax = gca;
-plot([mean_delta+5*st_dev_delta mean_delta+5*st_dev_delta],ax.YLim,'r','linewidth',2);
-plot([mean_delta-5*st_dev_delta mean_delta-5*st_dev_delta],ax.YLim,'r','linewidth',2);
+plot([mean_delta+3*st_dev_delta mean_delta+3*st_dev_delta],ax.YLim,'r','linewidth',2);
+plot([mean_delta-3*st_dev_delta mean_delta-3*st_dev_delta],ax.YLim,'r','linewidth',2);
 xlabel('Float [O_{2}] - WOA [O_{2}]');
 exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
 close
@@ -95,7 +114,7 @@ myColorMap = flipud(hot(256.*32));
 myColorMap(1,:) = 1;
 colormap(myColorMap);
 set(gca,'ColorScale','log')
-caxis([1e0 1e5]);
+clim([1e0 1e5]);
 c=colorbar;
 c.Label.String = 'log10(Bin Counts)';
 exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_comp_scatter_' file_date float_file_ext '.png']);
@@ -103,77 +122,64 @@ close
 % clean up
 clear counts bin_centers c h myColorMap
 
-%% remove data points more than 5 sigmas from WOA value
-idx_rem = WOA_delta > mean_delta+5.*st_dev_delta | WOA_delta < mean_delta-5.*st_dev_delta;
-% sum(idx_rem)
+%% remove data points based on global range test
+% 479 umol/kg is max for WOD range checks
+idx_rem = float_data.OXY < 0 | float_data.OXY > 480;
+disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
+    num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
 vars = fieldnames(float_data);
 for v = 1:length(vars)
     float_data.(vars{v})(idx_rem) = [];
 end
+WOA_delta(idx_rem) = [];
+WOA_delta_per(idx_rem) = [];
+WOA_match(idx_rem) = [];
+
+%% remove data points more than 3 sigmas from WOA value for each depth
+pres_levels = unique(float_data.PRES);
+idx_rem = false(length(WOA_delta),1);
+st_dev_delta_pres = nan(size(pres_levels));
+mean_delta_pres = nan(size(pres_levels));
+for z = 1:length(pres_levels)
+    pres_idx = float_data.PRES == pres_levels(z);
+    st_dev_delta_pres(z) = std(WOA_delta(pres_idx),[],'omitnan');
+    mean_delta_pres(z) = mean(WOA_delta(pres_idx),'omitnan');
+    idx_rem(pres_idx) = WOA_delta(pres_idx) > mean_delta_pres(z)+3.*st_dev_delta_pres(z) | ...
+        WOA_delta(pres_idx) < mean_delta_pres(z)-3.*st_dev_delta_pres(z);
+end
+disp([num2str(sum(idx_rem)) ' data points removed by WOA comparison test (' ...
+    num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
+vars = fieldnames(float_data);
+% plot(mean_delta_pres,pres_levels); xlabel('Float - WOA'); ylabel('pres.');
+for v = 1:length(vars)
+    float_data.(vars{v})(idx_rem) = [];
+end
+WOA_delta(idx_rem) = [];
+WOA_delta_per(idx_rem) = [];
+WOA_match(idx_rem) = [];
+
+%% histogram of differences (corrected)
+figure; hold on
+histogram(WOA_delta);
+set(gca,'fontsize',16);
+ax = gca;
+plot([mean_delta+3*st_dev_delta mean_delta+3*st_dev_delta],ax.YLim,'r','linewidth',2);
+plot([mean_delta-3*st_dev_delta mean_delta-3*st_dev_delta],ax.YLim,'r','linewidth',2);
+xlabel('Float [O_{2}] - WOA [O_{2}]');
+exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
+close
 % clean up
 clear WOA_match WOA_delta WOA_delta_per mean_delta st_dev_delta idx_rem v vars
 
-%% determine histogram counts and indices
-% % establish edges of bins
-% x_edges = -180:180;
-% x_bins = -179.5:179.5;
-% y_edges = -85:85;
-% y_bins = -84.5:84.5;
-% z_edges = [0 5:10:175 190:20:450 475:50:1375 1450:100:1950 2000];
-% z_bins = [2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975];
-% mn_edges = 1:12;
-% yr_edges = 2004:glodap_year;
-% t_edges = datenum([[repelem(yr_edges,1,length(mn_edges)) yr_edges(end)+1]', ...
-%                   [repmat(mn_edges,1,length(yr_edges)) 1]', ...
-%                   [zeros(1,length(mn_edges)*length(yr_edges)+1)]']);
-% t_bins = datenum([[repelem(yr_edges,1,length(mn_edges))]', ...
-%                   [repmat(mn_edges,1,length(yr_edges))]', ...
-%                   [repmat(15,1,length(mn_edges)*length(yr_edges))]']);
-% % get histogram counts in each bin
-% [~,~,Xnum_float] = histcounts(float_data.LON,x_edges);
-% [~,~,Ynum_float] = histcounts(float_data.LAT,y_edges);
-% [~,~,Znum_float] = histcounts(float_data.PRES,z_edges);
-% [~,~,Tnum_float] = histcounts(float_data.TIME,t_edges);
-% [~,~,Xnum_glodap] = histcounts(glodap_data.LON,x_edges);
-% [~,~,Ynum_glodap] = histcounts(glodap_data.LAT,y_edges);
-% [~,~,Znum_glodap] = histcounts(glodap_data.PRES,z_edges);
-% [~,~,Tnum_glodap] = histcounts(glodap_data.TIME,t_edges);
-% % accumulate index of counts
-% subs_float = [Xnum_float,Ynum_float,Znum_float,Tnum_float];
-% idx_float = ~any(subs_float==0,2);
-% subs_glodap = [Xnum_glodap,Ynum_glodap,Znum_glodap,Tnum_glodap];
-% idx_glodap = ~any(subs_glodap==0,2);
-% clear Xnum_float Ynum_float Znum_float Tnum_float
-% clear Xnum_glodap Ynum_glodap Znum_glodap Tnum_glodap
-% % determine size of 4D grid
-% sz = [length(x_bins),length(y_bins),length(z_bins),length(t_bins)];
-% % clean up
-% clear x_edges y_edges z_edges mn_edges yr_edges t_edges
-% 
-% %% Bin float and glodap data
-% binned_data.oxy_float = single(nan(sz));
-% binned_data.oxy_glodap = single(nan(sz));
-% for m = 1:length(t_bins)
-%     % month-specific float index
-%     idx_float_tmp = idx_float;
-%     idx_float_tmp(subs_float(:,4)~=m) = false;
-%     % month-specific glodap index
-%     idx_glodap_tmp = idx_glodap;
-%     idx_glodap_tmp(subs_glodap(:,4)~=m) = false;
-%     % bin oxygen data
-%     binned_data.oxy_float(:,:,:,m) = single(accumarray(subs_float(idx_float_tmp,1:3),float_data.OXY(idx_float_tmp),sz(1:3),@nanmean,nan));
-%     binned_data.oxy_glodap(:,:,:,m) = single(accumarray(subs_glodap(idx_glodap_tmp,1:3),glodap_data.OXY(idx_glodap_tmp),sz(1:3),@nanmean,nan));
+% prof_ids = unique(float_data.PROF_ID);
+% for p = 1:length(prof_ids)
+%     idx = prof_ids(p) == float_data.PROF_ID;
+%     figure;
+%     plot(float_data.OXY(idx),float_data.PRES(idx));
+%     set(gca,'ydir','reverse');
+%     keyboard
+%     close
 % end
-% % add pressure bins
-% binned_data.pres = repmat(permute(single(z_bins),[3 1 2]),length(x_bins),length(y_bins),1,length(t_bins));
-% % save binned data
-% if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-% save(['O2/Data/binned_data_' file_date float_file_ext],'binned_data','-v7.3')
-% 
-% % clean up
-% clear binned_data idx_float idx_glodap
-% clear idx_float_tmp idx_glodap_tmp m sz subs_float subs_glodap
-% clear x_edges x_bins y_bins z_edges z_bins t_bins
 
 %% Co-locate and compare float and glodap data (via profile crossovers)
 pres_levels = [2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975]';
@@ -188,23 +194,28 @@ crossover.oxy_float = [];
 crossover.oxy_float_gradient = [];
 crossover.temp_float = [];
 crossover.sal_float = [];
-crossover.oxy_glodap = [];
-crossover.oxy_glodap_gradient = [];
-crossover.sigma_glodap = [];
+crossover.oxy_ship = [];
+crossover.oxy_ship_gradient = [];
+crossover.sigma_ship = [];
 crossover.oxy_delta = [];
 crossover.oxy_delta_per = [];
 % cycle through float profiles 
+ship_lon = [glodap_data.LON;wod_data.LON];
+ship_lat = [glodap_data.LAT;wod_data.LAT];
+ship_time = [glodap_data.TIME;wod_data.TIME];
+ship_sigma = [glodap_data.SIGMA;wod_data.SIGMA];
+ship_oxy = [glodap_data.OXY;wod_data.OXY];
 for p = 1:length(float_profile_IDs)
     % float position
     lon = mean(float_data.LON(float_data.PROF_ID==float_profile_IDs(p)));
     lat = mean(float_data.LAT(float_data.PROF_ID==float_profile_IDs(p)));
     time = mean(float_data.TIME(float_data.PROF_ID==float_profile_IDs(p)));
     % match index
-    idx_lon = abs(glodap_data.LON - lon) < 0.5;
-    idx_lat = abs(glodap_data.LAT - lat) < 0.5;
-    idx_time = abs(glodap_data.TIME - time) < 30;
+    idx_lon = abs(ship_lon - lon) < 0.5;
+    idx_lat = abs(ship_lat - lat) < 0.5;
+    idx_time = abs(ship_time - time) < 30;
     idx_all = idx_lon & idx_lat & idx_time;
-    % if there is a matching glodap profile
+    % if there is a matching ship profile
     if sum(idx_all) > 0
         % float oxygen and depth
         oxy_float = float_data.OXY(float_data.PROF_ID==float_profile_IDs(p));
@@ -245,18 +256,18 @@ for p = 1:length(float_profile_IDs)
         oxy_float_gradient = [0;diff(oxy_float)];
         % pressure index
         idx_pres = ismember(pres_levels,pres_float);
-        % extract glodap data
-        oxy_glodap_temp = glodap_data.OXY(idx_all);
-        sigma_glodap_temp = glodap_data.SIGMA(idx_all);
-        % take average of all matching glodap profiles (helps if there are multiple)
-        oxy_glodap = nan(58,1);
-        sigma_glodap = nan(58,1);
+        % extract ship data
+        oxy_ship_temp = ship_oxy(idx_all);
+        sigma_ship_temp = ship_sigma(idx_all);
+        % take average of all matching ship profiles (helps if there are multiple)
+        oxy_ship = nan(58,1);
+        sigma_ship = nan(58,1);
         for gld_z = 1:58
-            oxy_glodap(gld_z) = mean(oxy_glodap_temp(gld_z:58:end),'omitnan');
-            sigma_glodap(gld_z) = mean(sigma_glodap_temp(gld_z:58:end),'omitnan');
+            oxy_ship(gld_z) = mean(oxy_ship_temp(gld_z:58:end),'omitnan');
+            sigma_ship(gld_z) = mean(sigma_ship_temp(gld_z:58:end),'omitnan');
         end
         % get oxygen gradient
-        oxy_glodap_gradient = [0;diff(oxy_glodap)];
+        oxy_ship_gradient = [0;diff(oxy_ship)];
         % log matched data
         crossover.id = [crossover.id;repmat(float_profile_IDs(p),length(pres_float),1)];
         crossover.lon = [crossover.lon;lon_float];
@@ -266,13 +277,13 @@ for p = 1:length(float_profile_IDs)
         crossover.oxy_float_gradient = [crossover.oxy_float_gradient;oxy_float_gradient];
         crossover.temp_float = [crossover.temp_float;temp_float];
         crossover.sal_float = [crossover.sal_float;sal_float];
-        crossover.oxy_glodap = [crossover.oxy_glodap;oxy_glodap(idx_pres)];
-        crossover.oxy_glodap_gradient = [crossover.oxy_glodap_gradient;oxy_glodap_gradient(idx_pres)];
+        crossover.oxy_ship = [crossover.oxy_ship;oxy_ship(idx_pres)];
+        crossover.oxy_ship_gradient = [crossover.oxy_ship_gradient;oxy_ship_gradient(idx_pres)];
         crossover.sigma_float = [crossover.sigma_float;sigma_float];
-        crossover.sigma_glodap = [crossover.sigma_glodap;sigma_glodap];
-        crossover.oxy_delta = [crossover.oxy_delta;oxy_float-oxy_glodap(idx_pres)];
+        crossover.sigma_ship = [crossover.sigma_ship;sigma_ship];
+        crossover.oxy_delta = [crossover.oxy_delta;oxy_float-oxy_ship(idx_pres)];
         crossover.oxy_delta_per = [crossover.oxy_delta_per;...
-            (oxy_float-oxy_glodap(idx_pres))./oxy_float];
+            (oxy_float-oxy_ship(idx_pres))./oxy_float];
     end
 end
 
@@ -297,10 +308,10 @@ crossover.oxy_float_sat_per = 100*(crossover.oxy_float./crossover.oxy_sat_float)
 crossover.oxy_delta_sat_per = 100*(crossover.oxy_delta./crossover.oxy_sat_float);
 
 % index to below 300 dbars
-idx = crossover.pres > 300 & ~isnan(crossover.oxy_float) & ~isnan(crossover.oxy_glodap);
+idx = crossover.pres > 300 & ~isnan(crossover.oxy_float) & ~isnan(crossover.oxy_ship);
 % clean up
 clear pres_levels float_profile_IDs lon lat time oxy_float pres_float
-clear idx_lon idx_lat idx_time oxy_temp pres_temp idx_pres oxy_glodap
+clear idx_lon idx_lat idx_time oxy_temp pres_temp idx_pres oxy_ship
 % fit delta against [O2]
 mdl = fitlm(crossover.oxy_sat_float(idx),crossover.oxy_delta_sat_per(idx),'Intercept',true);
 slp = mdl.Coefficients.Estimate(2);
@@ -310,8 +321,8 @@ corr_fac = slp .* crossover.oxy_sat_float + int; % modelled saturation delta
 crossover.oxy_float_sat_per_corr = crossover.oxy_float_sat_per - corr_fac;
 crossover.oxy_float_corr = (crossover.oxy_float_sat_per_corr./100).*crossover.oxy_sat_float;
 % re-calculate delta
-crossover.oxy_delta_corr = crossover.oxy_float_corr-crossover.oxy_glodap;
-crossover.oxy_delta_per_corr = (crossover.oxy_float_corr-crossover.oxy_glodap)./crossover.oxy_float_corr;
+crossover.oxy_delta_corr = crossover.oxy_float_corr-crossover.oxy_ship;
+crossover.oxy_delta_per_corr = (crossover.oxy_float_corr-crossover.oxy_ship)./crossover.oxy_float_corr;
 % save crossover data
 if ~exist([pwd '/O2/Data'],'dir'); mkdir('Data'); end
 save(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx','-v7.3')
@@ -320,53 +331,19 @@ if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
 save(['O2/Data/float_corr_' file_date float_file_ext],'slp','int');
 clear slp int
 
-%% Co-locate and compare float and glodap data (via bins)
-% % load binned data
-% load(['O2/Data/binned_data_' file_date float_file_ext],'binned_data')
-% % index where binned float and glodap data overlap under 300 dbars
-% idx = ~isnan(binned_data.oxy_float) & ~isnan(binned_data.oxy_glodap) & ...
-%     binned_data.pres > 300;
-% % add matched data to structure
-% matched_data.oxy_float = binned_data.oxy_float(idx);
-% matched_data.oxy_glodap = binned_data.oxy_glodap(idx);
-% matched_data.oxy_delta = matched_data.oxy_glodap-matched_data.oxy_float;
-% matched_data.oxy_delta_per = (matched_data.oxy_glodap-matched_data.oxy_float)./matched_data.oxy_glodap;
-% matched_data.pres = binned_data.pres(idx);
-% % fit delta against [O2]
-% mdl = fitlm(matched_data.oxy_float,matched_data.oxy_delta_per,'Intercept',true);
-% slp = mdl.Coefficients.Estimate(2);
-% int = mdl.Coefficients.Estimate(1);
-% % apply linear correction to float O2
-% matched_data.oxy_float_corr = matched_data.oxy_float + ...
-%     (slp.*matched_data.oxy_float + int).*matched_data.oxy_float;
-% % re-calculate delta
-% matched_data.oxy_delta_corr = matched_data.oxy_glodap-matched_data.oxy_float_corr;
-% matched_data.oxy_delta_per_corr = matched_data.oxy_glodap-matched_data.oxy_float_corr;
-% % clean up
-% clear idx mdl binned_data
-% 
-% % save matched float and glodap data
-% if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-% save(['O2/Data/matched_data_' file_date float_file_ext],'matched_data','-v7.3');
-% clear matched_data
-% % save correction factors
-% if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-% save(['O2/Data/float_corr_' file_date float_file_ext],'slp','int');
-% clear slp int
-
-%% plot uncorrected float vs. glodap residuals
+%% plot uncorrected float vs. ship residuals
 load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx');
 % scatter
 figure; hold on;
-scatter(crossover.oxy_glodap(idx),crossover.oxy_float(idx),20,'.');
+scatter(crossover.oxy_ship(idx),crossover.oxy_float(idx),20,'.');
 plot([0,450],[0 450],'k--');
 ylabel('Binned BGC Argo Oxygen Data (\mumol kg^{-1})');
-xlabel('Binned GLODAP Oxygen Data (\mumol kg^{-1})');
+xlabel('Binned GLODAP/WOD Oxygen Data (\mumol kg^{-1})');
 crossover.err_md = median(crossover.oxy_delta(idx));
 crossover.std = std(crossover.oxy_delta(idx));
 crossover.rmse = sqrt(mean((crossover.oxy_delta(idx)).^2));
-crossover.r2 = corr(crossover.oxy_glodap(idx),crossover.oxy_float(idx));
-crossover.slope = polyfit(crossover.oxy_glodap(idx),crossover.oxy_float(idx),1);
+crossover.r2 = corr(crossover.oxy_ship(idx),crossover.oxy_float(idx));
+crossover.slope = polyfit(crossover.oxy_ship(idx),crossover.oxy_float(idx),1);
 crossover.slope = crossover.slope(1);
 text(300,120,['Med. Err. = ' num2str(round(crossover.err_md,2))],'fontsize',12);
 text(300,90,['RMSE = ' num2str(round(crossover.rmse,1))],'fontsize',12);
@@ -383,7 +360,7 @@ sig2_min = double(mean(crossover.oxy_delta(idx))-2*std(crossover.oxy_delta(idx))
 sig2_max = double(mean(crossover.oxy_delta(idx))+2*std(crossover.oxy_delta(idx)));
 plot([sig2_min sig2_min],[0 1],'r','linewidth',1);
 plot([sig2_max sig2_max],[0 1],'r','linewidth',1);
-xlabel('Float [O_{2}] - GLODAP [O_{2}]');
+xlabel('Float [O_{2}] - Ship [O_{2}]');
 xL = xlim; yL = ylim;
 text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
     num2str(round(mean(crossover.oxy_delta(idx)),2))],...
@@ -391,24 +368,24 @@ text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
 text(0.9*xL(1),0.8*yL(2),['Std. \Delta[O_{2}] = ' ...
     num2str(round(std(crossover.oxy_delta(idx)),2))],...
     'HorizontalAlignment','left','VerticalAlignment','top');
-exportgraphics(gcf,[pwd '/O2/Figures/Data/GLODAP_comp_histogram_uncorr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[pwd '/O2/Figures/Data/Ship_comp_histogram_uncorr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear crossover
 
-%% plot corrected float vs. glodap residuals
+%% plot corrected float vs. ship residuals
 load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx');
 % scatter
 figure; hold on;
-scatter(crossover.oxy_glodap(idx),crossover.oxy_float_corr(idx),20,'.');
+scatter(crossover.oxy_ship(idx),crossover.oxy_float_corr(idx),20,'.');
 plot([0,450],[0 450],'k--');
 ylabel('Corrected, Binned BGC Argo Oxygen Data (\mumol kg^{-1})');
-xlabel('Binned GLODAP Oxygen Data (\mumol kg^{-1})');
+xlabel('Binned GLODAP/WOD Oxygen Data (\mumol kg^{-1})');
 crossover.err_md_corr = median(crossover.oxy_delta_corr(idx));
 crossover.std_corr = std(crossover.oxy_delta_corr(idx));
 crossover.rmse_corr = sqrt(mean((crossover.oxy_delta_corr(idx)).^2));
-crossover.r2_corr = corr(crossover.oxy_glodap(idx),crossover.oxy_float_corr(idx));
-crossover.slope_corr = polyfit(crossover.oxy_glodap(idx),crossover.oxy_float_corr(idx),1);
+crossover.r2_corr = corr(crossover.oxy_ship(idx),crossover.oxy_float_corr(idx));
+crossover.slope_corr = polyfit(crossover.oxy_ship(idx),crossover.oxy_float_corr(idx),1);
 crossover.slope_corr = crossover.slope_corr(1);
 text(300,120,['Med. Err. = ' num2str(round(crossover.err_md_corr,2))],'fontsize',12);
 text(300,90,['RMSE = ' num2str(round(crossover.rmse_corr,1))],'fontsize',12);
@@ -425,7 +402,7 @@ sig2_min = double(mean(crossover.oxy_delta_corr(idx))-2*std(crossover.oxy_delta_
 sig2_max = double(mean(crossover.oxy_delta_corr(idx))+2*std(crossover.oxy_delta_corr(idx)));
 plot([sig2_min sig2_min],[0 1],'r','linewidth',1);
 plot([sig2_max sig2_max],[0 1],'r','linewidth',1);
-xlabel('Float [O_{2}] - GLODAP [O_{2}]');
+xlabel('Float [O_{2}] - Ship [O_{2}]');
 xL = xlim; yL = ylim;
 text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
     num2str(round(mean(crossover.oxy_delta_corr(idx)),2))],...
@@ -433,12 +410,12 @@ text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
 text(0.9*xL(1),0.8*yL(2),['Std. \Delta[O_{2}] = ' ...
     num2str(round(std(crossover.oxy_delta_corr(idx)),2))],...
     'HorizontalAlignment','left','VerticalAlignment','top');
-exportgraphics(gcf,[pwd '/O2/Figures/Data/GLODAP_comp_histogram_corr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[pwd '/O2/Figures/Data/Ship_comp_histogram_corr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear crossover
 
-%% plot uncorrected float vs. glodap residuals
+%% plot uncorrected float vs. ship residuals
 load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx');
 % scatter
 figure; hold on;
@@ -452,12 +429,12 @@ plot(avg_delta_by_p,pressures);
 set(gca,'YDir','reverse');
 
 ylabel('Pressure (dbar)');
-xlabel('Binned GLODAP Oxygen Data (\mumol kg^{-1})');
+xlabel('Binned GLODAP/WOD Oxygen Data (\mumol kg^{-1})');
 crossover.err_md = median(crossover.oxy_delta(idx));
 crossover.std = std(crossover.oxy_delta(idx));
 crossover.rmse = sqrt(mean((crossover.oxy_delta(idx)).^2));
-crossover.r2 = corr(crossover.oxy_glodap(idx),crossover.oxy_float(idx));
-crossover.slope = polyfit(crossover.oxy_glodap(idx),crossover.oxy_float(idx),1);
+crossover.r2 = corr(crossover.oxy_ship(idx),crossover.oxy_float(idx));
+crossover.slope = polyfit(crossover.oxy_ship(idx),crossover.oxy_float(idx),1);
 crossover.slope = crossover.slope(1);
 text(300,120,['Med. Err. = ' num2str(round(crossover.err_md,2))],'fontsize',12);
 text(300,90,['RMSE = ' num2str(round(crossover.rmse,1))],'fontsize',12);
@@ -474,7 +451,7 @@ sig2_min = double(mean(crossover.oxy_delta(idx))-2*std(crossover.oxy_delta(idx))
 sig2_max = double(mean(crossover.oxy_delta(idx))+2*std(crossover.oxy_delta(idx)));
 plot([sig2_min sig2_min],[0 1],'r','linewidth',1);
 plot([sig2_max sig2_max],[0 1],'r','linewidth',1);
-xlabel('GLODAP [O_{2}] - Float [O_{2}]');
+xlabel('Float [O_{2}] - GLODAP/WOD [O_{2}]');
 xL = xlim; yL = ylim;
 text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
     num2str(round(mean(crossover.oxy_delta(idx)),2))],...
@@ -482,7 +459,7 @@ text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
 text(0.9*xL(1),0.8*yL(2),['Std. \Delta[O_{2}] = ' ...
     num2str(round(std(crossover.oxy_delta(idx)),2))],...
     'HorizontalAlignment','left','VerticalAlignment','top');
-exportgraphics(gcf,[pwd '/O2/Figures/Data/GLODAP_comp_histogram_uncorr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[pwd '/O2/Figures/Data/Ship_comp_histogram_uncorr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear crossover

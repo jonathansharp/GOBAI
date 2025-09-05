@@ -1,7 +1,12 @@
 %% Plot clusters over time
 
-function plot_cluster_animation(param_props,param_path,base_grid,num_clusters,...
-    start_year,snap_date,numWorkers_train)
+function plot_cluster_animation(param_props,fpaths,base_grid,num_clusters,...
+    start_year,snap_date,numWorkers_train,flt,gld,ctd)
+
+% define dataset extensions
+if flt == 1; float_ext = 'f'; else float_ext = ''; end
+if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
+if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
 
 % process date
 date_str = num2str(snap_date);
@@ -14,7 +19,7 @@ else
     path2 = ['_Omon_' base_grid '_'];
     path3 = '_r1i1p1f1_gr';
     % define filename
-    filename = [param_path 'combined/regridded/abs_sal' path2 ...
+    filename = [fpaths.param_path 'combined/regridded/abs_sal' path2 ...
         'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
     % load pressures
     pressures = ncread(filename,'depth');
@@ -28,10 +33,11 @@ parfor d = 1:length(pressures)
     dname = [param_props.dir_name '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
     % establish file name
-    fname = ['cluster_animation_' num2str(pressures(d)) 'dbar.gif'];
+    fname = ['cluster_animation_' float_ext glodap_ext ctd_ext '_' ...
+        num2str(pressures(d)) 'dbar.gif'];
     % determine number of monthly timesteps
-    folder_name = [param_path 'GMM_' base_grid '_' num2str(num_clusters)];
-    cluster_inf = ncinfo([folder_name '/clusters.nc']);
+    folder_name = [fpaths.param_path 'GMM_' base_grid '_' num2str(num_clusters)];
+    cluster_inf = ncinfo([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc']);
     for dims = 1:length(cluster_inf.Dimensions)
         if strcmp(cluster_inf.Dimensions(dims).Name,'time')
             t_idx = dims;
@@ -39,9 +45,9 @@ parfor d = 1:length(pressures)
     end
     timesteps = cluster_inf.Dimensions(t_idx).Length;
     % load dimensions
-    Longitude = ncread([folder_name '/clusters.nc'],'lon');
-    Latitude = ncread([folder_name '/clusters.nc'],'lat');
-    Pressure = ncread([folder_name '/clusters.nc'],'pres');
+    Longitude = ncread([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'],'lon');
+    Latitude = ncread([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'],'lat');
+    Pressure = ncread([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'],'pres');
     % process longitude
     idx_20 = Longitude<20;
     Longitude(idx_20) = Longitude(idx_20)+360;
@@ -50,7 +56,7 @@ parfor d = 1:length(pressures)
     depth_idx = find(Pressure == pressures(d));
     % set counter
     cnt = 1;
-    % establish fiugre
+    % establish figure
     h = figure('color','w','visible','off');
     axis tight manual
     % plot clusters each month/week
@@ -58,9 +64,9 @@ parfor d = 1:length(pressures)
         % clear frame
         clf
         % load monthly clusters
-        GMM_clusters = ncread([folder_name '/clusters.nc'],...
+        GMM_clusters = ncread([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'],...
             'clusters',[1 1 1 t],[Inf Inf Inf 1]);
-        time = ncread([folder_name '/clusters.nc'],'time',t,1);
+        time = ncread([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'],'time',t,1);
         % make plot
         m_proj('robinson','lon',[20 380]);
         z = [GMM_clusters(~idx_20,:,depth_idx);GMM_clusters(idx_20,:,depth_idx)];

@@ -7,7 +7,7 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 04/21/2025
+% DATE: 07/02/2025
 
 function adjust_dic_float_data(float_file_ext,glodap_year,snap_date)
 
@@ -17,6 +17,13 @@ load(['DIC/Data/processed_float_dic_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date');
 load(['DIC/Data/processed_glodap_dic_data_' num2str(glodap_year) '.mat'],...
     'glodap_data');
+
+%% pH range test
+idx = float_data.PH < 7.4 | float_data.PH > 8.3;
+vars = fieldnames(float_data);
+for v = 1:length(vars)
+    float_data.(vars{v})(idx) = [];
+end
 
 %% calculate DIC from float data
 % convert pressure to depth

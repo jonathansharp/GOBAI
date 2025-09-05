@@ -1,25 +1,28 @@
-function [model_path,param_path,temp_path,sal_path] = path_config(base_grid,param)
+function fpaths = path_config(base_grid,param)
 
 % model path
-model_path = '/fast7/sharp/model/';
+fpaths.model_path = '/fast7/model/';
 
 % temperature and salinity paths
 if strcmp(base_grid,'RG')
-    temp_path = [pwd '/Data/RG_CLIM/'];
-    sal_path = [pwd '/Data/RG_CLIM/'];
+    fpaths.temp_path = [pwd '/Data/RG_CLIM/'];
+    fpaths.sal_path = [pwd '/Data/RG_CLIM/'];
 elseif strcmp(base_grid,'RFROM')
-    temp_path = '/fast2/sharp/temp/';
-    sal_path = '/fast3/sharp/sal/';
+    fpaths.temp_path = '/fast2/temperature/';
+    fpaths.sal_path = '/fast3/salinity/';
 else
-    temp_path = '';
-    sal_path = '';
+    fpaths.temp_path = '';
+    fpaths.sal_path = '';
 end
 
 % parameter path
 if strcmp(param,'o2')
-    param_path = '/fast4/sharp/o2/';
+    fpaths.param_path_temp = '/fast4/o2/';
+    fpaths.param_path = '/data2/o2/';
 elseif strcmp(param,'no3')
-    param_path = '/fast5/sharp/no3/';
+    fpaths.param_path_temp = '/fast5/no3/';
+    fpaths.param_path = '/data2/no3/';
 elseif strcmp(param,'dic')
-    param_path = '/fast6/sharp/dic/';
+    fpaths.param_path_temp = '/fast6/dic/';
+    fpaths.param_path = '/data2/dic/';
 end

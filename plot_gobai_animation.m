@@ -1,8 +1,13 @@
 
 %% Plot GOBAI over time
 
-function plot_gobai_animation(param_props,param_path,base_grid,num_clusters,...
-    alg_type,file_date,float_file_ext,numWorkers_predict,varargin)
+function plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,...
+    alg_type,file_date,float_file_ext,numWorkers_predict,flt,gld,ctd,varargin)
+
+%% define dataset extensions
+if flt == 1; float_ext = 'f'; else float_ext = ''; end
+if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
+if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
 
 %% set pressures
 pressures = [2.5 10 50 100 200 300 500 1000 1500 1975];
@@ -22,6 +27,8 @@ numtrees = NaN;
 minLeafSize = NaN;
 numstumps = NaN;
 numbins = NaN;
+uncer = 0;
+anom = 0;
 % process based on algorithm type
 if strcmp(alg_type,'FFNN')
     for i = 1:2:length(varargin)-1
@@ -31,6 +38,10 @@ if strcmp(alg_type,'FFNN')
             val_ratio = varargin{i+1};
         elseif strcmpi(varargin{i}, 'test_ratio')
             test_ratio = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'uncer')
+            uncer = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'anom')
+            anom = varargin{i+1};
         end
     end
 elseif strcmp(alg_type,'RFR')
@@ -39,6 +50,10 @@ elseif strcmp(alg_type,'RFR')
             numtrees = varargin{i+1};
         elseif strcmpi(varargin{i}, 'minLeafSize')
             minLeafSize = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'uncer')
+            uncer = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'anom')
+            anom = varargin{i+1};
         end
     end
 elseif strcmp(alg_type,'GBM')
@@ -47,6 +62,10 @@ elseif strcmp(alg_type,'GBM')
             numstumps = varargin{i+1};
         elseif strcmpi(varargin{i}, 'numbins')
             numbins = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'uncer')
+            uncer = varargin{i+1};
+        elseif strcmpi(varargin{i}, 'anom')
+            anom = varargin{i+1};
         end
     end
 elseif strcmp(alg_type,'AVG')
@@ -56,7 +75,7 @@ else
 end
 
 %% set up parallel pool
-% tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+%tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% plot frames
 for d = 1:length(pressures)
@@ -65,25 +84,34 @@ for d = 1:length(pressures)
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
     % define directory for file
     if strcmp(alg_type,'FFNN')
-        dir_base = [param_path 'GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) ...
+        dir_base = [fpaths.param_path 'GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) ...
             '_' file_date float_file_ext '/train' num2str(100*train_ratio) ...
             '_val' num2str(100*test_ratio) '_test' num2str(100*val_ratio)];
     elseif strcmp(alg_type,'RFR')
-        dir_base = [param_path 'GOBAI/' base_grid '/RFR/c' num2str(num_clusters) ...
+        dir_base = [fpaths.param_path 'GOBAI/' base_grid '/RFR/c' num2str(num_clusters) ...
             '_' file_date float_file_ext '/tr' ...
             num2str(numtrees) '_lf' num2str(minLeafSize)];
     elseif strcmp(alg_type,'GBM')
-        dir_base = [param_path 'GOBAI/' base_grid '/GBM/c' num2str(num_clusters) ...
+        dir_base = [fpaths.param_path 'GOBAI/' base_grid '/GBM/c' num2str(num_clusters) ...
             '_' file_date float_file_ext '/tr' num2str(numstumps) ...
             '_bin' num2str(numbins)];
     elseif strcmp(alg_type,'AVG')
-        dir_base = [param_path 'GOBAI/' base_grid '/AVG/c' num2str(num_clusters) ...
+        dir_base = [fpaths.param_path 'GOBAI/' base_grid '/AVG/c' num2str(num_clusters) ...
             '_' file_date float_file_ext];
     end
     % establish file name
-    fname = ['gobai_animation_' num2str(pressures(d)) 'dbar.gif'];
+    if uncer == 0 && anom == 0
+        fname = ['gobai_animation_' num2str(pressures(d)) 'dbar.gif'];
+        gobai_fname = [dir_base '/' float_ext glodap_ext ctd_ext ...
+            '/gobai-' param_props.file_name '.nc'];
+    elseif uncer == 1
+        fname = ['gobai_uncer_animation_' num2str(pressures(d)) 'dbar.gif'];
+        gobai_fname = [dir_base '/gobai-' param_props.file_name '-uncer.nc'];
+    elseif anom == 1
+        fname = ['gobai_anom_animation_' num2str(pressures(d)) 'dbar.gif'];
+        gobai_fname = [dir_base '/gobai-' param_props.file_name '.nc'];
+    end
     % determine number of timesteps
-    gobai_fname = [dir_base '/gobai-' param_props.file_name '.nc'];
     gobai_inf = ncinfo(gobai_fname);
     for dims = 1:length(gobai_inf.Dimensions)
         if strcmp(gobai_inf.Dimensions(dims).Name,'time')
@@ -102,51 +130,68 @@ for d = 1:length(pressures)
     % depth index
     depth_idx = find(Pressure == pressures(d));
     % establish fiugre
-    h = figure('color','w','visible','on','Position',[616 474 1200 800]);
+    h = figure('color','w','visible','off','Position',[616 474 1200 800]);
     axis tight manual
     % plot clusters each month/week
     for t = 1:timesteps
         % clear frame
         clf
         % load monthly gobai
-        gobai = ncread(gobai_fname,param_props.file_name,...
-            [1 1 depth_idx t],[Inf Inf 1 1]);
-        time = ncread(gobai_fname,'time',t,1);
+        if uncer == 1
+            gobai = ncread(gobai_fname,['u_tot_' param_props.file_name],...
+                [1 1 depth_idx t],[Inf Inf 1 1]);
+        else
+            gobai = ncread(gobai_fname,param_props.file_name,...
+                [1 1 depth_idx t],[Inf Inf 1 1]);
+        end
+        time = datenum(1950,0,0) + ncread(gobai_fname,'time',t,1);
         % establish figure
-        figure(h);
         set(gca,'FontSize',20);
         % make plot
         m_proj('robinson','lon',[20 380]);
         z = [gobai(~idx_20,:);gobai(idx_20,:)];
         m_pcolor(double(Longitude),double(Latitude),double(z)');
         if strcmp(base_grid,'RFROM')
-            title(gca,datestr(datenum(1950,0,0)+time),'FontSize',20);
+            title(gca,datestr(time,'mmm-YYYY'),'FontSize',20);
         else
             title(gca,extractAfter(datestr(datenum(2004,t,1)),'-'),'FontSize',20);
         end
-        colormap(param_props.cmap);
         m_coast('patch',rgb('grey'));
         m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
-        clim([param_props.edges(1) param_props.edges(end)]);
+        if uncer == 0
+            clim([param_props.edges(1) param_props.edges(end)]);
+        elseif uncer == 1
+            clim([param_props.edges(1) param_props.edges(end)/10]);
+        end
         c=colorbar;
-        c.Limits = [param_props.edges(1) param_props.edges(end)];
         c.Label.String = [param_props.label ' ' param_props.units];
         c.TickLength = 0;
-        % save frame
+        % define colormap
+        if uncer == 0 && anom == 0
+            colormap(param_props.cmap);
+        elseif uncer == 1
+            colormap(cmocean('amp'));
+        elseif anom == 1
+            colormap(cmocean('balance','pivot',0));
+        end
+        % create folder
         if ~isfolder([dname '/' num2str(pressures(d)) 'dbars'])
             mkdir([dname '/' num2str(pressures(d)) 'dbars']);
         end
-        export_fig(h,[dname '/' num2str(pressures(d)) ...
-            'dbars/t' num2str(t) '.png'],'-transparent','-silent');
-        % capture frame
-        frame = getframe(h);
-        im = frame2im(frame);
-        [imind,cm] = rgb2ind(im,256);
+        % save frame
+        % export_fig(h,[dname '/' num2str(pressures(d)) ...
+        %     'dbars/t' num2str(t) '.png'],'-transparent','-silent');
+        % % capture frame
+        % frame = getframe(h);
+        % im = frame2im(frame);
+        % [imind,cm] = rgb2ind(im,256);
         % write to file
         if t == 1
-            imwrite(imind,cm,[dname '/' fname],'gif','Loopcount',inf,'DelayTime',delay_time);
+            % imwrite(imind,cm,[dname '/' fname],'gif','Loopcount',inf,'DelayTime',delay_time);
+            exportgraphics(h,[dname '/' fname],'Append',false);
         else
-            imwrite(imind,cm,[dname '/' fname],'gif','WriteMode','append','DelayTime',delay_time);
+            % imwrite(imind,cm,[dname '/' fname],'gif','WriteMode','append','DelayTime',delay_time);
+            exportgraphics(h,[dname '/' fname],'Append',true);
         end
     end
     close

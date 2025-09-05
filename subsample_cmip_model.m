@@ -1,13 +1,17 @@
 function subsample_cmip_model(param_props,data,model,fpath,file_date,...
-    snap_date,float_file_ext,start_year,rlz)
+    snap_date,float_file_ext,start_year,rlz,float_ext,glodap_ext,ctd_ext)
 
 %% process date
 date_str = num2str(snap_date);
 
 %% check if processed file already exists
-if ~isfile([param_props.dir_name '/Data/' model '_' param_props.file_name '_data_' file_date float_file_ext '.mat'])
+% if ~isfile([param_props.dir_name '/Data/' model '_' float_ext ...
+%         glodap_ext ctd_ext '_' param_props.file_name '_data_' ...
+%         file_date float_file_ext '.mat'])
+
 %% load variables
-nc_filepath = [fpath 'combined/regridded/' param_props.file_name '_Omon_' model ... % define filepath
+nc_filepath = [fpath 'combined/regridded/' param_props.file_name ...
+    '_Omon_' model ... % define filepath
     '_combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 lat = ncread(nc_filepath,'lat');
 lon = ncread(nc_filepath,'lon');
@@ -26,7 +30,7 @@ lon_diff = diff(lon)./2;
 lat_diff = diff(lat)./2;
 [~,~,Ynum] = histcounts(data.latitude,[lat(1)-lat_diff(1); ...
     lat(2:end)-lat_diff; lat(end)+lat_diff(end)]);
-% determine bin number of each latitude point
+% determine bin number of each depth point
 depth_diff = diff(depth)./2;
 [~,~,Znum] = histcounts(data.depth,[depth(1)-depth_diff(1); ...
     depth(2:end)-depth_diff; depth(end)+depth_diff(end)]);
@@ -36,7 +40,7 @@ time_diff = diff(time)./2;
     time(2:end)-time_diff; time(end)+time_diff(end)]);
 clear lat_diff time_diff
 
-%% accumulate 3D grid
+%% accumulate 4D grid
 idx = Xnum > 0 & Ynum > 0 & Znum > 0 & Tnum > 0;
 subs = [Xnum(idx), Ynum(idx), Znum(idx) Tnum(idx)];
 clear Xnum Ynum Znum 
@@ -71,6 +75,10 @@ for v = 1:length(vars)
         all_data.(vars{v}) = var(train_idx_mod);
     end
 end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% add uncertainty to measurements??
+
 
 %% add 3d dimensional variables
 lon = convert_lon(lon,'format','-180:180'); % convert longitude back to -180 to 180
@@ -139,18 +147,20 @@ c.Label.String = ['Average Gridded ' param_props.fig_name];
 c.FontSize = 12;
 mlabel off; plabel off;
 if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
-export_fig(['Figures/' model '/subsampled_' param_props.fig_name '_20m.png'],'-transparent');
+export_fig(['Figures/' model '/subsampled_' param_props.fig_name '_' ...
+    float_ext glodap_ext ctd_ext '_20m.png'],'-transparent');
 close
 
 %% save data
-save([param_props.dir_name '/Data/' model '_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
+save([param_props.dir_name '/Data/' model '_' param_props.file_name ...
+    '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext '.mat'],...
     'all_data','file_date','-v7.3');
 
-else
-
-%% display information
-disp([model ' already subsampled for ' date_str(5:6) '/' date_str(1:4)]);
-
-end
+% else
+% 
+% %% display information
+% disp([model ' already subsampled for ' date_str(5:6) '/' date_str(1:4)]);
+% 
+% end
 
 end

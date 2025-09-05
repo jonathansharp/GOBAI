@@ -6,18 +6,18 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 11/30/2023
+% DATE: 5/29/2025
 
 %% establish paths, folders, and options
 % file paths and names
-fpath = '/fast2/sharp/temp/';
-folder = 'RFROM_TEMP_v0.1';
-fname = '/RFROM_TEMP_STABLE_';
+fpath = '/fast2/temperature/';
+folder = 'RFROM_TEMP_v2.2';
+fname = '/RFROMV22_TEMP_STABLE_';
 % create annual file folder
 if ~isfolder([fpath folder '_annual']); mkdir([fpath folder '_annual']); end
 % timespan
-y1 = 2004;
-y2 = 2022;
+y1 = 1993;
+y2 = 2024;
 
 %% create monthly annual files
 % loop through each year to create annual files

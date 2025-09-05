@@ -9,7 +9,7 @@
 %
 % DATE: 7/31/2025
 
-function gmm_clustering(param_props,fpaths,base_grid,start_year,end_year,snap_date,...
+function gmm_clustering_new(param_props,fpaths,base_grid,start_year,end_year,snap_date,...
     float_file_ext,clust_vars,num_clusters,numWorkers_cluster,flt,gld,ctd,varargin)
 
 %% define dataset extensions
@@ -73,6 +73,8 @@ end
     for v = 1:length(clust_vars)
         predictor_matrix = [predictor_matrix all_data.(clust_vars{v})];
     end
+    basins = find_basin_paige();
+    for b = 1
     [X_norm,C,S] = normalize(predictor_matrix);
     % reduce inputs for model training to 100,000 random data points
     idx_rand = randperm(length(X_norm),100000)';
@@ -186,13 +188,11 @@ length_expt = (end_year-start_year)*12 + 12;
     if strcmp(base_grid,'RG')
        [TS,months,weeks,timesteps] = load_RG_dim(fpaths.temp_path);
        % create file
-       create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,...
-           TS.zdim,folder_name,float_ext,glodap_ext,ctd_ext);
+       create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
     elseif strcmp(base_grid,'RFROM')
         [TS,months,weeks,timesteps] = load_RFROM_dim(fpaths.temp_path,start_year,end_year);
         % create file
-        create_nc_files(TS,0,base_grid,TS.xdim,TS.ydim,TS.zdim,...
-            folder_name,float_ext,glodap_ext,ctd_ext); % don't write cluster probs for RFROM
+        create_nc_files(TS,0,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name); % don't write cluster probs for RFROM
     else
         % define paths
         path2 = ['_Omon_' base_grid '_'];
@@ -204,8 +204,7 @@ length_expt = (end_year-start_year)*12 + 12;
         % load dimensions
         [TS,months,weeks,timesteps] = load_model_dim(nc_filepath_abs_sal);
         % create file
-        create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,...
-            TS.zdim,folder_name,float_ext,glodap_ext,ctd_ext);
+        create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,TS.zdim,folder_name);
     end
     
     % load GMM model
@@ -307,12 +306,11 @@ function assign_to_gmm_clusters(TS,base_grid,gmm,num_clusters,idx,X_norm,t,folde
 end
 
 % for creating netCDF file
-function create_nc_files(TS,num_clusters,base_grid,xdim,ydim,zdim,...
-    folder_name,float_ext,glodap_ext,ctd_ext)
+function create_nc_files(TS,num_clusters,base_grid,xdim,ydim,zdim,folder_name)
 
     % define file name and create file
     if ~isfolder(folder_name); mkdir(folder_name); end
-    filename = [folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'];
+    filename = [folder_name '/clusters.nc'];
 
     % longitude
     nccreate(filename,'lon','Dimensions',{'lon',xdim},...

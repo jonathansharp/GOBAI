@@ -13,8 +13,8 @@ function adjust_no3_float_data(float_file_ext,glodap_year,snap_date)
 
 %% Only do all this if downloaded float matlab file does not exist
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-if exist(['NO3/Data/processed_float_no3_data_adjusted_' file_date ...
-        float_file_ext '.mat'],'file') ~= 2
+%if exist(['NO3/Data/processed_float_no3_data_adjusted_' file_date ...
+%        float_file_ext '.mat'],'file') ~= 2
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
@@ -23,62 +23,78 @@ load(['NO3/Data/processed_float_no3_data_' file_date float_file_ext '.mat'],...
 load(['NO3/Data/processed_glodap_no3_data_' num2str(glodap_year) '.mat'],...
     'glodap_data');
 
+
+%%%%%%%%%%%%%%%%%%%
+%error('FIX WOA match issue');
+
 %% import WOA climatologies
 temp_path = [pwd '/Data/WOA/TEMPERATURE/'];
 sal_path = [pwd '/Data/WOA/SALINITY/'];
+oxy_path = [pwd '/Data/WOA/OXYGEN/'];
 nit_path = [pwd '/Data/WOA/NITRATE/'];
 for m = 1:12
     WOA.TMP(:,:,:,m) = ncread([temp_path 'woa18_decav_t' sprintf('%02d',m) '_01.nc'],'t_an');
     WOA.SAL(:,:,:,m) = ncread([sal_path 'woa18_decav_s' sprintf('%02d',m) '_01.nc'],'s_an');
+    WOA.OXY(:,:,:,m) = ncread([oxy_path 'woa18_all_o',sprintf('%02d',m),'_01.nc'],'o_an');
     WOA.NIT(:,:,:,m) = ncread([nit_path 'woa18_all_n',sprintf('%02d',m),'_01.nc'],'n_an');
 end
 % Import and format WOA latitude and longitude
 WOA.LAT   = ncread([nit_path 'woa18_all_n01_01.nc'],'lat');
 WOA.LON   = ncread([nit_path 'woa18_all_n01_01.nc'],'lon');
-WOA.DEPTH = ncread([nit_path 'woa18_all_n01_01.nc'],'depth');
+WOA.DEPTH = ncread([oxy_path 'woa18_all_o01_01.nc'],'depth');
+[~,lat_3d,depth_3d] = ndgrid(WOA.LON,WOA.LAT,WOA.DEPTH);
+WOA.PRES = -gsw_p_from_z(depth_3d,lat_3d);
 % clean up
 clear m temp_path sal_path nit_path
 
 %% compare float data to WOA
 % index to valid data points
-idx = find(~isnan(float_data.NIT) & ~isnan(float_data.LAT) & ...
-    ~isnan(float_data.LON) & ~isnan(float_data.PRES) & ...
-    ~isnan(float_data.TIME));
+idx = find(~isnan(float_data.OXY) & ~isnan(float_data.NIT) & ...
+    ~isnan(float_data.LAT) & ~isnan(float_data.LON) & ...
+    ~isnan(float_data.PRES) & ~isnan(float_data.TIME));
 % obtain month from date
 date = datevec(datenum(float_data.YEAR,0,float_data.DAY));
 float_data.MONTH = date(:,2);
 clear date
 % pre-allocate matches
-WOA_match = nan(size(float_data.NIT));
+WOA_NIT_match = nan(size(float_data.NIT));
+WOA_OXY_match = nan(size(float_data.OXY));
 % match float data with WOA
 for i=1:length(idx)
     idx_lon = find(min(abs(WOA.LON - float_data.LON(idx(i)))) == ...
         abs(WOA.LON - float_data.LON(idx(i))));
     idx_lat = find(min(abs(WOA.LAT - float_data.LAT(idx(i)))) == ...
         abs(WOA.LAT - float_data.LAT(idx(i))));
-    idx_pres = find(min(abs(WOA.DEPTH - float_data.PRES(idx(i)))) == ...
-        abs(WOA.DEPTH - float_data.PRES(idx(i))));
+    idx_pres = find(min(abs(squeeze(WOA.PRES(idx_lon,idx_lat,:)) - float_data.PRES(idx(i)))) == ...
+        abs(squeeze(WOA.PRES(idx_lon,idx_lat,:)) - float_data.PRES(idx(i))));
     idx_mnth = find(min(abs((1:12)' - float_data.MONTH(idx(i)))) == ...
         abs((1:12)' - float_data.MONTH(idx(i))));
-    WOA_match(idx(i)) = WOA.NIT(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
+    WOA_OXY_match(idx(i)) = WOA.OXY(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
+    WOA_NIT_match(idx(i)) = WOA.NIT(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
 end
-% calculate differences
-WOA_delta = float_data.NIT-WOA_match;
-WOA_delta_per = WOA_delta./float_data.NIT;
-WOA_delta_per(isinf(WOA_delta_per))=NaN;
-st_dev_delta = std(WOA_delta,[],'omitnan');
-mean_delta = mean(WOA_delta,'omitnan');
+% calculate differences for oxygen
+WOA_oxy_delta = float_data.OXY-WOA_OXY_match;
+WOA_oxy_delta_per = WOA_oxy_delta./float_data.OXY;
+WOA_oxy_delta_per(isinf(WOA_oxy_delta_per))=NaN;
+st_dev_oxy_delta = std(WOA_oxy_delta,[],'omitnan');
+mean_oxy_delta = mean(WOA_oxy_delta,'omitnan');
+% calculate differences for nitrate
+WOA_nit_delta = float_data.NIT-WOA_NIT_match;
+WOA_nit_delta_per = WOA_nit_delta./float_data.NIT;
+WOA_nit_delta_per(isinf(WOA_nit_delta_per))=NaN;
+st_dev_nit_delta = std(WOA_nit_delta,[],'omitnan');
+mean_nit_delta = mean(WOA_nit_delta,'omitnan');
 % clean up
 clear idx idx_lon idx_lat idx_pres idx_mnth WOA i
 
 %% plot differences between float data and WOA
 % histogram of differences
 figure; hold on
-histogram(WOA_delta);
+histogram(WOA_nit_delta);
 set(gca,'fontsize',16);
 ax = gca;
-plot([mean_delta+5*st_dev_delta mean_delta+5*st_dev_delta],ax.YLim,'r','linewidth',2);
-plot([mean_delta-5*st_dev_delta mean_delta-5*st_dev_delta],ax.YLim,'r','linewidth',2);
+plot([mean_nit_delta+5*st_dev_nit_delta mean_nit_delta+5*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
+plot([mean_nit_delta-5*st_dev_nit_delta mean_nit_delta-5*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
 xlabel('Float [NO_{3}] - WOA [NO_{3}]');
 if ~exist([pwd '/NO3/Figures/Data'],'dir'); mkdir('NO3/Figures/Data'); end
 exportgraphics(gcf,[pwd '/NO3/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
@@ -89,7 +105,7 @@ set(gca,'fontsize',16);
 xlabel('WOA [NO_{3}]');
 ylabel('Float [NO_{3}] - WOA [NO_{3}]');
 [counts,bin_centers] = ...
-    hist3([WOA_match,WOA_delta],'Edges',{0:1:46 -34.5:1.5:34.5});
+    hist3([WOA_NIT_match,WOA_nit_delta],'Edges',{0:1:46 -34.5:1.5:34.5});
 h=pcolor(bin_centers{1}-mean(diff(bin_centers{1}))/2,...
     bin_centers{2}-mean(diff(bin_centers{2}))/2,counts');
 plot([0 45],[0 0],'k--');
@@ -108,9 +124,60 @@ close
 % clean up
 clear counts bin_centers c h myColorMap
 
-%% remove data points more than 5 sigmas from WOA value
-idx_rem = WOA_delta > mean_delta+5.*st_dev_delta | WOA_delta < mean_delta-5.*st_dev_delta;
+%% remove data points more than 5 sigmas from WOA values
+pres_levels = unique(float_data.PRES);
+idx_nit_rem = false(length(WOA_nit_delta),1);
+idx_oxy_rem = false(length(WOA_oxy_delta),1);
+st_dev_oxy_delta_pres = nan(size(pres_levels));
+mean_oxy_delta_pres = nan(size(pres_levels));
+st_dev_nit_delta_pres = nan(size(pres_levels));
+mean_nit_delta_pres = nan(size(pres_levels));
+for z = 1:length(pres_levels)
+    pres_idx = float_data.PRES == pres_levels(z);
+    st_dev_oxy_delta_pres(z) = std(WOA_oxy_delta(pres_idx),[],'omitnan');
+    mean_oxy_delta_pres(z) = mean(WOA_oxy_delta(pres_idx),'omitnan');
+    st_dev_nit_delta_pres(z) = std(WOA_nit_delta(pres_idx),[],'omitnan');
+    mean_nit_delta_pres(z) = mean(WOA_nit_delta(pres_idx),'omitnan');
+    idx_rem(pres_idx) = ...
+        WOA_oxy_delta(pres_idx) > mean_oxy_delta_pres(z)+3.*st_dev_oxy_delta_pres(z) | ...
+        WOA_oxy_delta(pres_idx) < mean_oxy_delta_pres(z)-3.*st_dev_oxy_delta_pres(z) | ...
+        WOA_nit_delta(pres_idx) > mean_nit_delta_pres(z)+3.*st_dev_nit_delta_pres(z) | ...
+        WOA_nit_delta(pres_idx) < mean_nit_delta_pres(z)-3.*st_dev_nit_delta_pres(z);
+end
+disp([num2str(sum(idx_rem)) ' data points removed by WOA comparison test (' ...
+    num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
+vars = fieldnames(float_data);
+figure; plot(st_dev_oxy_delta_pres,pres_levels); xlabel('OXY (Float - WOA)'); ylabel('pres.');
+figure; plot(st_dev_nit_delta_pres,pres_levels); xlabel('NIT (Float - WOA)'); ylabel('pres.');
+for v = 1:length(vars)
+    float_data.(vars{v})(idx_rem) = [];
+end
+WOA_delta(idx_rem) = [];
+
+
+
+pres_levels = unique(float_data.PRES);
+idx_nit_rem = false(length(WOA_nit_delta),1);
+idx_oxy_rem = false(length(WOA_oxy_delta),1);
+idx_nit_rem = WOA_nit_delta > mean_nit_delta+5.*st_dev_nit_delta | ...
+    WOA_nit_delta < mean_nit_delta-5.*st_dev_nit_delta;
+idx_oxy_rem = WOA_oxy_delta > mean_oxy_delta+5.*st_dev_oxy_delta | ...
+    WOA_oxy_delta < mean_oxy_delta-5.*st_dev_oxy_delta;
 % sum(idx_rem)
+plats = unique(float_data.PROF_ID);
+for n=1:length(plats)
+    idx = float_data.PROF_ID == plats(n);
+    if any(idx_nit_rem(idx)) || any(idx_oxy_rem(idx))
+        figure; set(gca,'YDir','reverse');
+        plot(float_data.OXY(idx),float_data.PRES(idx),...
+            WOA_OXY_match(idx),float_data.PRES(idx));
+        legend({'Float OXY' 'WOA OXY'});
+        figure; set(gca,'YDir','reverse');
+        plot(float_data.NIT(idx),float_data.PRES(idx),...
+            WOA_NIT_match(idx),float_data.PRES(idx));
+        legend({'Float NIT' 'WOA NIT'});
+    end
+end
 vars = fieldnames(float_data);
 for v = 1:length(vars)
     float_data.(vars{v})(idx_rem) = [];
@@ -402,10 +469,10 @@ save(['NO3/Data/processed_float_no3_data_adjusted_' file_date float_file_ext '.m
     'float_data_adjusted','file_date','-v7.3');
 clear slp int float_data float_data_adjusted v vars
 
-
-else
-
-% display information
-disp('Float data already adjusted.')
-
-end
+% 
+% else
+% 
+% % display information
+% disp('Float data already adjusted.')
+% 
+% end
