@@ -259,6 +259,7 @@ alg_med_err = median(alg_output.k_fold_delta,'omitnan');
 alg_rmse = sqrt(mean(alg_output.k_fold_delta.^2,'omitnan'));
 alg_med_abs_err = median(abs(alg_output.k_fold_delta),'omitnan');
 % print error stats
+fprintf([num2str(num_clusters) ' Clusters']);
 fprintf(['Mean Error = ' num2str(alg_mean_err) ' ' param_props.units '\n']);
 fprintf(['Median Error = ' num2str(alg_med_err) ' ' param_props.units '\n']);
 fprintf(['RMSE = ' num2str(alg_rmse) ' ' param_props.units '\n']);

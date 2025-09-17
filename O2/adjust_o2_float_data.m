@@ -127,6 +127,12 @@ clear counts bin_centers c h myColorMap
 idx_rem = float_data.OXY < 0 | float_data.OXY > 480;
 disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
     num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
+% idx_rem = glodap_data.OXY < 0 | glodap_data.OXY > 480;
+% disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
+%     num2str(100*(sum(idx_rem)/length(glodap_data.ID))) ' % of data)']);
+% idx_rem = wod_data.OXY < 0 | wod_data.OXY > 480;
+% disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
+%     num2str(100*(sum(idx_rem)/length(wod_data.ID))) ' % of data)']);
 vars = fieldnames(float_data);
 for v = 1:length(vars)
     float_data.(vars{v})(idx_rem) = [];

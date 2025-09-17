@@ -104,6 +104,7 @@ if strcmp(grid_label,'gr')
         lat = single(ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist1 '.nc'],'lat'));
         lon2d = nan; lat2d = nan;
         depth = single(ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist1 '.nc'],'lev'));
+        dpth_bnds = single(ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist1 '.nc'],'lev_bnds'));
     end
 elseif strcmp(grid_label,'gn')
     if strcmp(model,'NorESM2-LM') || strcmp(model,'IPSL-CM6A-LR')
@@ -112,16 +113,20 @@ elseif strcmp(grid_label,'gn')
         lon2d = convert_lon(lon2d,'0-360');
         lat2d = single(ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist1 '.nc'],'nav_lat'));
         depth = single(ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist1 '.nc'],'olevel'));
+        dpth_bnds = single(ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist1 '.nc'],'olevel_bounds'));
     elseif strcmp(model,'CanESM5') || strcmp(model,'ACCESS-ESM1-5') || strcmp(model,'MPI-ESM1-2-LR')
         lon = (0.5:359.5)'; lat = (-89.5:89.5)';
         lon2d = single(ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist1 '.nc'],'longitude'));
         lat2d = single(ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist1 '.nc'],'latitude'));
         depth = single(ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist1 '.nc'],'lev'));
+        dpth_bnds = single(ncread([path1_hist 'o2' path2 'historical' path3 '_' ext_hist1 '.nc'],'lev_bnds'));
     end
 end
 
 % index to above 2100m
-idx_depth = find(depth < 2100); depth = depth(idx_depth);
+idx_depth = find(depth < 2100);
+depth = depth(idx_depth);
+dpth_bnds = [dpth_bnds(1,idx_depth),dpth_bnds(2,idx_depth(end))]';
 
 %% load, combine, and save potential temperature
 nc_filepath = [fpath 'combined/regridded/thetao' path2 ... % define filepath
@@ -131,16 +136,16 @@ nc_filepath_temp = [fpath 'combined/regridded/thetao' path2 ... % define tempora
 % check if file exists and is the proper size
 if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
 % load and combine cmip output fields
-if l ~= length(time)
+% if l ~= length(time)
     combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
-        depth,time,time_strt,grid_label,'thetao',idx_depth,'Sea Water Potential Temperature',...
+        depth,dpth_bnds,time,time_strt,grid_label,'thetao',idx_depth,'Sea Water Potential Temperature',...
         'degC',ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2);
     % plot global mean timeseries
     thetao = ncread(nc_filepath,'thetao');
-    plot_global_timeseries(lat,lon,depth,time,thetao,'thetao',...
+    plot_global_timeseries(lat,lon,depth,dpth_bnds,time,thetao,'thetao',...
         'Potential Temperature',[char(176) 'C'],model);
     clear thetao
-end
+% end
 
 %% load, combine, and save salinity
 nc_filepath = [fpath 'combined/regridded/so' path2 ... % define filepath
@@ -152,11 +157,11 @@ if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
 % load and combine cmip output fields
 if l ~= length(time)
     combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
-        depth,time,time_strt,grid_label,'so',idx_depth,'Sea Water Salinity','n/a',...
+        depth,dpth_bnds,time,time_strt,grid_label,'so',idx_depth,'Sea Water Salinity','n/a',...
         ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2);
     % plot global mean timeseries
     so = ncread(nc_filepath,'so');
-    plot_global_timeseries(lat,lon,depth,time,so,'so','Salinity','n/a',model);
+    plot_global_timeseries(lat,lon,depth,dpth_bnds,time,so,'so','Salinity','n/a',model);
     clear so
 end
 
@@ -168,12 +173,12 @@ end
 % if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
 % if l ~= length(time)
 %     combine_cmip_field(nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,lon,lat,...
-%         depth,time,time_strt,grid_label,'chl',idx_depth);
+%         depth,dpth_bnds,time,time_strt,grid_label,'chl',idx_depth);
 %     limit chlorophyll to only surface values (to match observations)
 %     chl = repmat(chl(:,:,1,:),1,1,length(depth),1);
 %     % plot global mean timeseries
 %     chl = ncread(nc_filepath,'chl');
-%     plot_global_timeseries(lat,lon,depth,time,chl,'chl','Chlorophyll','mg/m2',model,fpath,grid_type);
+%     plot_global_timeseries(lat,lon,depth,dpth_bnds,time,chl,'chl','Chlorophyll','mg/m2',model,fpath,grid_type);
 % end
 
 %% process dimensional variables
@@ -209,10 +214,15 @@ if l ~= length(time)
         {'depth' depth 'depth' 'meters'},...
         {'time' time 'time' 'days since 0000-01-01'},...
         {'abs_sal' abs_sal 'Absolute Salinity' ''});
+    % write depth bounds
+    nccreate(nc_filepath,'dpth_bnds','Dimensions',{'dpth_bnds',length(dpth_bnds)});
+    ncwrite(nc_filepath,'dpth_bnds',dpth_bnds);
+    ncwriteatt(nc_filepath,'dpth_bnds','long_name','depth boundaries');
+    ncwriteatt(nc_filepath,'dpth_bnds','units','meters');
     clear so abs_sal
     % plot global mean timeseries
     abs_sal = ncread(nc_filepath,'abs_sal');
-    plot_global_timeseries(lat,lon,depth,time,abs_sal,'abs_sal',...
+    plot_global_timeseries(lat,lon,depth,dpth_bnds,time,abs_sal,'abs_sal',...
         'Absolute Salinity','n/a',model);
     clear abs_sal
 end
@@ -236,10 +246,15 @@ if l ~= length(time)
         {'depth' depth 'depth' 'meters'},...
         {'time' time 'time' 'days since 0000-01-01'},...
         {'cns_tmp' cns_tmp 'Conservative Temperature' 'degC'});
+    % write depth bounds
+    nccreate(nc_filepath,'dpth_bnds','Dimensions',{'dpth_bnds',length(dpth_bnds)});
+    ncwrite(nc_filepath,'dpth_bnds',dpth_bnds);
+    ncwriteatt(nc_filepath,'dpth_bnds','long_name','depth boundaries');
+    ncwriteatt(nc_filepath,'dpth_bnds','units','meters');
     clear thetao cns_tmp
     % plot global mean timeseries
     cns_tmp = ncread(nc_filepath,'cns_tmp');
-    plot_global_timeseries(lat,lon,depth,time,cns_tmp,'cns_tmp',...
+    plot_global_timeseries(lat,lon,depth,dpth_bnds,time,cns_tmp,'cns_tmp',...
         'Conservative Temperature',[char(176) 'C'],model);
     clear cns_tmp
 end
@@ -262,10 +277,15 @@ if l ~= length(time)
         {'depth' depth 'depth' 'meters'},...
         {'time' time 'time' 'days since 0000-01-01'},...
         {'tmp' tmp 'In Situ Temperature' 'degC'});
+    % write depth bounds
+    nccreate(nc_filepath,'dpth_bnds','Dimensions',{'dpth_bnds',length(dpth_bnds)});
+    ncwrite(nc_filepath,'dpth_bnds',dpth_bnds);
+    ncwriteatt(nc_filepath,'dpth_bnds','long_name','depth boundaries');
+    ncwriteatt(nc_filepath,'dpth_bnds','units','meters');
     clear thetao abs_sal tmp
     % plot global mean timeseries
     tmp = ncread(nc_filepath,'tmp');
-    plot_global_timeseries(lat,lon,depth,time,tmp,'tmp',...
+    plot_global_timeseries(lat,lon,depth,dpth_bnds,time,tmp,'tmp',...
         'In Situ Temperature',[char(176) 'C'],model);
     clear tmp
 end
@@ -288,10 +308,15 @@ if l ~= length(time)
         {'depth' depth 'depth' 'meters'},...
         {'time' time 'time' 'days since 0000-01-01'},...
         {'sigma' sigma 'Potential Density Anomaly' 'kg/m^3'});
+    % write depth bounds
+    nccreate(nc_filepath,'dpth_bnds','Dimensions',{'dpth_bnds',length(dpth_bnds)});
+    ncwrite(nc_filepath,'dpth_bnds',dpth_bnds);
+    ncwriteatt(nc_filepath,'dpth_bnds','long_name','depth boundaries');
+    ncwriteatt(nc_filepath,'dpth_bnds','units','meters');
     clear cns_tmp abs_sal sigma
     % plot global mean timeseries
     sigma = ncread(nc_filepath,'sigma');
-    plot_global_timeseries(lat,lon,depth,time,sigma,'sigma',...
+    plot_global_timeseries(lat,lon,depth,dpth_bnds,time,sigma,'sigma',...
         'Potential Density','kg/m^3',model);
     clear sigma
 end
@@ -314,10 +339,15 @@ if l ~= length(time)
         {'depth' depth 'depth' 'meters'},...
         {'time' time 'time' 'days since 0000-01-01'},...
         {'dens' dens 'In Situ Density' 'kg/m^3'});
+    % write depth bounds
+    nccreate(nc_filepath,'dpth_bnds','Dimensions',{'dpth_bnds',length(dpth_bnds)});
+    ncwrite(nc_filepath,'dpth_bnds',dpth_bnds);
+    ncwriteatt(nc_filepath,'dpth_bnds','long_name','depth boundaries');
+    ncwriteatt(nc_filepath,'dpth_bnds','units','meters');
     clear cns_tmp abs_sal dens
     % plot global mean timeseries
     dens = ncread(nc_filepath,'dens');
-    plot_global_timeseries(lat,lon,depth,time,dens,'dens',...
+    plot_global_timeseries(lat,lon,depth,dpth_bnds,time,dens,'dens',...
         'Density','kg/m^3',model);
     clear dens
 end
@@ -340,10 +370,15 @@ if l ~= length(time)
         {'depth' depth 'depth' 'meters'},...
         {'time' time 'time' 'days since 0000-01-01'},...
         {'o2_sat' o2_sat 'Oxygen Saturation' 'micromoles per kilogram'});
+    % write depth bounds
+    nccreate(nc_filepath,'dpth_bnds','Dimensions',{'dpth_bnds',length(dpth_bnds)});
+    ncwrite(nc_filepath,'dpth_bnds',dpth_bnds);
+    ncwriteatt(nc_filepath,'dpth_bnds','long_name','depth boundaries');
+    ncwriteatt(nc_filepath,'dpth_bnds','units','meters');
     clear tmp so o2_sat
     % plot global mean timeseries
     o2_sat = ncread(nc_filepath,'o2_sat');
-    plot_global_timeseries(lat,lon,depth,time,o2_sat,'o2_sat',...
+    plot_global_timeseries(lat,lon,depth,dpth_bnds,time,o2_sat,'o2_sat',...
         'Oxygen Saturation','umol/kg',model);
     clear o2_sat
 end
@@ -358,7 +393,7 @@ if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
 % load and combine cmip output fields
 if l ~= length(time)
     combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
-        depth,time,time_strt,grid_label,'o2',idx_depth,'Dissolved Oxygen Content',...
+        depth,dpth_bnds,time,time_strt,grid_label,'o2',idx_depth,'Dissolved Oxygen Content',...
         'mL/L',ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2);
     o2 = ncread(nc_filepath,'o2');
     dens = ncread([fpath 'combined/regridded/dens' path2 ...
@@ -369,9 +404,14 @@ if l ~= length(time)
         {'depth' depth 'depth' 'meters'},...
         {'time' time 'time' 'days since 0000-01-01'},...
         {'o2' o2 'Dissolved Oxygen Content','umol/kg'});
+    % write depth bounds
+    nccreate(nc_filepath,'dpth_bnds','Dimensions',{'dpth_bnds',length(dpth_bnds)});
+    ncwrite(nc_filepath,'dpth_bnds',dpth_bnds);
+    ncwriteatt(nc_filepath,'dpth_bnds','long_name','depth boundaries');
+    ncwriteatt(nc_filepath,'dpth_bnds','units','meters');
     % plot global mean timeseries
     o2 = ncread(nc_filepath,'o2');
-    plot_global_timeseries(lat,lon,depth,time,o2,'o2',...
+    plot_global_timeseries(lat,lon,depth,dpth_bnds,time,o2,'o2',...
         'Oxygen Amount Content','umol/kg',model);
     clear o2
 end
@@ -472,7 +512,7 @@ end
 
 %% load and combine cmip model output
 function combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,...
-    lon,lat,lon2d,lat2d,depth,time,time_strt,grid_label,var_name,idx_depth,long_name,units,...
+    lon,lat,lon2d,lat2d,depth,dpth_bnds,time,time_strt,grid_label,var_name,idx_depth,long_name,units,...
     ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2)
 
 if strcmp(model,'GFDL-ESM4') || strcmp(model,'MPI-ESM1-2-LR')
@@ -481,7 +521,7 @@ if strcmp(model,'GFDL-ESM4') || strcmp(model,'MPI-ESM1-2-LR')
     dims_hist1 = ncinfo([path1_hist var_name path2 'historical' path3 '_' ext_hist1 '.nc'],var_name);
     dims_hist2 = ncinfo([path1_hist var_name path2 'historical' path3 '_' ext_hist2 '.nc'],var_name);
 
-    % set up parallel pool with 20 workers
+    % set up parallel pool
     tic; parpool; fprintf('Pool initiation: '); toc;
 
     parfor t = 1:length(time)
@@ -501,7 +541,7 @@ if strcmp(model,'GFDL-ESM4') || strcmp(model,'MPI-ESM1-2-LR')
         end
         % save variable to combined file
         save_temp_files(nc_filepath_temp,t,var,var_name,lon2d,lat2d,...
-            lon,lat,depth,time,grid_label,long_name,units);
+            lon,lat,depth,dpth_bnds,time,grid_label,long_name,units);
     end
 
 elseif strcmp(model,'NorESM2-LM') || strcmp(model,'ACCESS-ESM1-5') || strcmp(model,'CanESM5')
@@ -514,7 +554,7 @@ elseif strcmp(model,'NorESM2-LM') || strcmp(model,'ACCESS-ESM1-5') || strcmp(mod
     dims_ssp1 = ncinfo([path1_ssp var_name path2 'ssp245' path3 '_' ext_ssp1 '.nc'],var_name);
     dims_ssp2 = ncinfo([path1_ssp var_name path2 'ssp245' path3 '_' ext_ssp2 '.nc'],var_name);
 
-    % set up parallel pool with 20 workers
+    % set up parallel pool
     tic; parpool; fprintf('Pool initiation: '); toc;
 
     parfor t = 1:length(time)
@@ -542,7 +582,7 @@ elseif strcmp(model,'NorESM2-LM') || strcmp(model,'ACCESS-ESM1-5') || strcmp(mod
         end
         % save variable to combined file
         save_temp_files(nc_filepath_temp,t,var,var_name,lon2d,lat2d,...
-            lon,lat,depth,time,grid_label,long_name,units);
+            lon,lat,depth,dpth_bnds,time,grid_label,long_name,units);
     end
 
 elseif strcmp(model,'IPSL-CM6A-LR')
@@ -550,7 +590,7 @@ elseif strcmp(model,'IPSL-CM6A-LR')
     % for models with one historical file and one ssp file
     dims_hist1 = ncinfo([path1_hist var_name path2 'historical' path3 '_' ext_hist1 '.nc'],var_name);
 
-    % set up parallel pool with 20 workers
+    % set up parallel pool
     tic; parpool; fprintf('Pool initiation: '); toc;
 
     parfor t = 1:length(time)
@@ -566,7 +606,7 @@ elseif strcmp(model,'IPSL-CM6A-LR')
          end
         % save variable to combined file
         save_temp_files(nc_filepath_temp,t,var,var_name,lon2d,lat2d,...
-            lon,lat,depth,time,grid_label,long_name,units);
+            lon,lat,depth,dpth_bnds,time,grid_label,long_name,units);
     end
 
 end
@@ -585,6 +625,11 @@ for t = 1:length(files)
             {'depth' depth 'depth' 'meters'},...
             {'time' time(t) 'time' 'days since 0000-01-01'},...
             {var_name var_temp long_name units});
+        % write depth bounds
+        nccreate(nc_filepath,'dpth_bnds','Dimensions',{'dpth_bnds',length(dpth_bnds)});
+        ncwrite(nc_filepath,'dpth_bnds',dpth_bnds);
+        ncwriteatt(nc_filepath,'dpth_bnds','long_name','depth boundaries');
+        ncwriteatt(nc_filepath,'dpth_bnds','units','meters');
     else
         ncwrite(nc_filepath,'time',time(t),t);
         ncwrite(nc_filepath,var_name,var_temp,[1 1 1 t]);
@@ -597,7 +642,7 @@ end
 
 %% save variable to combined file
 function save_temp_files(nc_filepath_temp,t,var,var_name,lon2d,lat2d,...
-    lon,lat,depth,time,grid_label,long_name,units)
+    lon,lat,depth,dpth_bnds,time,grid_label,long_name,units)
 
     % interpolate
     if strcmp(grid_label,'gr')
@@ -633,9 +678,9 @@ function save_temp_files(nc_filepath_temp,t,var,var_name,lon2d,lat2d,...
 end
 
 %% plot global timeseries
-function plot_global_timeseries(lat,lon,depth,time,var,varname,var_label,units,model)
+function plot_global_timeseries(lat,lon,depth,dpth_bnds,time,var,varname,var_label,units,model)
     % calculate volume
-    vol = single(calculate_volume(lat,lon,depth));
+    vol = single(calculate_volume(lat,lon,depth,dpth_bnds));
     % calculate gloabl mean
     var_mean = nan(length(time),1);
     for t = 1:length(time)

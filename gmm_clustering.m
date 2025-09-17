@@ -72,6 +72,9 @@ end
     predictor_matrix = [];
     for v = 1:length(clust_vars)
         predictor_matrix = [predictor_matrix all_data.(clust_vars{v})];
+        % if strcmp((clust_vars{v}),'pressure')
+        %     predictor_matrix = [predictor_matrix log(all_data.(clust_vars{v}))];
+        % end
     end
     [X_norm,C,S] = normalize(predictor_matrix);
     % reduce inputs for model training to 100,000 random data points
@@ -155,6 +158,7 @@ if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
 else
     folder_name_temp = [fpaths.model_path base_grid '/GMM_' base_grid '_' num2str(num_clusters)];
 end
+if ~isfolder(folder_name_temp); mkdir(folder_name_temp); end
 % determine length of cluster file if it exists
 if exist([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'],'file') == 2
     inf = ncinfo([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc']);

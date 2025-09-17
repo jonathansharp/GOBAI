@@ -58,8 +58,7 @@ ctd = 0;
 %% load and process data
 % acquire data
 acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
-acquire_glodap_data(param_props,glodap_year);
-% acquire_wod_ctd_data(param_props,glodap_year,end_year);
+acquire_glodap_data(param_props,glodap_year,start_year);
 % display data
 % display_data(param_props,float_file_ext,glodap_year,start_year,snap_date,flt,gld,ctd);
 % adjust and combine data

@@ -13,15 +13,15 @@ function display_data(param_props,float_file_ext,glodap_year,start_year,snap_dat
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
-load([param_props.dir_name '/Data/processed_float_' ...
+if flt == 1; load([param_props.dir_name '/Data/processed_float_' ...
     param_props.file_name '_data_' file_date float_file_ext '.mat'],...
-    'float_data','file_date');
-load([param_props.dir_name '/Data/processed_glodap_' ...
+    'float_data','file_date'); end
+if gld == 1; load([param_props.dir_name '/Data/processed_glodap_' ...
     param_props.file_name '_data_' num2str(glodap_year) '.mat'],...
-    'glodap_data');
-load([param_props.dir_name '/Data/processed_wod_ctd_' ...
-    param_props.file_name '_data_' ...
-    num2str(glodap_year) '.mat'],'wod_data');
+    'glodap_data'); end
+if ctd == 1; load([param_props.dir_name '/Data/processed_wod_ctd_' ...
+    param_props.file_name '_data_' num2str(glodap_year) '.mat'],...
+    'wod_data'); end
 
 %% plot for sanity
 % clrs=colororder;
@@ -113,23 +113,11 @@ load([param_props.dir_name '/Data/processed_wod_ctd_' ...
 %    ~isfile([param_props.dir_name '/Figures/Data/data_by_longitude_' file_date float_file_ext '.png'])
 
 % float
-f_profiles = unique(float_data.PROF_ID);
-f_idx = nan(length(f_profiles),1);
-for n = 1:length(f_profiles)
-    f_idx(n) = find(f_profiles(n)==float_data.PROF_ID,1);
-end
+if flt == 1; [f_profiles,f_idx] = unique(float_data.PROF_ID); end
 % glodap
-g_profiles = unique(glodap_data.ID);
-g_idx = nan(length(g_profiles),1);
-for n = 1:length(g_profiles)
-    g_idx(n) = find(g_profiles(n)==glodap_data.ID,1);
-end
+if gld == 1; [g_profiles,g_idx] = unique(glodap_data.ID); end
 % wod
-w_profiles = unique(wod_data.ID);
-w_idx = nan(length(w_profiles),1);
-for n = 1:length(w_profiles)
-    w_idx(n) = find(w_profiles(n)==wod_data.ID,1);
-end
+if ctd == 1; [w_profiles,w_idx] = unique(wod_data.ID); end
 
 % By time
 figure; hold on;
@@ -140,12 +128,13 @@ min_year = min_year(1);
 max_year = datevec(max([float_data.TIME;glodap_data.TIME;wod_data.TIME]));
 max_year = max_year(1);
 year_temp = (min_year:max_year+1)';
-edges=datenum([year_temp ones(length(year_temp),1) ones(length(year_temp),1)]);
-histogram(wod_data.TIME(w_idx),edges,'FaceColor','g');
-histogram(float_data.TIME(f_idx),edges,'FaceColor','r');
-histogram(glodap_data.TIME(g_idx),edges,'FaceColor','b');
-legend({'CTD' 'Floats' 'GLODAP'},'location','northwest');
-datetick('x'); xlim([datenum([start_year 1 1]) Inf]);
+edges = datenum([year_temp ones(length(year_temp),1) ones(length(year_temp),1)]);
+if gld == 1; g_counts = histcounts(glodap_data.TIME(g_idx),edges); else g_counts = zeros(size(edges)); end
+if flt == 1; f_counts = histcounts(float_data.TIME(f_idx),edges); else f_counts = zeros(size(edges)); end
+if ctd == 1; w_counts = histcounts(wod_data.TIME(w_idx),edges); else w_counts = zeros(size(edges)); end
+bar(edges(1:end-1),[g_counts',w_counts',f_counts'],'stacked');
+legend({'GLODAP' 'CTD' 'Floats'},'location','northwest');
+datetick('x'); xlim([datenum([start_year-1 1 1]) max(edges)]);
 ylabel('Profiles within each year');
 if ~exist([pwd '/' param_props.dir_name '/Figures'],'dir'); mkdir([param_props.dir_name '/Figures']); end
 if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
@@ -159,9 +148,10 @@ figure; hold on;
 set(gca,'fontsize',20);
 set(gcf,'units','inches','position',[0 5 10 10]);
 edges=-90:5:90;
-histogram(wod_data.LAT(w_idx),edges,'FaceColor','g');
-histogram(float_data.LAT(f_idx),edges,'FaceColor','r');
-histogram(glodap_data.LAT(g_idx),edges,'FaceColor','b');
+if gld == 1; g_counts = histcounts(glodap_data.LAT(g_idx),edges); else g_counts = zeros(size(edges)); end
+if flt == 1; f_counts = histcounts(float_data.LAT(f_idx),edges); else f_counts = zeros(size(edges)); end
+if ctd == 1; w_counts = histcounts(wod_data.LAT(w_idx),edges); else w_counts = zeros(size(edges)); end
+bar(edges(1:end-1),[g_counts',w_counts',f_counts'],'stacked');
 legend({'CTD' 'Floats' 'GLODAP'});
 ylabel('Profiles within each latitude range');
 if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
@@ -175,9 +165,10 @@ figure; hold on;
 set(gca,'fontsize',20);
 set(gcf,'units','inches','position',[0 5 10 10]);
 edges=-180:5:180;
-histogram(wod_data.LON(w_idx),edges,'FaceColor','g');
-histogram(float_data.LON(f_idx),edges,'FaceColor','r');
-histogram(glodap_data.LON(g_idx),edges,'FaceColor','b');
+if gld == 1; g_counts = histcounts(glodap_data.LON(g_idx),edges); else g_counts = zeros(size(edges)); end
+if flt == 1; f_counts = histcounts(float_data.LON(f_idx),edges); else f_counts = zeros(size(edges)); end
+if ctd == 1; w_counts = histcounts(wod_data.LON(w_idx),edges); else w_counts = zeros(size(edges)); end
+bar(edges(1:end-1),[g_counts',w_counts',f_counts'],'stacked');
 legend({'CTD' 'Floats' 'GLODAP'});
 ylabel('Profiles within each longitude range');
 if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
@@ -186,22 +177,74 @@ export_fig(gcf,[param_props.dir_name '/Figures/Data/data_by_longitude_' ...
 clear edges
 close
 
-% Map
-figure('visible','on'); hold on
-m_proj('robinson','lon',[20 380]);
+%% Maps by decade
+dec_start = floor(start_year/10)*10:10:2020;
+dec_end = floor(start_year/10)*10+10:10:2030;
+clrs = colororder;
+figure('visible','on');
 set(gcf,'units','inches','position',[0 5 20 10]);
-temp_lon_g = convert_lon(glodap_data.LON(g_idx),'format','0-360');
-temp_lon_g(temp_lon_g < 20) = temp_lon_g(temp_lon_g < 20) + 360;
-temp_lon_f = convert_lon(float_data.LON(f_idx),'format','0-360');
-temp_lon_f(temp_lon_f < 20) = temp_lon_f(temp_lon_f < 20) + 360;
-temp_lon_w = convert_lon(wod_data.LON(w_idx),'format','0-360');
-temp_lon_w(temp_lon_w < 20) = temp_lon_w(temp_lon_w < 20) + 360;
-m_scatter(temp_lon_f,float_data.LAT(f_idx),'.');
-m_scatter(temp_lon_w,wod_data.LAT(w_idx),'.');
-m_scatter(temp_lon_g,glodap_data.LAT(g_idx),'.');
-m_coast('patch',rgb('grey'));
-m_grid('linestyle','-','linewidth',0.5,'xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
+tiledlayout(2,2,'Padding','none','TileSpacing','compact');
+for d = 1:length(dec_start)
+    nexttile; hold on;
+    % index coordinates by decade
+    g_idx_y = glodap_data.YEAR >= dec_start(d) & glodap_data.YEAR < dec_end(d);
+    lon_g = glodap_data.LON; lon_g(~g_idx_y) = NaN;
+    lat_g = glodap_data.LAT; lat_g(~g_idx_y) = NaN;
+    f_idx_y = float_data.YEAR >= dec_start(d) & float_data.YEAR < dec_end(d);
+    lon_f = float_data.LON; lon_f(~f_idx_y) = NaN;
+    lat_f = float_data.LAT; lat_f(~f_idx_y) = NaN;
+    w_idx_y = wod_data.YEAR >= dec_start(d) & wod_data.YEAR < dec_end(d);
+    lon_w = wod_data.LON; lon_w(~w_idx_y) = NaN;
+    lat_w = wod_data.LAT; lat_w(~w_idx_y) = NaN;
+    % set map projection
+    m_proj('robinson','lon',[20 380]);
+    % convert longitude to proper format
+    temp_lon_g = convert_lon(lon_g(g_idx),'format','0-360');
+    temp_lon_g(temp_lon_g < 20) = temp_lon_g(temp_lon_g < 20) + 360;
+    temp_lon_f = convert_lon(lon_f(f_idx),'format','0-360');
+    temp_lon_f(temp_lon_f < 20) = temp_lon_f(temp_lon_f < 20) + 360;
+    temp_lon_w = convert_lon(lon_w(w_idx),'format','0-360');
+    temp_lon_w(temp_lon_w < 20) = temp_lon_w(temp_lon_w < 20) + 360;
+    % scatter data
+    m_scatter(temp_lon_f,lat_f(f_idx),5,clrs(1,:),'filled');
+    m_scatter(temp_lon_w,lat_w(w_idx),5,clrs(2,:),'filled');
+    m_scatter(temp_lon_g,lat_g(g_idx),5,clrs(3,:),'filled');
+    % set properties
+    title([num2str(dec_start(d)) ' to ' num2str(dec_end(d))]);
+    m_coast('patch',rgb('grey'));
+    m_grid('linestyle','none','xticklabels',[],...
+        'yticklabels',[],'ytick',-90:30:90);
+    % legend({'Float Data' 'CTD Data' 'GLODAP Data'});
+end
 export_fig(gcf,[param_props.dir_name '/Figures/Data/Mapped_' ...
+    param_props.dir_name '_' file_date float_file_ext '.png'],'-transparent');
+close
+
+%% Map for full period
+clrs = colororder;
+figure('visible','on'); hold on;
+set(gcf,'units','inches','position',[0 5 20 10]);
+% set map projection
+m_proj('robinson','lon',[20 380]);
+% convert longitude to proper format
+temp_lon_g = convert_lon(glodap_data.LON,'format','0-360');
+temp_lon_g(temp_lon_g < 20) = temp_lon_g(temp_lon_g < 20) + 360;
+temp_lon_f = convert_lon(float_data.LON,'format','0-360');
+temp_lon_f(temp_lon_f < 20) = temp_lon_f(temp_lon_f < 20) + 360;
+temp_lon_w = convert_lon(woa_data.LON,'format','0-360');
+temp_lon_w(temp_lon_w < 20) = temp_lon_w(temp_lon_w < 20) + 360;
+% scatter data
+m_scatter(temp_lon_f,float_data.LAT,10,clrs(1,:),'filled');
+m_scatter(temp_lon_w,woa_data.LAT,10,clrs(2,:),'filled');
+m_scatter(temp_lon_g,glodap_data.LAT,10,clrs(3,:),'filled');
+% set properties
+title([param_props.label ' Data Distribution']);
+m_coast('patch',rgb('grey'));
+m_grid('linestyle','none','xticklabels',[],...
+    'yticklabels',[],'ytick',-90:30:90);
+legend({'Float Data' 'CTD Data' 'GLODAP Data'},'Location','northwest');
+set(gca,'FontSize',24);
+export_fig(gcf,[param_props.dir_name '/Figures/Data/All_Mapped_' ...
     param_props.dir_name '_' file_date float_file_ext '.png'],'-transparent');
 close
 

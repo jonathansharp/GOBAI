@@ -46,14 +46,14 @@ base_grid = 'RFROM';
 [model_path,param_path,temp_path,sal_path] = path_config(base_grid,param);
 
 %% load and process data
-% % acquire data
-% acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
-% acquire_glodap_data(param_props,glodap_year);
-% % display data
-% display_data(param_props,float_file_ext,glodap_year,snap_date);
-% % adjust and combine data
-% adjust_dic_float_data(float_file_ext,glodap_year,snap_date);
-% combine_data(param_props,float_file_ext,glodap_year,snap_date);
+% acquire data
+acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
+acquire_glodap_data(param_props,glodap_year);
+% display data
+display_data(param_props,float_file_ext,glodap_year,snap_date);
+% adjust and combine data
+adjust_dic_float_data(float_file_ext,glodap_year,snap_date);
+combine_data(param_props,float_file_ext,glodap_year,snap_date);
 
 %% create time-varying clusters and assign data points to them
 % % form clusters

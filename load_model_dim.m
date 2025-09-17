@@ -7,7 +7,7 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 11/1/2024
+% DATE: 9/16/2025
 
 function [TS,months,weeks,timesteps] = load_model_dim(fpath)
 
@@ -15,6 +15,7 @@ function [TS,months,weeks,timesteps] = load_model_dim(fpath)
 TS.Latitude = ncread(fpath,'lat');
 TS.Longitude = ncread(fpath,'lon');
 TS.Depth = ncread(fpath,'depth');
+TS.Depth_Bounds = ncread(fpath,'dpth_bnds');
 % compute dimensions
 TS.xdim = length(TS.Longitude);
 TS.ydim = length(TS.Latitude);

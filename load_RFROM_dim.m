@@ -58,6 +58,8 @@ for n = 1:length(files)
     TS.years(n) = str2double(date(1:4));
     TS.months(n) = str2double(date(6:7));
 end
+% add pressure bounds
+TS.Pressure_Bounds = ncread([files(m).folder '/' files(m).name],'mean_pressure_bnds');
 % remove months and years outside range
 idx = TS.years < y1 | TS.years > y2;
 TS.years(idx) = [];

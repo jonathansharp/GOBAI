@@ -37,6 +37,7 @@ delta_filepath = [fpaths.param_path 'GOBAI/' base_grid '/DELTA/c' ...
 lat = ncread(osse_filepath,'lat');
 lon = ncread(osse_filepath,'lon');
 depth = ncread(osse_filepath,'depth');
+dpth_bnds = ncread(osse_filepath,'dpth_bnds');
 time = ncread(osse_filepath,'time');
 
 %% load and evaluate monthly reconstructed gobai in relation to cmip
@@ -47,6 +48,10 @@ cmip_depth_mean = nan(length(time),length(depth));
 
 % %% load T/S timeframe
 % rg_time = [pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'];
+
+% column mean
+gobai_col_mean = nan(length(lon),length(lat),length(time));
+cmip_col_mean = nan(length(lon),length(lat),length(time));
 
 %% loop through each month
 for m = 1:length(time)
@@ -74,13 +79,28 @@ for m = 1:length(time)
     delta = gobai-cmip;
 
     %% calculate global means
-    vol = single(calculate_volume(lat,lon,depth));
+    vol = single(calculate_volume(lat,lon,depth,dpth_bnds));
     idx_gobai = ~isnan(gobai);
     % Eliminate bottom depth for MPI-ESM1-2-LR
     if strcmp(base_grid,'MPI-ESM1-2-LR'); idx_gobai(:,:,end) = false; end
     gobai_mean(m) = sum(gobai(idx_gobai).*vol(idx_gobai))./sum(vol(idx_gobai));
     idx_cmip = ~isnan(cmip);
     cmip_mean(m) = sum(cmip(idx_cmip).*vol(idx_cmip))./sum(vol(idx_cmip));
+
+    %% calculate column means
+    % gobai (mol/m2)
+    idx_gobai = ~isnan(gobai);
+    % replicate depth bin heights
+    dpth_bins_3d = repmat(permute(diff(dpth_bnds),[3 2 1]),length(lon),length(lat),1);
+    % Eliminate bottom depth for MPI-ESM1-2-LR
+    if strcmp(base_grid,'MPI-ESM1-2-LR'); idx_gobai(:,:,end) = false; end
+    gobai_col_mean_temp = sum(((gobai./10^6).*1026).*dpth_bins_3d,3,'omitnan'); % density estimate for now...
+    gobai_col_mean_temp(gobai_col_mean_temp==0) = NaN;
+    gobai_col_mean(:,:,m) = gobai_col_mean_temp;
+    % cmip (mol/m2)
+    cmip_col_mean_temp = sum(((cmip./10^6).*1026).*dpth_bins_3d,3,'omitnan'); % density estimate for now...
+    cmip_col_mean_temp(cmip_col_mean_temp==0) = NaN;
+    cmip_col_mean(:,:,m) = cmip_col_mean_temp;
 
     %% calculate means by depth
     area = single(calculate_area(lat,lon));
@@ -134,13 +154,67 @@ for m = 1:length(time)
 
 end
 
+%% calculate trends
+gobai_trend = nan(length(lon),length(lat));
+cmip_trend = nan(length(lon),length(lat));
+for x = 1:length(lon)
+    for y = 1:length(lat)
+        if any(~isnan(gobai_col_mean(x,y,:)))
+            % gobai trend
+            gobai_col_mean_temp = squeeze(gobai_col_mean(x,y,:));
+            tr = polyfit(time,gobai_col_mean_temp,1);
+            gobai_trend(x,y) = tr(1).*365.25.*10;
+        end
+        if any(~isnan(cmip_col_mean(x,y,:)))
+            % cmip trend
+            cmip_col_mean_temp = squeeze(cmip_col_mean(x,y,:));
+            tr = polyfit(time,cmip_col_mean_temp,1);
+            cmip_trend(x,y) = tr(1).*365.25.*10;
+        end
+    end
+end
+
+%% plot global gobai trends
+figure('visible','on');
+worldmap('world');
+set(gca,'fontsize',12);
+title(['Reconstructed ' base_grid]);
+mlabel off; plabel off;
+pcolorm(lat,[lon;lon(end)+1],[gobai_trend;gobai_trend(end,:)]');
+plot_land('map');
+c=colorbar('Location','southoutside');
+clim([-param_props.edges(end)/50 param_props.edges(end)/50]);
+c.Label.String = [' Column ' param_props.label ...
+    ' Trend (mol m^{-2} dec^{-1})'];
+colormap(cmocean('balance'));
+export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
+        '/gobai_col_mean_trend_' float_ext glodap_ext ctd_ext '.png'],'-transparent'); close;
+close
+
+%% plot global cmip trends
+figure('visible','on');
+worldmap('world');
+set(gca,'fontsize',12);
+title(base_grid);
+mlabel off; plabel off;
+pcolorm(lat,[lon;lon(end)+1],[cmip_trend;cmip_trend(end,:)]');
+plot_land('map');
+c=colorbar('Location','southoutside');
+clim([-param_props.edges(end)/50 param_props.edges(end)/50]);
+c.Label.String = [' Column ' param_props.label ...
+    ' Trend (mol m^{-2} dec^{-1})'];
+colormap(cmocean('balance'));
+export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
+        '/model_col_mean_trend_' float_ext glodap_ext ctd_ext '.png'],'-transparent'); close;
+close
+
 %% save global means
 if ~isfolder([param_props.dir_name '/Data/' base_grid]); mkdir([param_props.dir_name '/Data/' base_grid '/' rlz '_gr']); end
 save([param_props.dir_name '/Data/' base_grid '/' rlz '_gr/statistics_' ...
     float_ext glodap_ext ctd_ext '.mat'],...
     'gobai_mean','gobai_depth_mean','cmip_mean','cmip_depth_mean');
 
-%% plot timeseries
+%% plot global mean timeseries
 figure;
 plot(datenum(1950,1,1)+time,cmip_mean,datenum(1950,1,1)+time,gobai_mean,'LineWidth',2);
 legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']});

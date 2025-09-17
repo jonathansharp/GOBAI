@@ -101,15 +101,20 @@ for d = 1:length(pressures)
     end
     % establish file name
     if uncer == 0 && anom == 0
-        fname = ['gobai_animation_' num2str(pressures(d)) 'dbar.gif'];
+        fname = ['gobai_' param_props.file_name '_animation_' num2str(pressures(d)) 'dbar.gif'];
+        v_fname = ['gobai_' param_props.file_name '_animation_' num2str(pressures(d)) 'dbar.avi'];
         gobai_fname = [dir_base '/' float_ext glodap_ext ctd_ext ...
             '/gobai-' param_props.file_name '.nc'];
     elseif uncer == 1
-        fname = ['gobai_uncer_animation_' num2str(pressures(d)) 'dbar.gif'];
-        gobai_fname = [dir_base '/gobai-' param_props.file_name '-uncer.nc'];
+        fname = ['gobai_' param_props.file_name '_uncer_animation_' num2str(pressures(d)) 'dbar.gif'];
+        v_fname = ['gobai_' param_props.file_name '_uncer_animation_' num2str(pressures(d)) 'dbar.avi'];
+        gobai_fname = [dir_base '/' float_ext glodap_ext ctd_ext ...
+            '/gobai-' param_props.file_name '-uncer.nc'];
     elseif anom == 1
-        fname = ['gobai_anom_animation_' num2str(pressures(d)) 'dbar.gif'];
-        gobai_fname = [dir_base '/gobai-' param_props.file_name '.nc'];
+        fname = ['gobai_' param_props.file_name '_anom_animation_' num2str(pressures(d)) 'dbar.gif'];
+        v_fname = ['gobai_' param_props.file_name '_anom_animation_' num2str(pressures(d)) 'dbar.avi'];
+        gobai_fname = [dir_base '/' float_ext glodap_ext ctd_ext ...
+            '/gobai-' param_props.file_name '.nc'];
     end
     % determine number of timesteps
     gobai_inf = ncinfo(gobai_fname);
@@ -130,8 +135,10 @@ for d = 1:length(pressures)
     % depth index
     depth_idx = find(Pressure == pressures(d));
     % establish fiugre
-    h = figure('color','w','visible','off','Position',[616 474 1200 800]);
+    h = figure('color','w','visible','on','Position',[616 474 1200 800]);
     axis tight manual
+    % establish video file
+    v = VideoWriter([dname '/' v_fname]);
     % plot clusters each month/week
     for t = 1:timesteps
         % clear frame
@@ -144,9 +151,7 @@ for d = 1:length(pressures)
             gobai = ncread(gobai_fname,param_props.file_name,...
                 [1 1 depth_idx t],[Inf Inf 1 1]);
         end
-        time = datenum(1950,0,0) + ncread(gobai_fname,'time',t,1);
-        % establish figure
-        set(gca,'FontSize',20);
+        time = datenum(1950,1,1) + ncread(gobai_fname,'time',t,1);
         % make plot
         m_proj('robinson','lon',[20 380]);
         z = [gobai(~idx_20,:);gobai(idx_20,:)];
@@ -174,15 +179,19 @@ for d = 1:length(pressures)
         elseif anom == 1
             colormap(cmocean('balance','pivot',0));
         end
+        set(gca,'FontSize',20);
         % create folder
         if ~isfolder([dname '/' num2str(pressures(d)) 'dbars'])
             mkdir([dname '/' num2str(pressures(d)) 'dbars']);
         end
         % save frame
-        % export_fig(h,[dname '/' num2str(pressures(d)) ...
-        %     'dbars/t' num2str(t) '.png'],'-transparent','-silent');
-        % % capture frame
-        % frame = getframe(h);
+        export_fig(h,[dname '/' num2str(pressures(d)) ...
+            'dbars/t' num2str(t) '.png'],'-transparent','-silent');
+        % capture frame
+        open(v);
+        frame = getframe(h);
+        writeVideo(v,frame);
+        close(v);
         % im = frame2im(frame);
         % [imind,cm] = rgb2ind(im,256);
         % write to file

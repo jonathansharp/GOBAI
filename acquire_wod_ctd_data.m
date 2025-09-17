@@ -1,4 +1,4 @@
-function wod = acquire_wod_ctd_data(param_props,glodap_year,end_year)
+function wod = acquire_wod_ctd_data(param_props,glodap_year,start_year,end_year)
 
 %% process parameter name
 if strcmp(param_props.file_name,'o2')
@@ -46,7 +46,7 @@ m_coast('patch',rgb('gray'));
 m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
 
 %% load oxygen variables
-for y = 1993:end_year
+for y = start_year:end_year
     for x = 1:length(types)
         file = [folder '/' var_name '_' types{x} '_NCEI/' var_name '_' types{x} '_' num2str(y) '.nc'];
         if exist(file,'file')

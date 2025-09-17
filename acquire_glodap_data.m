@@ -9,7 +9,7 @@
 %
 % DATE: 2/5/2025
 
-function acquire_glodap_data(param_props,glodap_year)
+function acquire_glodap_data(param_props,glodap_year,start_year)
 
 %% change temporary param name for DIC
 if strcmp(param_props.temp_name,'PH')
@@ -49,7 +49,7 @@ idx_qc = glodap_data.G2salinityqc == 1 & ...
 % check for good flags
 idx_flags = glodap_data.G2salinityf == 2 & glodap_data.([param_props.glodap_name 'f']) == 2;
 % check depth and/or time range
-idx_lims = glodap_data.G2pressure <= 2500;
+idx_lims = glodap_data.G2pressure <= 2500 & glodap_data.G2year >= start_year;
 %idx_lims = glodap_data.G2pressure <= 2500 & glodap_data.time > datenum(2004,1,0);
 % combine indices
 idx = idx_nans & idx_qc & idx_flags & idx_lims;

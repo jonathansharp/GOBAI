@@ -23,10 +23,6 @@ load(['NO3/Data/processed_float_no3_data_' file_date float_file_ext '.mat'],...
 load(['NO3/Data/processed_glodap_no3_data_' num2str(glodap_year) '.mat'],...
     'glodap_data');
 
-
-%%%%%%%%%%%%%%%%%%%
-%error('FIX WOA match issue');
-
 %% import WOA climatologies
 temp_path = [pwd '/Data/WOA/TEMPERATURE/'];
 sal_path = [pwd '/Data/WOA/SALINITY/'];
@@ -41,7 +37,7 @@ end
 % Import and format WOA latitude and longitude
 WOA.LAT   = ncread([nit_path 'woa18_all_n01_01.nc'],'lat');
 WOA.LON   = ncread([nit_path 'woa18_all_n01_01.nc'],'lon');
-WOA.DEPTH = ncread([oxy_path 'woa18_all_o01_01.nc'],'depth');
+WOA.DEPTH = ncread([nit_path 'woa18_all_n01_01.nc'],'depth');
 [~,lat_3d,depth_3d] = ndgrid(WOA.LON,WOA.LAT,WOA.DEPTH);
 WOA.PRES = -gsw_p_from_z(depth_3d,lat_3d);
 % clean up
@@ -72,6 +68,14 @@ for i=1:length(idx)
     WOA_OXY_match(idx(i)) = WOA.OXY(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
     WOA_NIT_match(idx(i)) = WOA.NIT(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
 end
+% remove data below 800dbar
+idx_woa_pres = float_data.PRES <= 800;
+WOA_OXY_match(idx_woa_pres) = [];
+WOA_oxy_delta(idx_woa_pres) = [];
+WOA_oxy_delta_per(idx_woa_pres) = [];
+WOA_NIT_match(idx_woa_pres) = [];
+WOA_nit_delta(idx_woa_pres) = [];
+WOA_nit_delta_per(idx_woa_pres) = [];
 % calculate differences for oxygen
 WOA_oxy_delta = float_data.OXY-WOA_OXY_match;
 WOA_oxy_delta_per = WOA_oxy_delta./float_data.OXY;
@@ -93,8 +97,8 @@ figure; hold on
 histogram(WOA_nit_delta);
 set(gca,'fontsize',16);
 ax = gca;
-plot([mean_nit_delta+5*st_dev_nit_delta mean_nit_delta+5*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
-plot([mean_nit_delta-5*st_dev_nit_delta mean_nit_delta-5*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
+plot([mean_nit_delta+3*st_dev_nit_delta mean_nit_delta+3*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
+plot([mean_nit_delta-3*st_dev_nit_delta mean_nit_delta-3*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
 xlabel('Float [NO_{3}] - WOA [NO_{3}]');
 if ~exist([pwd '/NO3/Figures/Data'],'dir'); mkdir('NO3/Figures/Data'); end
 exportgraphics(gcf,[pwd '/NO3/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
@@ -124,7 +128,20 @@ close
 % clean up
 clear counts bin_centers c h myColorMap
 
-%% remove data points more than 5 sigmas from WOA values
+%% remove data points based on global range test
+% 479 umol/kg is max for WOD range checks
+idx_rem = float_data.NIT < 0 | float_data.NIT > 480;
+disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
+    num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
+vars = fieldnames(float_data);
+for v = 1:length(vars)
+    float_data.(vars{v})(idx_rem) = [];
+end
+WOA_delta(idx_rem) = [];
+WOA_delta_per(idx_rem) = [];
+WOA_match(idx_rem) = [];
+
+%% remove data points more than 3 sigmas from WOA values
 pres_levels = unique(float_data.PRES);
 idx_nit_rem = false(length(WOA_nit_delta),1);
 idx_oxy_rem = false(length(WOA_oxy_delta),1);

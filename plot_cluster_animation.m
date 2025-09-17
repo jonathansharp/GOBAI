@@ -57,7 +57,7 @@ parfor d = 1:length(pressures)
     % set counter
     cnt = 1;
     % establish figure
-    h = figure('color','w','visible','off');
+    h = figure('color','w','visible','off','Position',[616 474 1200 800]);
     axis tight manual
     % plot clusters each month/week
     for t = 1:timesteps
@@ -66,7 +66,8 @@ parfor d = 1:length(pressures)
         % load monthly clusters
         GMM_clusters = ncread([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'],...
             'clusters',[1 1 1 t],[Inf Inf Inf 1]);
-        time = ncread([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'],'time',t,1);
+        time = datenum(1950,1,1) + ...
+            ncread([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'],'time',t,1);
         % make plot
         m_proj('robinson','lon',[20 380]);
         z = [GMM_clusters(~idx_20,:,depth_idx);GMM_clusters(idx_20,:,depth_idx)];
@@ -84,6 +85,7 @@ parfor d = 1:length(pressures)
         c.Limits = [0.5 num_clusters+0.5];
         c.Label.String = 'Cluster';
         c.TickLength = 0;
+        set(gca,'FontSize',20);
         % save frame
         if ~isfolder([dname '/' num2str(pressures(d)) 'dbars'])
             mkdir([dname '/' num2str(pressures(d)) 'dbars']);
