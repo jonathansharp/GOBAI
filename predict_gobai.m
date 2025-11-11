@@ -134,190 +134,211 @@ else
     TS = load_model_dim(nc_filepath_abs_sal);
 end
 
-% %% set up parallel pool
-% tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
-% 
-% %% start timing predictions
-% tStart = tic;
-% 
-% %% compute and save estimates for each month
-% parfor m = 1:length(TS.months)
-%     if strcmp(base_grid,'RG')
-%         % counter 
-%         cnt = m;
-%         % load dimensions
-%         TS = load_RG_dim(fpaths.temp_path);
-%         TS = replicate_dims(base_grid,TS,1);
-%         TS.longitude = convert_lon(TS.longitude);
-%         % get RG T and S
-%         TS.temperature = ncread([fpaths.temp_path 'RG_Climatology_Temp.nc'],...
-%             'Temperature',[1 1 1 m],[Inf Inf Inf 1]);
-%         TS.salinity = ncread([fpaths.sal_path 'RG_Climatology_Sal.nc'],...
-%             'Salinity',[1 1 1 m],[Inf Inf Inf 1]);
-%         % covert RG T and S to conservative temperature and absolute salinity
-%         pres_3d = repmat(permute(TS.Pressure,[3 2 1]),length(TS.Longitude),length(TS.Latitude),1);
-%         lon_3d = repmat(TS.Longitude,1,length(TS.Latitude),length(TS.Pressure));
-%         lat_3d = repmat(TS.Latitude',length(TS.Longitude),1,length(TS.Pressure));
-%         TS.salinity_abs = gsw_SA_from_SP(TS.salinity,pres_3d,convert_lon(lon_3d),lat_3d);
-%         TS.temperature_cns = gsw_CT_from_t(TS.salinity_abs,TS.temperature,pres_3d);
-%         % get time variables for just this timestep
-%         TS.Time = ncread([fpaths.temp_path 'RG_Climatology_Temp.nc'],'Time',m,1);
-%         date_temp = datevec(datenum(2004,1,1+double(TS.Time)));
-%         date_temp0 = date_temp;
-%         date_temp0(:,2:3) = 1; % Jan. 1 of each year
-%         TS.year = date_temp(:,1);
-%         TS.day = datenum(date_temp) - datenum(date_temp0) + 1;
-%         % transform day
-%         TS.day_sin = sin((2.*pi.*TS.day)/365.25);
-%         TS.day_cos = cos((2.*pi.*TS.day)/365.25);
-%         % apply model
-%         apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
-%             base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-%             thresh,gobai_alg_dir_temp,param_props,fpaths.param_path,...
-%             date_str,clust_vars,float_ext,glodap_ext,ctd_ext);
-%     elseif strcmp(base_grid,'RFROM')
-%         % load dimensions
-%         TS = load_RFROM_dim(fpaths.temp_path,start_year,end_year);
-%         TS = replicate_dims(base_grid,TS,1);
-%         % determine number of weeks in file
-%         nc_atts = ncinfo([fpaths.temp_path 'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
-%             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
-%         for w = 1:nc_atts.Dimensions(3).Length
-%             % counter
-%             cnt = TS.cnt{m}(w);
-%             % get RFROM T and S
-%             TS.temperature_cns = ncread([fpaths.temp_path 'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
-%                 num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
-%                     'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
-%             TS.salinity_abs = ncread([fpaths.sal_path 'RFROM_SAL_v2.2/RFROMV22_SAL_STABLE_' ...
-%                 num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
-%                     'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
-%             % load bgc variables if applicable
-%             if any(strcmp(variables,'o2'))
-%                 TS.o2 = ncread(['/fast4/o2/GOBAI/' base_grid '/' dir_base '/gobai-o2.nc'],...
-%                         'o2',[1 1 1 cnt],[Inf Inf Inf 1]);
-%             end
-%             if any(strcmp(variables,'no3'))
-%                 TS.no3 = ncread(['/fast5/no3/GOBAI/' base_grid '/' dir_base '/gobai-no3.nc'],...
-%                         'no3',[1 1 1 cnt],[Inf Inf Inf 1]);
-%             end
-%             % get time variables for just this timestep
-%             date_temp = datevec(datenum(1950,0,0)+TS.Time(cnt));
-%             date_temp0 = date_temp;
-%             date_temp0(:,2:3) = 1; % Jan. 1 of the year
-%             TS.year = date_temp(:,1);
-%             TS.day = datenum(date_temp) - datenum(date_temp0) + 1;
-%             % transform day
-%             TS.day_sin = sin((2.*pi.*TS.day)/365.25);
-%             TS.day_cos = cos((2.*pi.*TS.day)/365.25);
-%             % apply model
-%             apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
-%                 base_grid,m,w,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-%                 thresh,gobai_alg_dir_temp,param_props,fpaths.param_path,...
-%                 date_str,clust_vars,float_ext,glodap_ext,ctd_ext);
-%         end
-%     else
-%         % counter 
-%         cnt = m;
-%         % define paths
-%         path2 = ['_Omon_' base_grid '_'];
-%         path3 = ['_'  rlz '_gr'];
-%         % define filepaths
-%         nc_filepath_abs_sal = [fpaths.model_path base_grid '/combined/regridded/abs_sal' path2 ...
-%             'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
-%         nc_filepath_cns_tmp = [fpaths.model_path base_grid '/combined/regridded/cns_tmp' path2 ...
-%             'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
-%         % load dimensions
-%         TS = load_model_dim(nc_filepath_abs_sal);
-%         TS = replicate_dims(base_grid,TS,1);
-%         % get practical salinity and in situ temperature from cmip model
-%         TS.salinity_abs = ncread(nc_filepath_abs_sal,'abs_sal',[1 1 1 m],[Inf Inf Inf 1]);
-%         TS.temperature_cns = ncread(nc_filepath_cns_tmp,'cns_tmp',[1 1 1 m],[Inf Inf Inf 1]);
-%         % get time variables for just this timestep
-%         TS.Time = ncread(nc_filepath_abs_sal,'time',m,1);
-%         date_temp = datevec(datenum(0,0,double(TS.Time)));
-%         date_temp0 = date_temp;
-%         date_temp0(:,2:3) = 1; % Jan. 1 of each year
-%         TS.year = date_temp(:,1);
-%         TS.day = datenum(date_temp) - datenum(date_temp0) + 1;
-%         % transform day
-%         TS.day_sin = sin((2.*pi.*TS.day)/365.25);
-%         TS.day_cos = cos((2.*pi.*TS.day)/365.25);
-%         % apply model
-%         apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
-%             base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
-%             thresh,gobai_alg_dir_temp,param_props,fpaths.param_path,...
-%             date_str,clust_vars,float_ext,glodap_ext,ctd_ext);
-% 
-%     end
-% end
-% 
-% % end parallel session
-% delete(gcp('nocreate'));
+%% set up parallel pool
+tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
-%% create netCDF file that will be end result
-% if strcmp(base_grid,'RG')
-%     TS = load_RG_dim(fpaths.temp_path);
-%    % create file
-%    create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props);
-% elseif strcmp(base_grid,'RFROM')
-%     TS = load_RFROM_dim(fpaths.temp_path,start_year,end_year);
-%     % create file
-%     create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props);
-% else
-%     % define paths
-%     path2 = ['_Omon_' base_grid '_'];
-%     path3 = ['_' rlz '_gr'];
-%     % define filepaths
-%     nc_filepath_abs_sal = [fpaths.model_path base_grid '/combined/regridded/abs_sal' path2 ...
-%         'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
-%     % load dimensions
-%     TS = load_model_dim(nc_filepath_abs_sal);
-%     % create file
-%     create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props);
-% end
+%% start timing predictions
+tStart = tic;
 
-%% concatenate gobai in weekly files to match RFROM
-files = dir([gobai_alg_dir_temp '/gobai-' param_props.file_name '-*.nc']); % count files in folder
-idx_rem = [];
-for fln = 1:length(files)
-    % index to remove filenames with uncertinaty
-    if contains(files(fln).name,'uncer')
-        idx_rem = [idx_rem;fln];
+%% compute and save estimates for each month
+parfor m = 1:length(TS.months)
+    if strcmp(base_grid,'RG')
+        % counter 
+        cnt = m;
+        % load dimensions
+        TS = load_RG_dim(fpaths.temp_path);
+        TS = replicate_dims(base_grid,TS,1);
+        TS.longitude = convert_lon(TS.longitude);
+        % get RG T and S
+        TS.temperature = ncread([fpaths.temp_path 'RG_Climatology_Temp.nc'],...
+            'Temperature',[1 1 1 m],[Inf Inf Inf 1]);
+        TS.salinity = ncread([fpaths.sal_path 'RG_Climatology_Sal.nc'],...
+            'Salinity',[1 1 1 m],[Inf Inf Inf 1]);
+        % covert RG T and S to conservative temperature and absolute salinity
+        pres_3d = repmat(permute(TS.Pressure,[3 2 1]),length(TS.Longitude),length(TS.Latitude),1);
+        lon_3d = repmat(TS.Longitude,1,length(TS.Latitude),length(TS.Pressure));
+        lat_3d = repmat(TS.Latitude',length(TS.Longitude),1,length(TS.Pressure));
+        TS.salinity_abs = gsw_SA_from_SP(TS.salinity,pres_3d,convert_lon(lon_3d),lat_3d);
+        TS.temperature_cns = gsw_CT_from_t(TS.salinity_abs,TS.temperature,pres_3d);
+        % get time variables for just this timestep
+        TS.Time = ncread([fpaths.temp_path 'RG_Climatology_Temp.nc'],'Time',m,1);
+        date_temp = datevec(datenum(2004,1,1+double(TS.Time)));
+        date_temp0 = date_temp;
+        date_temp0(:,2:3) = 1; % Jan. 1 of each year
+        TS.year = date_temp(:,1);
+        TS.day = datenum(date_temp) - datenum(date_temp0) + 1;
+        % transform day
+        TS.day_sin = sin((2.*pi.*TS.day)/365.25);
+        TS.day_cos = cos((2.*pi.*TS.day)/365.25);
+        % apply model
+        apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
+            base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
+            thresh,gobai_alg_dir_temp,param_props,fpaths.param_path,...
+            date_str,clust_vars,float_ext,glodap_ext,ctd_ext,...
+            file_date,float_file_ext);
+    elseif strcmp(base_grid,'RFROM')
+        % load dimensions
+        TS = load_RFROM_dim(fpaths.temp_path,start_year,end_year);
+        TS = replicate_dims(base_grid,TS,1);
+        % determine number of weeks in file
+        nc_atts = ncinfo([fpaths.temp_path 'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
+            num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
+        for w = 1:nc_atts.Dimensions(3).Length
+            % counter
+            cnt = TS.cnt{m}(w);
+            % get RFROM T and S
+            TS.temperature_cns = ncread([fpaths.temp_path 'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
+                num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
+                    'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
+            TS.salinity_abs = ncread([fpaths.sal_path 'RFROM_SAL_v2.2/RFROMV22_SAL_STABLE_' ...
+                num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
+                    'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
+            % load bgc variables if applicable
+            if any(strcmp(variables,'o2'))
+                TS.o2 = ncread(['/fast4/o2/GOBAI/' base_grid '/' dir_base '/gobai-o2.nc'],...
+                        'o2',[1 1 1 cnt],[Inf Inf Inf 1]);
+            end
+            if any(strcmp(variables,'no3'))
+                TS.no3 = ncread(['/fast5/no3/GOBAI/' base_grid '/' dir_base '/gobai-no3.nc'],...
+                        'no3',[1 1 1 cnt],[Inf Inf Inf 1]);
+            end
+            % get time variables for just this timestep
+            date_temp = datevec(datenum(1950,0,0)+TS.Time(cnt));
+            date_temp0 = date_temp;
+            date_temp0(:,2:3) = 1; % Jan. 1 of the year
+            TS.year = date_temp(:,1);
+            TS.day = datenum(date_temp) - datenum(date_temp0) + 1;
+            % transform day
+            TS.day_sin = sin((2.*pi.*TS.day)/365.25);
+            TS.day_cos = cos((2.*pi.*TS.day)/365.25);
+            % apply model
+            apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
+                base_grid,m,w,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
+                thresh,gobai_alg_dir_temp,param_props,fpaths.param_path,...
+                date_str,clust_vars,float_ext,glodap_ext,ctd_ext,...
+                file_date,float_file_ext);
+        end
+    else
+        % counter 
+        cnt = m;
+        % define paths
+        path2 = ['_Omon_' base_grid '_'];
+        path3 = ['_'  rlz '_gr'];
+        % define filepaths
+        nc_filepath_abs_sal = [fpaths.model_path base_grid '/combined/regridded/abs_sal' path2 ...
+            'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+        nc_filepath_cns_tmp = [fpaths.model_path base_grid '/combined/regridded/cns_tmp' path2 ...
+            'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+        % load dimensions
+        TS = load_model_dim(nc_filepath_abs_sal);
+        TS = replicate_dims(base_grid,TS,1);
+        % get practical salinity and in situ temperature from cmip model
+        TS.salinity_abs = ncread(nc_filepath_abs_sal,'abs_sal',[1 1 1 m],[Inf Inf Inf 1]);
+        TS.temperature_cns = ncread(nc_filepath_cns_tmp,'cns_tmp',[1 1 1 m],[Inf Inf Inf 1]);
+        % get time variables for just this timestep
+        TS.Time = ncread(nc_filepath_abs_sal,'time',m,1);
+        date_temp = datevec(datenum(0,0,double(TS.Time)));
+        date_temp0 = date_temp;
+        date_temp0(:,2:3) = 1; % Jan. 1 of each year
+        TS.year = date_temp(:,1);
+        TS.day = datenum(date_temp) - datenum(date_temp0) + 1;
+        % transform day
+        TS.day_sin = sin((2.*pi.*TS.day)/365.25);
+        TS.day_cos = cos((2.*pi.*TS.day)/365.25);
+        % apply model
+        apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
+            base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
+            thresh,gobai_alg_dir_temp,param_props,fpaths.param_path,...
+            date_str,clust_vars,float_ext,glodap_ext,ctd_ext,...
+            file_date,float_file_ext);
+
     end
 end
-files(idx_rem) = [];
-for cnt = 1:length(files)
-    % define temporary file name
-    filename_temp = [gobai_alg_dir_temp 'gobai-' ...
-        param_props.file_name '-' num2str(cnt) '.nc'];
-    % read time
-    time = ncread(filename_temp,'time'); % read
-    date = datevec(datenum(1950,1,1)+time);
-    y = date(1); m = date(2);
-    filename = [gobai_alg_dir 'gobai-' param_props.file_name '-' ...
-        num2str(y) '-' sprintf('%02d',m) '.nc'];
-    % copy rfrom schema
-    rfrom_info = ncinfo([fpaths.temp_path ...
-        'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
-        num2str(y) '_' sprintf('%02d',m) '.nc']);
-    ncwriteschema(filename,rfrom_info);
-    % adjust schema
-    for v = 1:length(rfrom_info.Variables)
-        if strcmp(rfrom_info.Variables(v).Name,'ocean_temperature')
-            var_idx = v;
+
+% end parallel session
+delete(gcp('nocreate'));
+
+% create netCDF file that will be end result
+if strcmp(base_grid,'RG')
+    TS = load_RG_dim(fpaths.temp_path);
+   % create file
+   create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props);
+elseif strcmp(base_grid,'RFROM')
+    TS = load_RFROM_dim(fpaths.temp_path,start_year,end_year);
+    % create file
+    create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props);
+else
+    % define paths
+    path2 = ['_Omon_' base_grid '_'];
+    path3 = ['_' rlz '_gr'];
+    % define filepaths
+    nc_filepath_abs_sal = [fpaths.model_path base_grid '/combined/regridded/abs_sal' path2 ...
+        'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+    % load dimensions
+    TS = load_model_dim(nc_filepath_abs_sal);
+    % create file
+    create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props);
+end
+
+%% concatenate gobai in weekly files to match RFROM
+% files = dir([gobai_alg_dir_temp '/gobai-' param_props.file_name '-*.nc']); % count files in folder
+% idx_rem = [];
+% for fln = 1:length(files)
+%     % index to remove filenames with uncertinaty
+%     if contains(files(fln).name,'uncer')
+%         idx_rem = [idx_rem;fln];
+%     end
+% end
+% files(idx_rem) = [];
+if strcmp(base_grid,'RFROM')
+    cnt = 1; %set counter
+    if ~isfolder([gobai_alg_dir 'monthly']); mkdir([gobai_alg_dir 'monthly']); end
+    for m = 1:length(TS.months)
+        % define gobai file name
+        filename = [gobai_alg_dir 'monthly/gobai-' param_props.file_name '-' ...
+            num2str(TS.years(m)) '-' sprintf('%02d',TS.months(m)) '.nc'];
+        if isfile(filename); delete(filename); end
+        % read rfrom schema
+        rfrom_info = ncinfo([fpaths.temp_path ...
+            'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
+            num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
+        % adjust variable-specific schema
+        for v = 1:length(rfrom_info.Variables)
+            if strcmp(rfrom_info.Variables(v).Name,'ocean_temperature')
+                var_idx = v;
+            end
+        end
+        rfrom_info.Variables(var_idx).Name = param_props.file_name;
+        rfrom_info.Variables(var_idx).Attributes(1).Value = param_props.units_long;
+        rfrom_info.Variables(var_idx).Attributes(2).Value = ['Mapped ' ...
+            param_props.long_param_name ' averaged from upper to lower ' ...
+            'bounds of mean pressure with the seasonal cycle '];
+        % adjust attributes
+        rfrom_info.Attributes(3).Value = 'NOAA PMEL, UW CICOES';
+        rfrom_info.Attributes(4).Value = ['Argo float data, GLODAP ship data, ' ...
+            rfrom_info.Attributes(2).Value];
+        rfrom_info.Attributes(2).Value = ['GOBAI-' param_props.dir_name ...
+            '-HR-v' num2str(snap_date)];
+        rfrom_info.Attributes(5).Value = 'Sharp, et al. GOBAI High Resolution Data Products, in prep.';
+        rfrom_info.Attributes(6).Value = ['Created: ' char(datetime('today'))];
+        rfrom_info.Attributes(7).Value = 'preliminary';
+        % write schema to gobai file
+        ncwriteschema(filename,rfrom_info);
+        % read and write parameters
+        for w = 1:rfrom_info.Dimensions(3).Length
+            % define temporary file name
+            filename_temp = [gobai_alg_dir_temp 'gobai-' ...
+                param_props.file_name '-' num2str(cnt) '.nc'];
+            % read and writetime
+            time = ncread(filename_temp,'time'); % read
+            ncwrite(filename,'time',time,w); % write
+            % read and write parameter
+            gobai_3d = ncread(filename_temp,param_props.file_name); % read
+            ncwrite(filename,param_props.file_name,gobai_3d,[1 1 1 w]); % write
+            % increase counter
+            cnt = cnt+1;
         end
     end
-    rfrom_info.Variables(var_idx).Name = 'o2';
-    rfrom_info.Variables(var_idx).Attributes(1).Value = 'micromole per kilogram';
-    rfrom_info.Variables(var_idx).Attributes(2).Value = 'micromole per kilogram';
-
-    % read information from temporary file and write it to main file
-    ncwrite(filename,'time',time,cnt); % write
-    gobai_3d = ncread(filename_temp,param_props.file_name); % read
-    ncwrite(filename,param_props.file_name,gobai_3d,[1 1 1 cnt]); % write
-    % delete temporary file
-    delete(filename_temp);
 end
 
 %% concatenate gobai in main file
@@ -367,7 +388,8 @@ end
 %% for processing 3D grids and applying trained models to them
 function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     base_grid,m,w,cnt,xdim,ydim,zdim,variables_TS,thresh,gobai_alg_dir_temp,...
-    param_props,param_path,date_str,clust_vars,float_ext,glodap_ext,ctd_ext)
+    param_props,param_path,date_str,clust_vars,float_ext,glodap_ext,ctd_ext,...
+    file_date,float_file_ext)
 
     % convert to arrays
     TS_index = ~isnan(TS.temperature_cns);
@@ -397,13 +419,15 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
 
     % define GMM model name
     if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-        gmm_folder_name = [param_props.dir_name '/Data/GMM_' ...
-            num2str(num_clusters)];
+        gmm_folder_name = [param_props.dir_name '/Models/GMM/c' ...
+            num2str(num_clusters) '_' file_date float_file_ext];
+        if ~isfolder(gmm_folder_name); mkdir(gmm_folder_name); end
         gmm_model_name = [gmm_folder_name '/model_' float_ext ...
-            glodap_ext ctd_ext '_' date_str];
+            glodap_ext ctd_ext];
     else
-        gmm_folder_name = [param_props.dir_name '/Data/GMM_' ...
-            base_grid '_' num2str(num_clusters)];
+        gmm_folder_name = [param_props.dir_name '/Models/GMM/' ...
+            base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+        if ~isfolder(gmm_folder_name); mkdir(gmm_folder_name); end
         gmm_model_name = [gmm_folder_name '/model_' float_ext ...
             glodap_ext ctd_ext '_' date_str];
     end
@@ -542,9 +566,9 @@ if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
     ncwriteatt(filename,'pres','long_name','pressure');
     ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
     % pressure bounds
-    nccreate(filename,'prs_bnds','Dimensions',{'prs_bnds',[zdim 2]},...
+    nccreate(filename,'prs_bnds','Dimensions',{'pres',zdim,'vertices',2},...
         'DataType','single','FillValue',NaN);
-    ncwrite(filename,'prs_bnds',TS.Pressure_Bounds);
+    ncwrite(filename,'prs_bnds',TS.Pressure_Bounds');
     ncwriteatt(filename,'prs_bnds','units','decibars');
     ncwriteatt(filename,'prs_bnds','axis','Z');
     ncwriteatt(filename,'prs_bnds','long_name','pressure bounds');

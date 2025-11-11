@@ -229,8 +229,9 @@ for f = 1:num_folds
     probs_matrix = [];
     for c = 1:num_clusters
         % load output
-        load([alg_dir '/' alg_fnames{f,c}],'output','obs_index_test')
+        load([alg_dir '/' alg_fnames{f,c}],'output','output_ESPER','obs_index_test')
         alg_output.(['f' num2str(f)])(:,c) = output;
+        esper_output.(['f' num2str(f)])(:,c) = output_ESPER;
         % assemble matrix of probabilities greater than the threshold (5%)
         probs_array = all_data_clusters.(['c' num2str(c)])(obs_index_test);
         probs_array(probs_array < thresh) = NaN;
@@ -239,38 +240,57 @@ for f = 1:num_folds
     alg_output.(['f' num2str(f) '_mean']) = ...
         double(sum(alg_output.(['f' num2str(f)]).*probs_matrix,2,'omitnan')./...
         sum(probs_matrix,2,'omitnan'));
+    esper_output.(['f' num2str(f) '_mean']) = ...
+        double(sum(esper_output.(['f' num2str(f)]).*probs_matrix,2,'omitnan')./...
+        sum(probs_matrix,2,'omitnan'));
 end
 % clean up
 clear f c
 % aggregate output from all folds
 alg_output.(['k_fold_test_' param_props.file_name]) = nan(size(all_data.(param_props.file_name)));
+esper_output.(['k_fold_test_' param_props.file_name]) = nan(size(all_data.(param_props.file_name)));
 for f = 1:num_folds
     % load output index
     load([alg_dir '/' alg_fnames{f,1}],'obs_index_test')
     % aggregate
     alg_output.(['k_fold_test_' param_props.file_name])(obs_index_test) = ...
         alg_output.(['f' num2str(f) '_mean']);
+    esper_output.(['k_fold_test_' param_props.file_name])(obs_index_test) = ...
+        esper_output.(['f' num2str(f) '_mean']);
 end
 % compare k-fold output to data
 alg_output.k_fold_delta = alg_output.(['k_fold_test_' param_props.file_name]) - all_data.(param_props.file_name);
-% calculate error stats
+esper_output.k_fold_delta = esper_output.(['k_fold_test_' param_props.file_name]) - all_data.(param_props.file_name);
+% calculate error stats for GOBAI algorithm
 alg_mean_err = mean(alg_output.k_fold_delta,'omitnan');
 alg_med_err = median(alg_output.k_fold_delta,'omitnan');
 alg_rmse = sqrt(mean(alg_output.k_fold_delta.^2,'omitnan'));
 alg_med_abs_err = median(abs(alg_output.k_fold_delta),'omitnan');
-% print error stats
-fprintf([num2str(num_clusters) ' Clusters']);
-fprintf(['Mean Error = ' num2str(alg_mean_err) ' ' param_props.units '\n']);
-fprintf(['Median Error = ' num2str(alg_med_err) ' ' param_props.units '\n']);
-fprintf(['RMSE = ' num2str(alg_rmse) ' ' param_props.units '\n']);
-fprintf(['Median Abs. Error = ' num2str(alg_med_abs_err) ' ' param_props.units '\n']);
+% calculate error stats for ESPER
+esper_mean_err = mean(esper_output.k_fold_delta,'omitnan');
+esper_med_err = median(esper_output.k_fold_delta,'omitnan');
+esper_rmse = sqrt(mean(esper_output.k_fold_delta.^2,'omitnan'));
+esper_med_abs_err = median(abs(esper_output.k_fold_delta),'omitnan');
+% print error stats for GOBAI algorithm
+fprintf([num2str(num_clusters) ' Clusters:\n']);
+fprintf(['Mean Error (GOBAI) = ' num2str(alg_mean_err) ' ' param_props.units '\n']);
+fprintf(['Median Error (GOBAI) = ' num2str(alg_med_err) ' ' param_props.units '\n']);
+fprintf(['RMSE (GOBAI) = ' num2str(alg_rmse) ' ' param_props.units '\n']);
+fprintf(['Median Abs. Error (GOBAI) = ' num2str(alg_med_abs_err) ' ' param_props.units '\n']);
+% print error stats for ESPER
+fprintf(['Mean Error (ESPER-NN) = ' num2str(esper_mean_err) ' ' param_props.units '\n']);
+fprintf(['Median Error (ESPER-NN) = ' num2str(esper_med_err) ' ' param_props.units '\n']);
+fprintf(['RMSE (ESPER-NN) = ' num2str(esper_rmse) ' ' param_props.units '\n']);
+fprintf(['Median Abs. Error (ESPER-NN) = ' num2str(esper_med_abs_err) ' ' param_props.units '\n']);
 % save predicted data
 if ~isfolder([pwd '/' kfold_dir]); mkdir(kfold_dir); end
 save([kfold_dir '/' kfold_name],'alg_output','alg_rmse',...
-    'alg_med_err','alg_mean_err','-v7.3');
+    'alg_med_err','alg_mean_err','esper_output','esper_rmse',...
+    'esper_med_err','esper_mean_err','-v7.3');
 clear alg_output alg_rmse alg_med_err alg_mean_err
+clear esper_output esper_rmse esper_med_err esper_mean_err
 
-%% plot histogram of errors
+%% plot histogram of errors for GOBAI algorithm
 load([kfold_dir '/' kfold_name],'alg_output','alg_rmse');
 figure('visible','on'); hold on;
 set(gca,'fontsize',12);
@@ -296,6 +316,36 @@ text(param_props.edges(1)+(2/5)*(param_props.edges(end)-param_props.edges(1)),..
     ['RMSE = ' num2str(round(alg_rmse,param_props.dec_points)) ' ' param_props.units],'fontsize',12);
 if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
 exportgraphics(gcf,[fig_dir '/' fig_name_1]);
+% clean up
+clear counts bin_centers h p myColorMap
+close
+
+%% plot histogram of errors for ESPER
+load([kfold_dir '/' kfold_name],'esper_output','esper_rmse');
+figure('visible','on'); hold on;
+set(gca,'fontsize',12);
+set(gcf,'position',[100 100 600 400]);
+[counts,bin_centers] = hist3([all_data.(param_props.file_name) esper_output.(['k_fold_test_' param_props.file_name])],...
+    'Edges',{param_props.edges param_props.edges});
+h=pcolor(bin_centers{1},bin_centers{2},counts');
+plot([param_props.edges(1) param_props.edges(end)],[param_props.edges(1) param_props.edges(end)],'k--');
+set(h,'EdgeColor','none');
+xlim([param_props.edges(1) param_props.edges(end)]);
+ylim([param_props.edges(1) param_props.edges(end)]);
+xlabel(['Measured ' param_props.label ' ' param_props.units]);
+ylabel(['ESPER-NN ' param_props.label ' ' param_props.units]);
+myColorMap = flipud(hot(256.*32));
+myColorMap(1,:) = 1;
+colormap(myColorMap);
+set(gca,'ColorScale','log');
+clim([1e0 1e5]);
+c=colorbar;
+c.Label.String = 'log_{10}(Bin Counts)';
+text(param_props.edges(1)+(2/5)*(param_props.edges(end)-param_props.edges(1)),...
+    param_props.edges(1)+(1/10)*(param_props.edges(end)-param_props.edges(1)),...
+    ['RMSE = ' num2str(round(esper_rmse,param_props.dec_points)) ' ' param_props.units],'fontsize',12);
+if ~isfolder([pwd '/' fig_dir]); mkdir(fig_dir); end
+exportgraphics(gcf,[fig_dir '/ESPER_' fig_name_1]);
 % clean up
 clear counts bin_centers h p myColorMap
 close
@@ -449,10 +499,27 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
                 output = ...
                     run_GBM(alg,all_data,all_data_clusters.(['c' num2str(c)]),...
                     obs_index_test,variables,thresh);
-             end
+            end
+            % estimate with ESPER neural network for oxygen
+            if strcmp(param_props.file_name,'o2')
+                idx_test = obs_index_test & ...
+                    all_data_clusters.(['c' num2str(c)]) > thresh;
+                ESPER_calc = ESPER_NN(7,[all_data.longitude(idx_test),...
+                                           all_data.latitude(idx_test),...
+                                           all_data.depth(idx_test)],...
+                                           [all_data.salinity(idx_test),...
+                                           all_data.temperature(idx_test)],...
+                                           [1 2],'Equations',8);
+                output_ESPER = nan(size(idx_test));
+                output_ESPER(idx_test) = ESPER_calc.oxygen;
+                output_ESPER = output_ESPER(obs_index_test);
+            else
+
+            end
         catch
             % if there aren't enough test data points, use NaNs
             output = nan(sum(obs_index_test),1);
+            output_ESPER = nan(sum(obs_index_test),1);
         end
 
         % stop timing predictions
@@ -491,13 +558,13 @@ end
 if ~isfolder([pwd '/' alg_dir]); mkdir(alg_dir); end
 if any(all_data_clusters.clusters(obs_index_train) == c)
     if num_folds > 1
-        parsave([alg_dir '/' alg_fnames{f,c} '.mat'],alg,alg_type,output,'output',obs_index_test,'obs_index_test');
+        parsave([alg_dir '/' alg_fnames{f,c} '.mat'],alg,alg_type,output,'output',output_ESPER,'output_ESPER',obs_index_test,'obs_index_test');
     else
         parsave([alg_dir '/' alg_fnames{f,c} '.mat'],alg,alg_type);
     end
 else
     if num_folds > 1
-        parsave([alg_dir '/' alg_fnames{f,c} '.mat'],output,'output',obs_index_test,'obs_index_test');
+        parsave([alg_dir '/' alg_fnames{f,c} '.mat'],output,'output',output_ESPER,'output_ESPER',obs_index_test,'obs_index_test');
     end
 end
 

@@ -68,14 +68,6 @@ for i=1:length(idx)
     WOA_OXY_match(idx(i)) = WOA.OXY(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
     WOA_NIT_match(idx(i)) = WOA.NIT(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
 end
-% remove data below 800dbar
-idx_woa_pres = float_data.PRES <= 800;
-WOA_OXY_match(idx_woa_pres) = [];
-WOA_oxy_delta(idx_woa_pres) = [];
-WOA_oxy_delta_per(idx_woa_pres) = [];
-WOA_NIT_match(idx_woa_pres) = [];
-WOA_nit_delta(idx_woa_pres) = [];
-WOA_nit_delta_per(idx_woa_pres) = [];
 % calculate differences for oxygen
 WOA_oxy_delta = float_data.OXY-WOA_OXY_match;
 WOA_oxy_delta_per = WOA_oxy_delta./float_data.OXY;
@@ -88,6 +80,14 @@ WOA_nit_delta_per = WOA_nit_delta./float_data.NIT;
 WOA_nit_delta_per(isinf(WOA_nit_delta_per))=NaN;
 st_dev_nit_delta = std(WOA_nit_delta,[],'omitnan');
 mean_nit_delta = mean(WOA_nit_delta,'omitnan');
+% remove data below 800dbar
+idx_woa_pres = float_data.PRES <= 800;
+WOA_OXY_match(idx_woa_pres) = [];
+WOA_oxy_delta(idx_woa_pres) = [];
+WOA_oxy_delta_per(idx_woa_pres) = [];
+WOA_NIT_match(idx_woa_pres) = [];
+WOA_nit_delta(idx_woa_pres) = [];
+WOA_nit_delta_per(idx_woa_pres) = [];
 % clean up
 clear idx idx_lon idx_lat idx_pres idx_mnth WOA i
 
@@ -129,17 +129,17 @@ close
 clear counts bin_centers c h myColorMap
 
 %% remove data points based on global range test
-% 479 umol/kg is max for WOD range checks
-idx_rem = float_data.NIT < 0 | float_data.NIT > 480;
-disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
-    num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
-vars = fieldnames(float_data);
-for v = 1:length(vars)
-    float_data.(vars{v})(idx_rem) = [];
-end
-WOA_delta(idx_rem) = [];
-WOA_delta_per(idx_rem) = [];
-WOA_match(idx_rem) = [];
+% % 479 umol/kg is max for WOD range checks
+% idx_rem = float_data.NIT < 0 | float_data.NIT > 480;
+% disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
+%     num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
+% vars = fieldnames(float_data);
+% for v = 1:length(vars)
+%     float_data.(vars{v})(idx_rem) = [];
+% end
+% WOA_delta(idx_rem) = [];
+% WOA_delta_per(idx_rem) = [];
+% WOA_match(idx_rem) = [];
 
 %% remove data points more than 3 sigmas from WOA values
 pres_levels = unique(float_data.PRES);

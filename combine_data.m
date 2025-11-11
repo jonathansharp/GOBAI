@@ -131,6 +131,25 @@ all_data.year = date(:,1);
 % calculate depth
 all_data.depth = -gsw_z_from_p(all_data.pressure,all_data.latitude);
 
+%%
+% determine bin number of each test data point on 1 degree grid
+lon_edges = -180:180; lon = -179.5:179.5;
+lat_edges = -90:90; lat = -89.5:89.5;
+time_edges = datenum([repelem([2000:2025]',12,1);2026],[repmat([1:12]',26,1);1],0);
+time = datenum(repelem([2000:2025]',12,15),repmat([1:12]',26,15),0);
+[~,~,Xnum] = histcounts(all_data.longitude,lon_edges);
+[~,~,Ynum] = histcounts(all_data.latitude,lat_edges);
+[~,~,Znum] = histcounts(all_data.time,time_edges);
+% accumulate 3D grid of test data point errors
+subs = [Xnum, Ynum, Znum];
+idx_subs = any(subs==0,2);
+sz = [length(lon),length(lat),length(time)];
+% average parameter
+count_profiles = accumarray(subs(~idx_subs,:),...
+    abs(all_data.(param_props.file_name)(~idx_subs)),sz,@nanmean,NaN);
+count_profiles = count_profiles(:,:,1:300);
+100.*(sum(~isnan(count_profiles(:)))/(360*180*300));
+
 %% plot gridded observations
 % determine bin number of each test data point on 1 degree grid
 lon_edges = -180:180; lon = -179.5:179.5;

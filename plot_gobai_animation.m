@@ -75,10 +75,10 @@ else
 end
 
 %% set up parallel pool
-%tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% plot frames
-for d = 1:length(pressures)
+parfor d = 1:length(pressures)
     % create folder for figures
     dname = [param_props.dir_name '/Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end

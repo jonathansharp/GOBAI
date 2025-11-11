@@ -156,6 +156,18 @@ save([param_props.dir_name '/Data/' model '_' param_props.file_name ...
     '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext '.mat'],...
     'all_data','file_date','-v7.3');
 
+%% save data as NetCDF
+nc_fname = [param_props.dir_name '/Data/' model '_' param_props.file_name ...
+        '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext '.nc'];
+if isfile(nc_fname); delete(nc_fname); end
+vars = fieldnames(all_data);
+for v = 1:length(vars)
+    if ndims(all_data.(vars{v})) < 3
+        nccreate(nc_fname,vars{v},'Dimensions',{vars{v} length(all_data.(vars{v}))});
+        ncwrite(nc_fname,vars{v},all_data.(vars{v}));
+    end
+end
+
 % else
 % 
 % %% display information

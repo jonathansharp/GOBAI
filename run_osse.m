@@ -27,7 +27,7 @@ load([param_props.dir_name '/Data/processed_all_' param_props.file_name ...
     '.mat'],'all_data','file_date');
 
 %% loop through each model
-for m = 2:length(model_types)
+for m = 1:length(model_types)
 
     %% process models
     process_cmip_model(model_types{m},[fpaths.model_path model_folders{m} '/'],...

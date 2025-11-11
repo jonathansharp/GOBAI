@@ -136,7 +136,7 @@ nc_filepath_temp = [fpath 'combined/regridded/thetao' path2 ... % define tempora
 % check if file exists and is the proper size
 if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
 % load and combine cmip output fields
-% if l ~= length(time)
+if l ~= length(time)
     combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
         depth,dpth_bnds,time,time_strt,grid_label,'thetao',idx_depth,'Sea Water Potential Temperature',...
         'degC',ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2);
@@ -145,7 +145,7 @@ if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
     plot_global_timeseries(lat,lon,depth,dpth_bnds,time,thetao,'thetao',...
         'Potential Temperature',[char(176) 'C'],model);
     clear thetao
-% end
+end
 
 %% load, combine, and save salinity
 nc_filepath = [fpath 'combined/regridded/so' path2 ... % define filepath

@@ -13,6 +13,7 @@ if strcmp(p,'o2')
     param_props.woa_name = 'OXYGEN'; % woa folder
     param_props.edges = 0:5:400;
     param_props.units = '(umol kg^{-1})';
+    param_props.units_long = 'micromole per kilogram';
     param_props.long_param_name = 'Dissolved Oxygen Amount Content';
     param_props.dec_points = 2;
     param_props.cmap = cmocean('ice');
@@ -27,6 +28,7 @@ elseif strcmp(p,'no3')
     param_props.woa_name = 'NITRATE'; % woa folder
     param_props.edges = 0:0.5:45;
     param_props.units = '(umol kg^{-1})';
+    param_props.units_long = 'micromole per kilogram';
     param_props.long_param_name = 'Dissolved Nitrate Amount Content';
     param_props.dec_points = 2;
     param_props.cmap = flipud(cmocean('speed'));
@@ -41,7 +43,8 @@ elseif strcmp(p,'dic')
     param_props.woa_name = '';
     param_props.edges = 1900:2:2400;
     param_props.units = '(umol kg^{-1})';
-    param_props.long_param_name = 'Dissolved Inorganic Carbon';
+     param_props.units_long = 'micromole per kilogram';
+   param_props.long_param_name = 'Dissolved Inorganic Carbon';
     param_props.dec_points = 1;
     param_props.cmap = cmocean('matter');
 end
