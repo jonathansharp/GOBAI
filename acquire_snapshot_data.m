@@ -229,27 +229,57 @@ for n = 1:length(idx_folders) % for each DAC
             m_scatter(lon_temp,float.(['F' floatnum]).LATITUDE,'.k');
             clear lon_temp
 
+            %% process pressure axis and physical variables
+            % pressure
+            if any(float.(['F' floatnum]).PRES_ADJUSTED_QC(:) == 1) || ...
+                    any(float.(['F' floatnum]).PRES_ADJUSTED_QC(:) == 2)
+                pressure = float.(['F' floatnum]).PRES_ADJUSTED;
+                pressure_qc = float.(['F' floatnum]).PRES_ADJUSTED_QC;
+            else
+                pressure = float.(['F' floatnum]).PRES;
+                pressure_qc = float.(['F' floatnum]).PRES_QC;
+            end
+
             %% Loop through floats, interpolate profiles, and log data
             for k = 1:numel(vars) % for each variable
                 % index based on data mode
                 mode_idx = false(n_levels,n_prof);
-                for m = 1:length(data_modes)
-                    if ~isfield(float.(['F' floatnum]),([vars{k} '_DATA_MODE']))
-                        mode_idx = mode_idx;
-                    else
-                    mode_idx = mode_idx | ...
-                        float.(['F' floatnum]).([vars{k} '_DATA_MODE']) == data_modes{m};
+                if ~isfield(float.(['F' floatnum]),([vars{k} '_DATA_MODE']))
+                    % do nothing
+                else
+                    for m = 1:length(data_modes)
+                        % apply certain criteria for physical parameters
+                        if strcmp(vars{k},'TEMP') || strcmp(vars{k},'PSAL')
+                            mode_idx = true; % mark as true if data mode exists
+                        else % apply different criteria for bgc parameters
+                            mode_idx = mode_idx | ... % mark as true if data mode matches
+                                float.(['F' floatnum]).([vars{k} '_DATA_MODE']) == data_modes{m};
+                        end
                     end
                 end
                 % index based on data mode and flags and depth < 1950
-                index = mode_idx & ... % use data mode index that was created
-                        (float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 1 | ...
-                        float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 2 | ...
-                        float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 8) & ... % with good variable flags,
-                        (float.(['F' floatnum]).PRES_ADJUSTED_QC == 1 | ...
-                        float.(['F' floatnum]).PRES_ADJUSTED_QC == 2) & ... % and good pressure flags
-                        float.(['F' floatnum]).PRES_ADJUSTED <= 1950;
-                
+                if strcmp(vars{k},'TEMP') || strcmp(vars{k},'PSAL')
+                    % allow unadjusted data for physical parameters
+                    index = mode_idx & ... % use data mode index that was created
+                            (float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 1 | ...
+                            float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 2 | ...
+                            float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 8 | ...
+                            float.(['F' floatnum]).([vars{k} '_QC']) == 1 | ...
+                            float.(['F' floatnum]).([vars{k} '_QC']) == 2 | ...
+                            float.(['F' floatnum]).([vars{k} '_QC']) == 8) & ... % with good variable flags,
+                            (pressure_qc == 1 | pressure_qc == 2) & ... % and good pressure flags
+                            pressure <= 1950;
+                else
+                    % apply different criteria for bgc parameters that
+                    % require adjusted data
+                    index = mode_idx & ... % use data mode index that was created
+                            (float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 1 | ...
+                            float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 2 | ...
+                            float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC']) == 8) & ... % with good variable flags,
+                            (pressure_qc == 1 | pressure_qc == 2) & ... % and good pressure flags
+                            pressure <= 1950;
+                end
+
                 % pre-allocate interpolated profiles
                 float.(['F' floatnum]).([vars{k} '_ADJUSTEDi']) = ...
                         nan(length(zi),length(float.(['F' floatnum]).CYCLE_NUMBER));
@@ -260,8 +290,19 @@ for n = 1:length(idx_folders) % for each DAC
                 for p = 1:length(float.(['F' floatnum]).CYCLE_NUMBER) % for each profile
                     if sum(index(:,p)) > 10 % if more than ten data points are available
                         % extract temporary pressure axis and parameter
-                        temp_pres = float.(['F' floatnum]).PRES_ADJUSTED(index(:,p),p);
-                        temp_var = float.(['F' floatnum]).([vars{k} '_ADJUSTED'])(index(:,p),p);
+                        temp_pres = pressure(index(:,p),p);
+                        if strcmp(vars{k},'TEMP') || strcmp(vars{k},'PSAL')
+                            % extract physical data that match index
+                            if any(float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC'])(:) == 1) || ...
+                                    any(float.(['F' floatnum]).([vars{k} '_ADJUSTED_QC'])(:) == 2)
+                                temp_var = float.(['F' floatnum]).([vars{k} '_ADJUSTED'])(index(:,p),p);
+                            else
+                                temp_var = float.(['F' floatnum]).(vars{k})(index(:,p),p);
+                            end
+                        else
+                            % extract adjusted bgc data that match index
+                            temp_var = float.(['F' floatnum]).([vars{k} '_ADJUSTED'])(index(:,p),p);
+                        end
 
                         % interpolate to edges (with extrapolation)
                         [~,unique_idx_pres] = unique(temp_pres);
@@ -325,7 +366,7 @@ for n = 1:length(idx_folders) % for each DAC
                         zi,'linewidth',2);
                     info = gcf; info.Position(4) = info.Position(4)*2;
                     scatter(float.(['F' floatnum]).([vars{k} '_ADJUSTED'])(:,prof_to_plot),...
-                        float.(['F' floatnum]).PRES_ADJUSTED(:,prof_to_plot),'filled');
+                        pressure(:,prof_to_plot),'filled');
                     legend({'Interpolation' 'Measurements'},'Location',...
                         'northoutside','NumColumns',2);
                     if ~exist([param_props.dir_name '/Figures/Data/Profiles'],'dir')
@@ -379,6 +420,10 @@ for n = 1:length(idx_folders) % for each DAC
                 float.(['F' floatnum]).CYCLE_NUMBERi(:)];
 
         end
+
+    % check for float processed but no data added to structure
+    % print float ID if this is the case (O2 sensor but not good data?)
+    if cmp_idx == 1 && sum(~nan_idx) == 0; disp(floatnum); end
 
     % clean up
     float = rmfield(float,(['F' floatnum]));
