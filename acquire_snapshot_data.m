@@ -154,6 +154,9 @@ end
 zi = ([2.5 10:10:170 182.5 ... % construct depth axis on which to interpolate
     200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
 
+%% load bad profile index
+load('argo_2025_1_3_QC_GOBAI_bad.mat');
+
 %% Download and process all float data
 for n = 1:length(idx_folders) % for each DAC
 
@@ -307,10 +310,16 @@ for n = 1:length(idx_folders) % for each DAC
                         % interpolate to edges (with extrapolation)
                         [~,unique_idx_pres] = unique(temp_pres);
                         try
-                        temp_var_i = interp1(temp_pres(unique_idx_pres),...
-                            temp_var(unique_idx_pres),zi,'linear','extrap');
+                            temp_var_i = interp1(temp_pres(unique_idx_pres),...
+                                temp_var(unique_idx_pres),zi,'linear','extrap');
                         catch
-                        keyboard
+                            keyboard
+                        end
+
+                        % remove interpolated data that matches a bad T/S index
+                        for z = 1:length(zi)
+                            keyboard
+                            % if platform_number_bad(z) cycle_number_bad(z)
                         end
 
                         % remove interpolated data beneath deepest measurement
@@ -479,6 +488,8 @@ float_data.DAY = datenum(date_temp) - datenum(date_temp0) + 1;
 clear date_temp date_temp0
 
 %% Calculate absolute salinity, conservative temperature, potential density, and spice
+% float_data.LON(float_data.LON<-200) = NaN;
+% float_data.LAT(float_data.LAT<-90) = NaN;
 float_data.ABSSAL = gsw_SA_from_SP(float_data.SAL,float_data.PRES,float_data.LON,float_data.LAT);
 float_data.CNSTEMP = gsw_CT_from_t(float_data.ABSSAL,float_data.TEMP,float_data.PRES);
 float_data.SIGMA = gsw_sigma0(float_data.ABSSAL,float_data.CNSTEMP);

@@ -101,17 +101,20 @@ parfor d = 1:length(pressures)
     end
     % establish file name
     if uncer == 0 && anom == 0
-        fname = ['gobai_' param_props.file_name '_animation_' num2str(pressures(d)) 'dbar.gif'];
+        fname = ['gobai_' param_props.file_name '_animation_' ...
+            float_ext glodap_ext ctd_ext '_' num2str(pressures(d)) 'dbar.gif'];
         v_fname = ['gobai_' param_props.file_name '_animation_' num2str(pressures(d)) 'dbar.avi'];
         gobai_fname = [dir_base '/' float_ext glodap_ext ctd_ext ...
             '/gobai-' param_props.file_name '.nc'];
     elseif uncer == 1
-        fname = ['gobai_' param_props.file_name '_uncer_animation_' num2str(pressures(d)) 'dbar.gif'];
+        fname = ['gobai_' param_props.file_name '_uncer_animation_' ...
+            float_ext glodap_ext ctd_ext '_' num2str(pressures(d)) 'dbar.gif'];
         v_fname = ['gobai_' param_props.file_name '_uncer_animation_' num2str(pressures(d)) 'dbar.avi'];
         gobai_fname = [dir_base '/' float_ext glodap_ext ctd_ext ...
             '/gobai-' param_props.file_name '-uncer.nc'];
     elseif anom == 1
-        fname = ['gobai_' param_props.file_name '_anom_animation_' num2str(pressures(d)) 'dbar.gif'];
+        fname = ['gobai_' param_props.file_name '_anom_animation_' ...
+            float_ext glodap_ext ctd_ext '_' num2str(pressures(d)) 'dbar.gif'];
         v_fname = ['gobai_' param_props.file_name '_anom_animation_' num2str(pressures(d)) 'dbar.avi'];
         gobai_fname = [dir_base '/' float_ext glodap_ext ctd_ext ...
             '/gobai-' param_props.file_name '.nc'];
@@ -186,7 +189,8 @@ parfor d = 1:length(pressures)
         end
         % save frame
         export_fig(h,[dname '/' num2str(pressures(d)) ...
-            'dbars/t' num2str(t) '.png'],'-transparent','-silent');
+            'dbars/t' num2str(t) '_' float_ext glodap_ext ctd_ext ...
+            '.png'],'-transparent','-silent');
         % capture frame
         open(v);
         frame = getframe(h);
