@@ -50,6 +50,9 @@ xlabel('\Delta[O_{2}] (GOBAI - CMIP)');
 ylabel('Depth (km)');
 hold off;
 
+% pre-allocate statistics table
+stats_table = table(model_types);
+
 %% loop through each model
 for m = 1:length(model_types)
 
@@ -75,15 +78,15 @@ for m = 1:length(model_types)
 
     % plot timeseries of residuals
     figure(1); hold on;
-    idx = ~isnan(gobai_mean) & ~isnan(cmip_mean);
-    ts_plot(m) = plot(time,gobai_mean-cmip_mean,'color',clrs(m,:),'linewidth',3);
+    idx = ~isnan(gobai_inv) & ~isnan(cmip_inv);
+    ts_plot(m) = plot(time,gobai_inv-cmip_inv,'color',clrs(m,:),'linewidth',3);
     hold off;
 
     % plot timeseries of each global mean
     figure(2); hold on;
-    ylim([floor(min([cmip_mean;gobai_mean])) ceil(max([cmip_mean;gobai_mean]))]);
-    p1=plot(time,cmip_mean,':','color',clrs(m,:),'linewidth',3);
-    p2=plot(time,gobai_mean,'color',clrs(m,:),'linewidth',3);
+    ylim([floor(min([cmip_inv;gobai_inv])) ceil(max([cmip_inv;gobai_inv]))]);
+    p1=plot(time,cmip_inv,':','color',clrs(m,:),'linewidth',3);
+    p2=plot(time,gobai_inv,'color',clrs(m,:),'linewidth',3);
     legend([p1 p2 ],{model_types{m} ['GOBAI-O_{2(' model_types{m} ')}']});
     export_fig(gcf,[param_props.dir_name '/Figures/osse_global_mean_timeseries_' ...
         float_ext glodap_ext ctd_ext '_' model_types{m} '.png'],'-transparent');
@@ -190,7 +193,6 @@ for m = 1:length(model_types)
     % end parallel session
     delete(gcp('nocreate'));
 
-
     % plot mean to 500m
     figure(5); hold on;
     worldmap([-90 90],[20 380]);
@@ -214,33 +216,36 @@ for m = 1:length(model_types)
     %% display statistics
     % global monthly
     disp([model_types{m} ' Avg. Diff. (Global Monthly Means) = ' ...
-        num2str(mean(gobai_mean-cmip_mean,1,'omitnan')) ' +/- ' ...
-        num2str(std(gobai_mean-cmip_mean,1,'omitnan')) ' umol/kg']);
+        num2str(mean(gobai_inv-cmip_inv,1,'omitnan')) ' +/- ' ...
+        num2str(std(gobai_inv-cmip_inv,1,'omitnan')) ' Pmol']);
     % grid-cell-level
     disp([model_types{m} ' Avg. Diff. (Grid-cell-level Values) = ' ...
         num2str(mean(delta(:),1,'omitnan')) ' +/- ' ...
-        num2str(std(delta(:),1,'omitnan')) 'umol/kg']);
+        num2str(std(delta(:),1,'omitnan')) 'Pmol']);
     % cmip trend
-    idx = ~isnan(cmip_mean);
-    [~,yr_cmip,x_cmip,err_cmip] = leastsq2(time(idx),cmip_mean(idx),time(1),2,[365.2424 365.2424/2]);
+    idx = ~isnan(cmip_inv);
+    [yf_cmip,yr_cmip,x_cmip,err_cmip] = leastsq2(time(idx),cmip_inv(idx),time(1),2,[365.2424 365.2424/2]);
     [~,acor,lag,dof] = autocov(time(idx),yr_cmip(idx),365.2424*5); % Determined lagged autocorrelation of residuals
     % figure; plot(lag,acor); 
-    % figure; plot(time(idx),yf_cmip(idx),time(idx),cmip_mean(idx));
+    % figure; plot(time(idx),yf_cmip(idx),time(idx),cmip_inv(idx));
     edof = dof-6; if edof < 1; edof = 1; end
     trend = x_cmip(2)*365.2424*10; % scale to decadal
     uncer = err_cmip(2)*365.2424*10*(sqrt(length(time))/sqrt(edof))*2; % scale to decadal, by eDOF, and to 95%
-    disp([model_types{m} ' Trend  = ' num2str(trend) ' +/- ' num2str(uncer) ' umol/kg/year']);
+    disp([model_types{m} ' Trend  = ' num2str(trend) ' +/- ' num2str(uncer) ' Pmol/year']);
     % gobai trend
-    idx = ~isnan(gobai_mean);
-    [~,yr_gobai,x_gobai,err_gobai] = leastsq2(time(idx),gobai_mean(idx),time(1),2,[365.2424 365.2424/2]);
+    idx = ~isnan(gobai_inv);
+    [~,yr_gobai,x_gobai,err_gobai] = leastsq2(time(idx),gobai_inv(idx),time(1),2,[365.2424 365.2424/2]);
     [~,acor,lag,dof] = autocov(time(idx),yr_gobai(idx),365.2424*5); % Determined lagged autocorrelation of residuals
     edof = dof-6; if edof < 1; edof = 1; end
     trend = x_gobai(2)*365.2424*10; % scale to decadal
     uncer = err_gobai(2)*365.2424*10*(sqrt(length(time(idx)))/sqrt(edof))*2; % scale to decadal, by eDOF, and to 95%
-    disp([model_types{m} ' Trend  = ' num2str(trend) ' +/- ' num2str(uncer) ' umol/kg/year']);
+    disp(['GOBAI (' model_types{m} ') Trend  = ' num2str(trend) ' +/- ' num2str(uncer) ' Pmol/year']);
     % trend diff
     disp([model_types{m} ' Trend Diff. = ' num2str((x_gobai(2)-x_cmip(2))*365.2424*10) ...
         ' umol/kg/year']);
+
+    % save statistics in table
+    %stats_table(1,1) = 
 
 end
 
@@ -266,7 +271,7 @@ plot_land('map');
 c=colorbar;
 caxis([-25 25]);
 colormap(cmocean('balance'));
-c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - ' model_types{m} ')}'];
+c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - ESM)}'];
 mlabel off;
 plabel off;
 export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_delta_' ...
@@ -277,7 +282,8 @@ close
 figure('visible','on');
 worldmap([-90 90],[20 380]);
 set(gca,'fontsize',12);
-pcolorm(lat,[lon;lon(end)+1],[std(delta_wtd_mean,[],3,'omitnan');std(delta_wtd_mean(end,:,:),[],3,'omitnan')]');
+pcolorm(lat,[lon;lon(end)+1],[std(delta_wtd_mean,[],3,'omitnan');...
+    std(delta_wtd_mean(end,:,:),[],3,'omitnan')]');
 title('Ensemble Variability');
 plot_land('map');
 c=colorbar;

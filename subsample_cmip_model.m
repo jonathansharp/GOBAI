@@ -130,7 +130,7 @@ all_data.(['gridded_' param_props.file_name]) = accumarray(subs(~idx_subs,:),...
 clear subs sz
 % make plot
 idx_depth = find(min(abs(all_data.depth-20))==abs(all_data.depth-20));
-figure('visible','off'); hold on
+figure('visible','on'); hold on
 worldmap([-90 90],[20 380]);
 title('model');
 title(['Annual mean at ' num2str(all_data.depth(idx_depth(1))) ' m (' model ')'],'fontsize',16)
@@ -142,7 +142,7 @@ pcolorm(lat,[lon_temp lon_temp(end)+1],[z;z(end,:)]');
 land = shaperead('landareas', 'UseGeoCoords', true);
 geoshow(land,'FaceColor',rgb('grey'));
 c=colorbar; caxis([150 350]);
-cmap = cmocean('ice'); cmap(1,:) = 1; colormap(cmap)
+cmap = cmocean('ice'); colormap(cmap)
 c.Label.String = ['Average Gridded ' param_props.fig_name];
 c.FontSize = 12;
 mlabel off; plabel off;

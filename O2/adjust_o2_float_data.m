@@ -9,16 +9,38 @@
 %
 % DATE: 09/22/2023
 
-function adjust_o2_float_data(float_file_ext,glodap_year,snap_date)
+function adjust_o2_float_data(float_file_ext,glodap_year,snap_date,...
+    include_float,include_glodap,include_ctd)
+
+%% define dataset extensions
+if include_float == 1; float_ext = 'f'; else float_ext = ''; end
+if include_glodap == 1; glodap_ext = 'g'; else glodap_ext = ''; end
+if include_ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-load(['O2/Data/processed_float_o2_data_' file_date float_file_ext '.mat'],...
-    'float_data','file_date');
-load(['O2/Data/processed_glodap_o2_data_' num2str(glodap_year) '.mat'],...
-    'glodap_data');
-load(['O2/Data/processed_wod_ctd_o2_data_' num2str(glodap_year) '.mat'],...
-    'wod_data');
+if include_float; load(['O2/Data/processed_float_o2_data_' ...
+        file_date float_file_ext '.mat'],'float_data','file_date'); end
+if include_glodap; load(['O2/Data/processed_glodap_o2_data_' ...
+        num2str(glodap_year) '.mat'],'glodap_data'); end
+if include_ctd; load(['O2/Data/processed_wod_ctd_o2_data_' ...
+        num2str(glodap_year) '.mat'],wod_data'); end
+
+%% remove data points based on global range test
+% 479 umol/kg is max for WOD range checks
+idx_rem = float_data.OXY < 0 | float_data.OXY > 480;
+disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
+    num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
+% idx_rem = glodap_data.OXY < 0 | glodap_data.OXY > 480;
+% disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
+%     num2str(100*(sum(idx_rem)/length(glodap_data.ID))) ' % of data)']);
+% idx_rem = wod_data.OXY < 0 | wod_data.OXY > 480;
+% disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
+%     num2str(100*(sum(idx_rem)/length(wod_data.ID))) ' % of data)']);
+vars = fieldnames(float_data);
+for v = 1:length(vars)
+    float_data.(vars{v})(idx_rem) = [];
+end
 
 % idx_f = (float_data.LON > 0 & float_data.LON < 35) & ...
 %     (float_data.LAT > 18 & float_data.LAT < 43) & ...
@@ -122,25 +144,6 @@ close
 % clean up
 clear counts bin_centers c h myColorMap
 
-%% remove data points based on global range test
-% 479 umol/kg is max for WOD range checks
-idx_rem = float_data.OXY < 0 | float_data.OXY > 480;
-disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
-    num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
-% idx_rem = glodap_data.OXY < 0 | glodap_data.OXY > 480;
-% disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
-%     num2str(100*(sum(idx_rem)/length(glodap_data.ID))) ' % of data)']);
-% idx_rem = wod_data.OXY < 0 | wod_data.OXY > 480;
-% disp([num2str(sum(idx_rem)) ' data points removed by global range test (' ...
-%     num2str(100*(sum(idx_rem)/length(wod_data.ID))) ' % of data)']);
-vars = fieldnames(float_data);
-for v = 1:length(vars)
-    float_data.(vars{v})(idx_rem) = [];
-end
-WOA_delta(idx_rem) = [];
-WOA_delta_per(idx_rem) = [];
-WOA_match(idx_rem) = [];
-
 %% remove data points more than 3 sigmas from WOA value for each depth
 pres_levels = unique(float_data.PRES);
 idx_rem = false(length(WOA_delta),1);
@@ -205,12 +208,21 @@ crossover.oxy_ship_gradient = [];
 crossover.sigma_ship = [];
 crossover.oxy_delta = [];
 crossover.oxy_delta_per = [];
+% include CTD data or not
+if include_ctd 
+    ship_lon = [glodap_data.LON;wod_data.LON];
+    ship_lat = [glodap_data.LAT;wod_data.LAT];
+    ship_time = [glodap_data.TIME;wod_data.TIME];
+    ship_sigma = [glodap_data.SIGMA;wod_data.SIGMA];
+    ship_oxy = [glodap_data.OXY;wod_data.OXY];
+else
+    ship_lon = [glodap_data.LON];
+    ship_lat = [glodap_data.LAT];
+    ship_time = [glodap_data.TIME];
+    ship_sigma = [glodap_data.SIGMA];
+    ship_oxy = [glodap_data.OXY];
+end
 % cycle through float profiles 
-ship_lon = [glodap_data.LON;wod_data.LON];
-ship_lat = [glodap_data.LAT;wod_data.LAT];
-ship_time = [glodap_data.TIME;wod_data.TIME];
-ship_sigma = [glodap_data.SIGMA;wod_data.SIGMA];
-ship_oxy = [glodap_data.OXY;wod_data.OXY];
 for p = 1:length(float_profile_IDs)
     % float position
     lon = mean(float_data.LON(float_data.PROF_ID==float_profile_IDs(p)));
@@ -287,7 +299,11 @@ for p = 1:length(float_profile_IDs)
         crossover.oxy_ship_gradient = [crossover.oxy_ship_gradient;oxy_ship_gradient(idx_pres)];
         crossover.sigma_float = [crossover.sigma_float;sigma_float];
         crossover.sigma_ship = [crossover.sigma_ship;sigma_ship];
-        crossover.oxy_delta = [crossover.oxy_delta;oxy_float-oxy_ship(idx_pres)];
+        try
+            crossover.oxy_delta = [crossover.oxy_delta;oxy_float-oxy_ship(idx_pres)];
+        catch
+            keyboard
+        end
         crossover.oxy_delta_per = [crossover.oxy_delta_per;...
             (oxy_float-oxy_ship(idx_pres))./oxy_float];
     end

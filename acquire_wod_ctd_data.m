@@ -1,4 +1,4 @@
-function wod = acquire_wod_ctd_data(param_props,glodap_year,start_year,end_year)
+function wod = acquire_wod_ctd_data(param_props,glodap_year,start_year)
 
 %% process parameter name
 if strcmp(param_props.file_name,'o2')
@@ -10,10 +10,19 @@ load([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_dat
     'glodap_data');
 
 %% Only do all this if downloaded wod matlab file does not exist
-if exist([param_props.dir_name '/Data/processed_wod_ctd_' param_props.file_name '_data_' num2str(end_year) '.mat'],'file') ~= 2
-
-%% process year
+end_year = year(date);
 year = num2str(end_year);
+
+if exist([param_props.dir_name '/Data/processed_wod_ctd_' param_props.file_name '_data_' year '.mat'],'file') ~= 2
+
+%% Download WOD CTD and OSD profiles
+for y = start_year:end_year
+    for x = 1:length(types)
+        if exist(['Data/WOD_Combined_Profiles/wod_' types{x} '_' num2str(y) '.nc'],'file') ~= 2
+            https://www.ncei.noaa.gov/data/oceans/ncei/wod/1965/wod_osd_1965.nc
+        end
+    end
+end
 
 %% load WOD profile data
 folder = 'Data/WOD_Profiles_data';

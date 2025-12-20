@@ -61,19 +61,19 @@ for m = 1:length(time)
     cmip = ncread(cmip_filepath,param_props.file_name,[1 1 1 m],[Inf Inf Inf 1]);
 
     %% apply RG mask
-    % % load RG grid
-    % lat_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],'Latitude');
-    % lon_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],'Longitude');
-    % temp_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],...
-    %     'Temperature',[1 1 1 m],[Inf Inf 1 1]);
-    % mask_rg = (isnan(temp_rg));
-    % % reorder and pad mask
-    % mask_cmip = [mask_rg(341:end,:,:);mask_rg(1:340,:,:)];
-    % mask_cmip = [true(length(lon),25,length(depth)),...
-    %     repmat(mask_cmip,1,1,length(depth)),true(length(lon),10,length(depth))];
-    % % apply mask to monthly output
-    % gobai(mask_cmip) = NaN;
-    % cmip(mask_cmip) = NaN;
+    % load RG grid
+    lat_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],'Latitude');
+    lon_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],'Longitude');
+    temp_rg = ncread([pwd '/Data/RG_CLIM/RG_Climatology_Temp.nc'],...
+        'Temperature',[1 1 1 m],[Inf Inf 1 1]);
+    mask_rg = (isnan(temp_rg));
+    % reorder and pad mask
+    mask_cmip = [mask_rg(341:end,:,:);mask_rg(1:340,:,:)];
+    mask_cmip = [true(length(lon),25,length(depth)),...
+        repmat(mask_cmip,1,1,length(depth)),true(length(lon),10,length(depth))];
+    % apply mask to monthly output
+    gobai(mask_cmip) = NaN;
+    cmip(mask_cmip) = NaN;
 
     %% determine differences between masked grids
     delta = gobai-cmip;
@@ -81,11 +81,19 @@ for m = 1:length(time)
     %% calculate global means
     vol = single(calculate_volume(lat,lon,depth,dpth_bnds));
     idx_gobai = ~isnan(gobai);
-    % Eliminate bottom depth for MPI-ESM1-2-LR
-    if strcmp(base_grid,'MPI-ESM1-2-LR'); idx_gobai(:,:,end) = false; end
+    % % Eliminate bottom depth for MPI-ESM1-2-LR
+    % if strcmp(base_grid,'MPI-ESM1-2-LR'); idx_gobai(:,:,end) = false; end
     gobai_mean(m) = sum(gobai(idx_gobai).*vol(idx_gobai))./sum(vol(idx_gobai));
     idx_cmip = ~isnan(cmip);
     cmip_mean(m) = sum(cmip(idx_cmip).*vol(idx_cmip))./sum(vol(idx_cmip));
+   
+    %% calculate global inventories
+    vol = single(calculate_volume(lat,lon,depth,dpth_bnds));
+    kg = 1027.*vol; % density estimate
+    idx_gobai = ~isnan(gobai);
+    gobai_inv(m) = sum(gobai(idx_gobai).*kg(idx_gobai))./(10^21);
+    idx_cmip = ~isnan(cmip);
+    cmip_inv(m) = sum(cmip(idx_cmip).*kg(idx_cmip))./(10^21);
 
     %% calculate column means
     % gobai (mol/m2)
@@ -212,7 +220,7 @@ close
 if ~isfolder([param_props.dir_name '/Data/' base_grid]); mkdir([param_props.dir_name '/Data/' base_grid '/' rlz '_gr']); end
 save([param_props.dir_name '/Data/' base_grid '/' rlz '_gr/statistics_' ...
     float_ext glodap_ext ctd_ext '.mat'],...
-    'gobai_mean','gobai_depth_mean','cmip_mean','cmip_depth_mean');
+    'gobai_mean','gobai_inv','gobai_depth_mean','cmip_mean','cmip_inv','cmip_depth_mean');
 
 %% plot global mean timeseries
 figure;

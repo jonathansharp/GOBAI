@@ -338,6 +338,15 @@ if strcmp(base_grid,'RFROM')
             % increase counter
             cnt = cnt+1;
         end
+        % write dimensions
+        lon = ncread([gobai_alg_dir 'gobai-' param_props.file_name '.nc'],'lon');
+        ncwrite(filename,'longitude',lon);
+        lat = ncread([gobai_alg_dir 'gobai-' param_props.file_name '.nc'],'lat');
+        ncwrite(filename,'latitude',lat);
+        pres = ncread([gobai_alg_dir 'gobai-' param_props.file_name '.nc'],'pres');
+        ncwrite(filename,'mean_pressure',pres);
+        prs_bnds = ncread([gobai_alg_dir 'gobai-' param_props.file_name '.nc'],'prs_bnds');
+        ncwrite(filename,'mean_pressure_bnds',prs_bnds');
     end
 end
 
@@ -469,9 +478,9 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         
         % % remove year for cluster 13 for RG grid
         % if c == 13
+        %     disp('EXCLUDING YEAR FOR CLUSTER #13 PREDICTIONS');
         %     variables_TS_tmp(strcmp(variables_TS_tmp,'year_array'))=[];
         % end
-
         % predict data for each cluster
         if strcmp(alg_type,'FFNN')
             gobai_matrix(:,c) = ...
@@ -486,7 +495,6 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
                 run_GBM(alg_struct.GBM,TS,probabilities_array,...
                 true(size(TS.temperature_cns_array)),variables_TS_tmp,thresh);
         end
-
       end
 
     end
@@ -565,14 +573,16 @@ if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
     ncwriteatt(filename,'pres','axis','Z');
     ncwriteatt(filename,'pres','long_name','pressure');
     ncwriteatt(filename,'pres','_CoordinateAxisType','Pres');
-    % pressure bounds
-    nccreate(filename,'prs_bnds','Dimensions',{'pres',zdim,'vertices',2},...
-        'DataType','single','FillValue',NaN);
-    ncwrite(filename,'prs_bnds',TS.Pressure_Bounds');
-    ncwriteatt(filename,'prs_bnds','units','decibars');
-    ncwriteatt(filename,'prs_bnds','axis','Z');
-    ncwriteatt(filename,'prs_bnds','long_name','pressure bounds');
-    ncwriteatt(filename,'prs_bnds','_CoordinateAxisType','Pres');
+    if strcmp(base_grid,'RFROM')
+        % pressure bounds
+        nccreate(filename,'prs_bnds','Dimensions',{'pres',zdim,'vertices',2},...
+            'DataType','single','FillValue',NaN);
+        ncwrite(filename,'prs_bnds',TS.Pressure_Bounds');
+        ncwriteatt(filename,'prs_bnds','units','decibars');
+        ncwriteatt(filename,'prs_bnds','axis','Z');
+        ncwriteatt(filename,'prs_bnds','long_name','pressure bounds');
+        ncwriteatt(filename,'prs_bnds','_CoordinateAxisType','Pres');
+    end
 else
     nccreate(filename,'depth','Dimensions',{'depth',zdim},...
     'DataType','single','FillValue',NaN);

@@ -35,9 +35,9 @@ lon_0_360 = convert_lon(lon,'format','0-360');
 [lon_0_360_3d,lat_3d,pres_3d] = ndgrid(lon_0_360,lat,pres);
 
 %% determine coefficients to calculate gridding uncertainty
-[b,stats] = calculate_gridding_uncertainty_coeffs(file_date,...
-    fpaths.temp_path,fpaths.sal_path,float_file_ext,glodap_year,...
-    lon,lat,time,lon_0_360_3d,lat_3d,pres_3d);
+% [b,stats] = calculate_gridding_uncertainty_coeffs(file_date,...
+%     fpaths.temp_path,fpaths.sal_path,float_file_ext,glodap_year,...
+%     lon,lat,time,lon_0_360_3d,lat_3d,pres_3d);
 
 %% loop through each model
 for m = 1:length(model_types)
@@ -106,15 +106,15 @@ parfor t = 1:length(time)
     % between models and reconstructions
     gobai_alg_uncer = sqrt(mean(gobai_delta.^2,4,'omitnan'));
 
-    % calculate measurement uncertainty as 3% of [O2]
-    gobai_meas_uncer = gobai.*0.03;
-
-    % calculate gridding uncertainty
-    bot_3d = bottom_depth(lat_3d,lon_0_360_3d);
-    bot_3d(bot_3d > 2000) = 2000;
-    gobai_grid_uncer = b(1) + b(2).*pres_3d + b(3).*bot_3d;
-    gobai_grid_uncer(~idx_gobai) = NaN;
-    % figure; pcolor(lon,lat,gobai_grid_uncer(:,:,11)'); shading flat; colorbar; clim([0 15]);
+    % % calculate measurement uncertainty as 3% of [O2]
+    % gobai_meas_uncer = gobai.*0.03;
+    % 
+    % % calculate gridding uncertainty
+    % bot_3d = bottom_depth(lat_3d,lon_0_360_3d);
+    % bot_3d(bot_3d > 2000) = 2000;
+    % gobai_grid_uncer = b(1) + b(2).*pres_3d + b(3).*bot_3d;
+    % gobai_grid_uncer(~idx_gobai) = NaN;
+    % % figure; pcolor(lon,lat,gobai_grid_uncer(:,:,11)'); shading flat; colorbar; clim([0 15]);
 
     % save uncertainty for timestep in temporary files
     filename = [gobai_alg_dir 'gobai-' param_props.file_name '-uncer-' num2str(t) '.nc'];
@@ -126,20 +126,20 @@ parfor t = 1:length(time)
     nccreate(filename,['u_alg_' param_props.file_name],'Dimensions',...
         {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
     ncwrite(filename,['u_alg_' param_props.file_name],gobai_alg_uncer);
-    % measurment uncertainty
-    nccreate(filename,['u_meas_' param_props.file_name],'Dimensions',...
-        {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
-    ncwrite(filename,['u_meas_' param_props.file_name],gobai_meas_uncer);
-    % gridding uncertainty
-    nccreate(filename,['u_grid_' param_props.file_name],'Dimensions',...
-        {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
-    ncwrite(filename,['u_grid_' param_props.file_name],gobai_grid_uncer);
-    % total uncertainty
-    gobai_tot_uncer = sqrt(gobai_alg_uncer.^2 + gobai_meas_uncer.^2 + ...
-        gobai_grid_uncer.^2);
-    nccreate(filename,['u_tot_' param_props.file_name],'Dimensions',...
-        {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
-    ncwrite(filename,['u_tot_' param_props.file_name],gobai_tot_uncer);
+    % % measurment uncertainty
+    % nccreate(filename,['u_meas_' param_props.file_name],'Dimensions',...
+    %     {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
+    % ncwrite(filename,['u_meas_' param_props.file_name],gobai_meas_uncer);
+    % % gridding uncertainty
+    % nccreate(filename,['u_grid_' param_props.file_name],'Dimensions',...
+    %     {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
+    % ncwrite(filename,['u_grid_' param_props.file_name],gobai_grid_uncer);
+    % % total uncertainty
+    % gobai_tot_uncer = sqrt(gobai_alg_uncer.^2 + gobai_meas_uncer.^2 + ...
+    %     gobai_grid_uncer.^2);
+    % nccreate(filename,['u_tot_' param_props.file_name],'Dimensions',...
+    %     {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
+    % ncwrite(filename,['u_tot_' param_props.file_name],gobai_tot_uncer);
 
     % display information
     % fprintf(['Algorithm Uncertainty Obtained for']);
@@ -163,12 +163,12 @@ for cnt = 1:length(files)
     ncwrite(filename,'time',time,cnt); % write
     gobai_3d = ncread(filename_temp,['u_alg_' param_props.file_name]); % read
     ncwrite(filename,['u_alg_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
-    gobai_3d = ncread(filename_temp,['u_meas_' param_props.file_name]); % read
-    ncwrite(filename,['u_meas_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
-    gobai_3d = ncread(filename_temp,['u_grid_' param_props.file_name]); % read
-    ncwrite(filename,['u_grid_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
-    gobai_3d = ncread(filename_temp,['u_tot_' param_props.file_name]); % read
-    ncwrite(filename,['u_tot_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
+    % gobai_3d = ncread(filename_temp,['u_meas_' param_props.file_name]); % read
+    % ncwrite(filename,['u_meas_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
+    % gobai_3d = ncread(filename_temp,['u_grid_' param_props.file_name]); % read
+    % ncwrite(filename,['u_grid_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
+    % gobai_3d = ncread(filename_temp,['u_tot_' param_props.file_name]); % read
+    % ncwrite(filename,['u_tot_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
     % delete temporary file
     delete(filename_temp);
 end

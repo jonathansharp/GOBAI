@@ -46,8 +46,8 @@ else
         glodap_ext ctd_ext '_' date_str];
 end
 
-% %% check for existence of model
-% if ~isfile([gmm_model_name '.mat'])
+%% check for existence of model
+if ~isfile([gmm_model_name '.mat'])
 
     %% load basin mask file
     
@@ -105,7 +105,6 @@ end
     % export('');
     % close
 
-
     % clean up
     clear gmm C S
     toc
@@ -148,8 +147,8 @@ end
 %     % display information
 %     disp(['already trained GMM for ' num2str(num_clusters) ...
 %         ' clusters for ' date_str(5:6) '/' date_str(1:4)]);
-% 
-% end
+
+end
 
 %% assign grid cells and probabilities to clusters
 folder_name = [fpaths.param_path 'GMM_' base_grid '_' num2str(num_clusters)];

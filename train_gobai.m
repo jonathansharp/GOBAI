@@ -413,14 +413,15 @@ obs_index_train(numbers > (data_per.*num_obs)) = false;
 
 % exclude Mediterranean cluster data before 2000 (for v2.3)
 if strcmp(base_grid,'RG')
-    in_med_new_idx = (all_data.longitude > -7 & all_data.longitude < 36) & ...
-        (all_data.latitude > 30 & all_data.latitude < 45) & all_data.year > 2000;
-    if c == 13
-        obs_index_train(all_data_clusters.clusters == 13 & ...
-            ~in_med_new_idx) = false;
-        variables(strcmp(variables,'year')) = [];
-    % elseif c == 5
-    end
+    % in_med_new_idx = (all_data.longitude > -7 & all_data.longitude < 36) & ...
+    %     (all_data.latitude > 30 & all_data.latitude < 45) & all_data.year > 2000;
+    % if c == 13
+    %     disp('EXCLUDING YEAR FOR CLUSTER #13')
+    %     obs_index_train(all_data_clusters.clusters == 13 & ...
+    %         ~in_med_new_idx) = false;
+    %     variables(strcmp(variables,'year')) = [];
+    % % elseif c == 5
+    % end
     % figure; scatter(all_data.year(all_data_clusters.clusters == 5 & in_med_new_idx),...
     %      all_data.o2(all_data_clusters.clusters == 5 & in_med_new_idx));
     % 

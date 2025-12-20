@@ -124,7 +124,7 @@ elseif strcmp(grid_label,'gn')
 end
 
 % index to above 2100m
-idx_depth = find(depth < 2100);
+idx_depth = find(depth < 2000);
 depth = depth(idx_depth);
 dpth_bnds = [dpth_bnds(1,idx_depth),dpth_bnds(2,idx_depth(end))]';
 
