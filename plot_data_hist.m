@@ -46,5 +46,6 @@ end
 ylabel('Number of Profiles');
 
 % save figure
-export_fig(['O2/Figures/dataset_histogram_' num2str(y1) '_' ...
+export_fig([param_props.dir_name '/Figures/dataset_histogram_' num2str(y1) '_' ...
     num2str(y2) '.png'],'-transparent','-silent');
+close;

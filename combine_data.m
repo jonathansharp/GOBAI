@@ -21,24 +21,35 @@ if include_float == 1; float_ext = 'f'; else float_ext = ''; end
 if include_glodap == 1; glodap_ext = 'g'; else glodap_ext = ''; end
 if include_ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
 
-%% load data after implementing float data adjustment
+%% load data after implementing float data adjustment and define variable names
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-load([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_adjusted_' file_date float_file_ext '.mat'],...
-    'float_data_adjusted','file_date');
-load([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' num2str(glodap_year) '.mat'],...
-    'glodap_data');
-load(['O2/Data/processed_wod_ctd_' param_props.file_name '_data_' num2str(glodap_year) '.mat'],...
-    'wod_data');
-
-%% Combine datasets
-float_vars = fieldnames(float_data_adjusted);
-glodap_vars = fieldnames(glodap_data);
-wod_vars = fieldnames(wod_data);
+if include_float == 1
+    load([param_props.dir_name ...
+        '/Data/processed_float_' param_props.file_name '_data_adjusted_' ...
+        file_date float_file_ext '.mat'],'float_data_adjusted','file_date');
+    float_vars = fieldnames(float_data_adjusted);
+else
+    float_data_adjusted = [];
+end
+if include_glodap == 1
+    load([param_props.dir_name ...
+        '/Data/processed_glodap_' param_props.file_name '_data_' ...
+        num2str(glodap_year) '.mat'],'glodap_data');
+    glodap_vars = fieldnames(glodap_data);
+else
+    glodap_data = [];
+end
+if include_ctd == 1
+    load(['O2/Data/processed_wod_ctd_' ...
+        param_props.file_name '_data_' num2str(glodap_year) '.mat'],...
+        'wod_data');
+    wod_vars = fieldnames(wod_data);
+else
+    wod_data = [];
+end
 
 %% Assemble index for float data
-if include_float == 0
-    float_idx = false(size(float_data_adjusted.(param_props.temp_name)));
-else
+if include_float == 1
     float_idx = true(size(float_data_adjusted.(param_props.temp_name)));
     for v = 1:length(float_vars)
         float_idx(isnan(float_data_adjusted.(float_vars{v}))) = false;
@@ -49,9 +60,7 @@ else
 end
 
 %% Assemble index for glodap data
-if include_glodap == 0
-    glodap_idx = false(size(glodap_data.(param_props.temp_name)));
-else
+if include_glodap == 1
     glodap_idx = true(size(glodap_data.(param_props.temp_name)));
     for v = 1:length(glodap_vars)
         glodap_idx(isnan(glodap_data.(glodap_vars{v}))) = false;
@@ -62,9 +71,7 @@ else
 end
 
 %% Assemble index for wod data
-if include_ctd == 0
-    wod_idx = false(size(wod_data.(param_props.temp_name)));
-else
+if include_ctd == 1
     wod_idx = true(size(wod_data.(param_props.temp_name)));
     for v = 1:length(wod_vars)
         wod_idx(isnan(wod_data.(wod_vars{v}))) = false;
@@ -74,50 +81,107 @@ else
     % wod_idx(wod_data.YEAR<start_year) = false;
 end
 
-%% Assemble combined dataset
-all_data.type = [repmat(1,sum(float_idx),1);...
-    repmat(2,sum(glodap_idx),1);repmat(3,sum(wod_idx),1)];
-all_data.platform = [float_data_adjusted.FLOAT(float_idx);...
-    glodap_data.CRU(glodap_idx);wod_data.CRU(wod_idx)];
-all_data.id = [float_data_adjusted.PROF_ID(float_idx);...
-    glodap_data.ID(glodap_idx);wod_data.ID(wod_idx)];
-all_data.latitude = [float_data_adjusted.LAT(float_idx);...
-    glodap_data.LAT(glodap_idx);wod_data.LAT(wod_idx)];
-all_data.longitude = [float_data_adjusted.LON(float_idx);...
-    glodap_data.LON(glodap_idx);wod_data.LON(wod_idx)];
-all_data.sigma = [float_data_adjusted.SIGMA(float_idx);...
-    glodap_data.SIGMA(glodap_idx);wod_data.SIGMA(wod_idx)];
-all_data.pressure = [float_data_adjusted.PRES(float_idx);...
-    glodap_data.PRES(glodap_idx);wod_data.PRES(wod_idx)];
-all_data.time = [float_data_adjusted.TIME(float_idx);...
-    glodap_data.TIME(glodap_idx);wod_data.TIME(wod_idx)];
-all_data.temperature = [float_data_adjusted.TEMP(float_idx);...
-    glodap_data.TEMP(glodap_idx);wod_data.TEMP(wod_idx)];
-all_data.temperature_cns = [float_data_adjusted.CNSTEMP(float_idx);...
-    glodap_data.CNSTEMP(glodap_idx);wod_data.CNSTEMP(wod_idx)];
-all_data.salinity = [float_data_adjusted.SAL(float_idx);...
-    glodap_data.SAL(glodap_idx);wod_data.SAL(wod_idx)];
-all_data.salinity_abs = [float_data_adjusted.ABSSAL(float_idx);...
-    glodap_data.ABSSAL(glodap_idx);wod_data.ABSSAL(wod_idx)];
-all_data.(param_props.file_name) = ...
-    [float_data_adjusted.(param_props.temp_name)(float_idx);...
-    glodap_data.(param_props.temp_name)(glodap_idx);...
-    wod_data.(param_props.temp_name)(wod_idx)];
+%% Pre-allocate combined dataset
+all_data.type = [];
+all_data.platform = [];
+all_data.id = [];
+all_data.latitude = [];
+all_data.longitude = [];
+all_data.sigma = [];
+all_data.pressure = [];
+all_data.time = [];
+all_data.temperature = [];
+all_data.temperature_cns = [];
+all_data.salinity = [];
+all_data.salinity_abs = [];
+all_data.(param_props.file_name) = [];
 if strcmp(param_props.file_name,'dic')
-    all_data.ph = [float_data_adjusted.PH(float_idx);...
-        glodap_data.PH(glodap_idx);wod_data.PH(wod_idx)];
-    all_data.talk = [float_data_adjusted.TA(float_idx);...
-        glodap_data.TA(glodap_idx);wod_data.TA(wod_idx)];
-    all_data.o2 = [float_data_adjusted.OXY(float_idx);...
-        glodap_data.OXY(glodap_idx);wod_data.OXY(wod_idx)];
-    all_data.no3 = [float_data_adjusted.NIT(float_idx);...
-        glodap_data.NIT(glodap_idx);wod_data.NIT(wod_idx)];
+    all_data.ph = [];
+    all_data.talk = [];
+    all_data.o2 = [];
+    all_data.no3 = [];
 elseif strcmp(param_props.file_name,'no3')
-    all_data.o2 = [float_data_adjusted.OXY(float_idx);...
-        glodap_data.OXY(glodap_idx);wod_data.OXY(wod_idx)];
+    all_data.o2 = [];
 end
 
-% transform longitude and day of year
+%% Add floats to combined dataset
+if include_float == 1
+    all_data.type = [all_data.type;repmat(1,sum(float_idx),1)];
+    all_data.platform = [all_data.platform;float_data_adjusted.FLOAT(float_idx)];
+    all_data.id = [all_data.id;float_data_adjusted.PROF_ID(float_idx)];
+    all_data.latitude = [all_data.latitude;float_data_adjusted.LAT(float_idx)];
+    all_data.longitude = [all_data.longitude;float_data_adjusted.LON(float_idx)];
+    all_data.sigma = [all_data.sigma;float_data_adjusted.SIGMA(float_idx)];
+    all_data.pressure = [all_data.pressure;float_data_adjusted.PRES(float_idx)];
+    all_data.time = [all_data.time;float_data_adjusted.TIME(float_idx)];
+    all_data.temperature = [all_data.temperature;float_data_adjusted.TEMP(float_idx)];
+    all_data.temperature_cns = [all_data.temperature_cns;float_data_adjusted.CNSTEMP(float_idx)];
+    all_data.salinity = [all_data.salinity;float_data_adjusted.SAL(float_idx)];
+    all_data.salinity_abs = [all_data.salinity_abs;float_data_adjusted.ABSSAL(float_idx)];
+    all_data.(param_props.file_name) = ...
+        [all_data.(param_props.file_name);float_data_adjusted.(param_props.temp_name)(float_idx)];
+    if strcmp(param_props.file_name,'dic')
+        all_data.ph = [all_data.ph;float_data_adjusted.PH_ESPER_ADJUSTED(float_idx)];
+        all_data.talk = [all_data.talk;float_data_adjusted.TA_est(float_idx)];
+        all_data.o2 = [all_data.o2;float_data_adjusted.OXY(float_idx)];
+        all_data.no3 = [all_data.no3;float_data_adjusted.NIT(float_idx)];
+    elseif strcmp(param_props.file_name,'no3')
+        all_data.o2 = [all_data.o2;float_data_adjusted.OXY(float_idx)];
+    end
+end
+
+%% Add glodap to combined dataset
+if include_glodap == 1
+    all_data.type = [all_data.type;repmat(2,sum(glodap_idx),1)];
+    all_data.platform = [all_data.platform;glodap_data.CRU(glodap_idx)];
+    all_data.id = [all_data.id;glodap_data.ID(glodap_idx)];
+    all_data.latitude = [all_data.latitude;glodap_data.LAT(glodap_idx)];
+    all_data.longitude = [all_data.longitude;glodap_data.LON(glodap_idx)];
+    all_data.sigma = [all_data.sigma;glodap_data.SIGMA(glodap_idx)];
+    all_data.pressure = [all_data.pressure;glodap_data.PRES(glodap_idx)];
+    all_data.time = [all_data.time;glodap_data.TIME(glodap_idx)];
+    all_data.temperature = [all_data.temperature;glodap_data.TEMP(glodap_idx)];
+    all_data.temperature_cns = [all_data.temperature_cns;glodap_data.CNSTEMP(glodap_idx)];
+    all_data.salinity = [all_data.salinity;glodap_data.SAL(glodap_idx)];
+    all_data.salinity_abs = [all_data.salinity_abs;glodap_data.ABSSAL(glodap_idx)];
+    all_data.(param_props.file_name) = ...
+        [all_data.(param_props.file_name);glodap_data.(param_props.temp_name)(glodap_idx)];
+    if strcmp(param_props.file_name,'dic')
+        all_data.ph = [all_data.ph;glodap_data.PH(glodap_idx)];
+        all_data.talk = [all_data.talk;glodap_data.TA(glodap_idx)];
+        all_data.o2 = [all_data.o2;glodap_data.OXY(glodap_idx)];
+        all_data.no3 = [all_data.no3;glodap_data.NIT(glodap_idx)];
+    elseif strcmp(param_props.file_name,'no3')
+        all_data.o2 = [all_data.o2;glodap_data.OXY(glodap_idx)];
+    end
+end
+
+%% Add ctd to combined dataset
+if include_ctd == 1
+    all_data.type = [all_data.type;repmat(3,sum(wod_idx),1)];
+    all_data.platform = [all_data.platform;wod_data.CRU(wod_idx)];
+    all_data.id = [all_data.id;wod_data.ID(wod_idx)];
+    all_data.latitude = [all_data.latitude;wod_data.LAT(wod_idx)];
+    all_data.longitude = [all_data.longitude;wod_data.LON(wod_idx)];
+    all_data.sigma = [all_data.sigma;wod_data.SIGMA(wod_idx)];
+    all_data.pressure = [all_data.pressure;wod_data.PRES(wod_idx)];
+    all_data.time = [all_data.time;wod_data.TIME(wod_idx)];
+    all_data.temperature = [all_data.temperature;wod_data.TEMP(wod_idx)];
+    all_data.temperature_cns = [all_data.temperature_cns;wod_data.CNSTEMP(wod_idx)];
+    all_data.salinity = [all_data.salinity;wod_data.SAL(wod_idx)];
+    all_data.salinity_abs = [all_data.salinity_abs;wod_data.ABSSAL(wod_idx)];
+    all_data.(param_props.file_name) = ...
+        [all_data.(param_props.file_name);wod_data.(param_props.temp_name)(wod_idx)];
+    if strcmp(param_props.file_name,'dic')
+        all_data.ph = [all_data.ph;wod_data.PH(wod_idx)];
+        all_data.talk = [all_data.talk;wod_data.TA(wod_idx)];
+        all_data.o2 = [all_data.o2;wod_data.OXY(wod_idx)];
+        all_data.no3 = [all_data.no3;wod_data.NIT(wod_idx)];
+    elseif strcmp(param_props.file_name,'no3')
+        all_data.o2 = [all_data.o2;wod_data.OXY(wod_idx)];
+    end
+end
+%% transform longitude and day of year
 all_data.lon_cos_1 = cosd(all_data.longitude-20);
 all_data.lon_cos_2 = cosd(all_data.longitude-110);
 date = datevec(all_data.time);

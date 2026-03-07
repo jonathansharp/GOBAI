@@ -22,7 +22,10 @@ if strcmp(param,'o2')
 elseif strcmp(param,'no3')
     fpaths.param_path_temp = '/fast5/no3/';
     fpaths.param_path = '/data2/no3/';
+    fpaths.param_path_o2 = '/data2/o2/';
 elseif strcmp(param,'dic')
     fpaths.param_path_temp = '/fast6/dic/';
     fpaths.param_path = '/data2/dic/';
+    fpaths.param_path_o2 = '/data2/o2/';
+    fpaths.param_path_no3 = '/data2/no3/';
 end

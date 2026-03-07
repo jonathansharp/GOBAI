@@ -317,10 +317,10 @@ for n = 1:length(idx_folders) % for each DAC
                         end
 
                         % remove interpolated data that matches a bad T/S index
-                        for z = 1:length(zi)
-                            keyboard
-                            % if platform_number_bad(z) cycle_number_bad(z)
-                        end
+                        % for z = 1:length(zi)
+                        %     keyboard
+                        %     % if platform_number_bad(z) cycle_number_bad(z)
+                        % end
 
                         % remove interpolated data beneath deepest measurement
                         % nah this doesn't seem necessary

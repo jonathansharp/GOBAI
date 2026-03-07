@@ -135,13 +135,13 @@ else
 end
 
 %% set up parallel pool
-tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+%tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% start timing predictions
 tStart = tic;
 
 %% compute and save estimates for each month
-parfor m = 1:length(TS.months)
+for m = 1:length(TS.months)
     if strcmp(base_grid,'RG')
         % counter 
         cnt = m;
@@ -160,6 +160,17 @@ parfor m = 1:length(TS.months)
         lat_3d = repmat(TS.Latitude',length(TS.Longitude),1,length(TS.Pressure));
         TS.salinity_abs = gsw_SA_from_SP(TS.salinity,pres_3d,convert_lon(lon_3d),lat_3d);
         TS.temperature_cns = gsw_CT_from_t(TS.salinity_abs,TS.temperature,pres_3d);
+        % load bgc variables if applicable
+        if any(strcmp(variables,'o2'))
+            TS.o2 = ncread([fpaths.param_path_o2 'GOBAI/' base_grid '/' ...
+                alg_type '/' 'c15_Jan-2026_D_A/train80_val10_test10/fg' ...
+                '/gobai-o2.nc'],'o2',[1 1 1 cnt],[Inf Inf Inf 1]);
+        end
+        if any(strcmp(variables,'no3'))
+            TS.no3 = ncread([fpaths.param_path_no3 'GOBAI/' base_grid '/' ...
+                alg_type '/' 'c15_Jan-2026_D/train80_val10_test10/fg' ...
+                '/gobai-no3.nc'],'no3',[1 1 1 cnt],[Inf Inf Inf 1]);
+        end
         % get time variables for just this timestep
         TS.Time = ncread([fpaths.temp_path 'RG_Climatology_Temp.nc'],'Time',m,1);
         date_temp = datevec(datenum(2004,1,1+double(TS.Time)));
@@ -195,12 +206,14 @@ parfor m = 1:length(TS.months)
                     'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
             % load bgc variables if applicable
             if any(strcmp(variables,'o2'))
-                TS.o2 = ncread(['/fast4/o2/GOBAI/' base_grid '/' dir_base '/gobai-o2.nc'],...
-                        'o2',[1 1 1 cnt],[Inf Inf Inf 1]);
+                TS.o2 = ncread([fpaths.param_path_o2 'GOBAI/' base_grid '/' ...
+                    alg_type '/' 'c15_Jan-2026_D_A/train80_val10_test10/fg' ...
+                    '/gobai-o2.nc'],'o2',[1 1 1 cnt],[Inf Inf Inf 1]);
             end
             if any(strcmp(variables,'no3'))
-                TS.no3 = ncread(['/fast5/no3/GOBAI/' base_grid '/' dir_base '/gobai-no3.nc'],...
-                        'no3',[1 1 1 cnt],[Inf Inf Inf 1]);
+                TS.no3 = ncread([fpaths.param_path_no3 'GOBAI/' base_grid '/' ...
+                    alg_type '/' 'c15_Jan-2026_D/train80_val10_test10/fg' ...
+                    '/gobai-no3.nc'],'no3',[1 1 1 cnt],[Inf Inf Inf 1]);
             end
             % get time variables for just this timestep
             date_temp = datevec(datenum(1950,0,0)+TS.Time(cnt));

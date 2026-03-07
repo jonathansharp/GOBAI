@@ -5,12 +5,12 @@ t_whole_script=tic; % time entire script
 start_year = 1993;
 end_year = 2024;
 % system-specific worker configuration
-numWorkers_train = 20;
-numWorkers_predict = 20;
-numWorkers_custer = 20;
+numWorkers_train = 24;
+numWorkers_predict = 24;
+numWorkers_cluster = 24;
 % float snapshot configuration
 snap_download = 1;
-snap_date = 202511;
+snap_date = 202601;
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_year = 2023;
@@ -26,18 +26,12 @@ num_folds = 5;
 variables = ... % variables for algorithms
     {'latitude' 'lon_cos_1' 'lon_cos_2' 'pressure' 'sigma' ...
     'temperature_cns' 'salinity_abs' 'day_sin' 'day_cos' 'year'};
-% random forest regression configuration
-numtrees = 500;
-minLeafSize = 10;
 % shallow neural network configuration
 train_ratio = 0.8;
 val_ratio = 0.1;
 test_ratio = 0.1;
-% gradient boosting configuration
-numstumps = 500;
-numbins = 50;
 % data and parameter configuration
-data_per_kfold = 0.1; % set data reduction to 10% for k-fold
+data_per_kfold = 0.01; % set data reduction to 10% for k-fold
 data_per = 1; % set data reduction to 100% for model training
 data_per_osse = 1; % set data reduction to 20% for osse
 param = 'o2';
@@ -54,6 +48,7 @@ grid_types = {'regridded' 'native_grid' 'native_grid' 'native_grid' 'native_grid
 % datasets to include
 flt = 1;
 gld = 1;
+osd = 0;
 ctd = 0;
 
 %% plot rfrom animation
@@ -61,15 +56,16 @@ ctd = 0;
 % plot_rfrom_sal_animation(fpaths,'v2.2','RFROM',start_year,end_year)
 
 %% load and process data
-% acquire data
-acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
-acquire_glodap_data(param_props,glodap_year,start_year);
+% % acquire data
+% acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
+% acquire_glodap_data(param_props,glodap_year,start_year);
 % acquire_wod_ctd_data(param_props,glodap_year,start_year);
-% display data
-display_data(param_props,float_file_ext,glodap_year,start_year,snap_date,flt,gld,ctd);
-% adjust and combine data (float,glodap,ctd)
-if flt == 1; adjust_o2_float_data(float_file_ext,glodap_year,snap_date,flt,gld,ctd); end
-combine_data(param_props,float_file_ext,start_year,glodap_year,snap_date,flt,gld,ctd);
+% acquire_wod_osd_data(param_props,glodap_year,start_year);
+% % display data
+% display_data(param_props,float_file_ext,glodap_year,start_year,snap_date,flt,gld,ctd);
+% % adjust and combine data (float,glodap,ctd)
+% if flt == 1; adjust_o2_float_data(float_file_ext,glodap_year,snap_date,flt,gld,ctd); end
+% combine_data(param_props,float_file_ext,start_year,glodap_year,snap_date,flt,gld,ctd);
 
 %% plot histogram of data
 plot_data_hist(param_props,file_date,float_file_ext,...
@@ -122,10 +118,10 @@ predict_gobai('FFNN',param_props,fpaths,base_grid,file_date,float_file_ext,...
     num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
     end_year,snap_date,flt,gld,ctd,'train_ratio',train_ratio,'val_ratio',val_ratio,...
     'test_ratio',test_ratio);
-% % plot gobai animations
-% plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,'FFNN',...
-%     file_date,float_file_ext,numWorkers_predict,flt,gld,ctd,'train_ratio',train_ratio,...
-%     'val_ratio',val_ratio,'test_ratio',test_ratio);
+% plot gobai animations
+plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,'FFNN',...
+    file_date,float_file_ext,numWorkers_predict,flt,gld,ctd,'train_ratio',train_ratio,...
+    'val_ratio',val_ratio,'test_ratio',test_ratio);
 % plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,'FFNN',...
 %     file_date,float_file_ext,numWorkers_predict,flt,gld,ctd,'train_ratio',train_ratio,...
 %     'val_ratio',val_ratio,'test_ratio',test_ratio,'anom',1);
@@ -133,7 +129,6 @@ predict_gobai('FFNN',param_props,fpaths,base_grid,file_date,float_file_ext,...
 % % plot gobai timeseries
 % gobai_global_timeseries(base_grid,param_props,fpaths,num_clusters,file_date,...
 %     float_file_ext,train_ratio,val_ratio,test_ratio,flt,gld,ctd,start_year,end_year)
-
 
 %% determine ideal number of clusters
 % num_clusters = [10 15 20 25];

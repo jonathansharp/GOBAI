@@ -515,7 +515,7 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
                 output_ESPER(idx_test) = ESPER_calc.oxygen;
                 output_ESPER = output_ESPER(obs_index_test);
             else
-
+                output_ESPER = nan(sum(obs_index_test),1);
             end
         catch
             % if there aren't enough test data points, use NaNs
@@ -561,6 +561,7 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
     if num_folds > 1
         parsave([alg_dir '/' alg_fnames{f,c} '.mat'],alg,alg_type,output,'output',output_ESPER,'output_ESPER',obs_index_test,'obs_index_test');
     else
+        % genFunction(FFNN.n1,['functions/' 'FFNN1_o2_C13_rg.m'])
         parsave([alg_dir '/' alg_fnames{f,c} '.mat'],alg,alg_type);
     end
 else

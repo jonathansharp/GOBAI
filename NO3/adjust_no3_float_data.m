@@ -475,6 +475,9 @@ for v = 1:length(vars)
     if strcmp(vars{v},'NIT')
         float_data_adjusted.NIT = double(float_data.NIT - ...
             (slp.*float_data.NIT + int).*float_data.NIT);
+        disp(['Average adjustment = ' ...
+            num2str(round(mean((slp.*float_data.NIT + int).*...
+            float_data.NIT,'omitnan'),2)) ' umol/kg']);
     else
         float_data_adjusted.(vars{v}) = float_data.(vars{v});
     end

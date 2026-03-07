@@ -29,15 +29,46 @@ end
 % convert pressure to depth
 float_data.DEPTH = -gsw_z_from_p(float_data.PRES,float_data.LAT);
 % make ESPER estimates
-esper_preds = ESPER_Mixed([1 4 6],[float_data.LON float_data.LAT float_data.DEPTH],...
-    [float_data.TEMP float_data.SAL float_data.OXY],[2 1 6],'Equations',7);
-float_data.TA = esper_preds.TA;
-float_data.PHOS = esper_preds.phosphate;
-float_data.SIL = esper_preds.silicate;
+esper_preds = ESPER_Mixed([1 2 3 4 6],[float_data.LON float_data.LAT float_data.DEPTH],...
+    [float_data.TEMP float_data.SAL float_data.OXY],[2 1 6],'Equations',7,...
+    'EstDates',float_data.YEAR + (float_data.DAY/365.25));
+float_data.TA_est = esper_preds.TA;
+float_data.DIC_est = esper_preds.DIC;
+float_data.pH_est = esper_preds.pH;
+float_data.PHOS_est = esper_preds.phosphate;
+float_data.SIL_est = esper_preds.silicate;
+idx = ~isnan(float_data.PH) & ~isnan(float_data.pH_est);
+% plot measured vs. estimated pH
+figure; scatter(float_data.PH,float_data.pH_est,'.k');
+hold on; plot([7.4 8.6],[7.4 8.6]);
+text(7.5,8.5,['Average Diff. = ' ...
+    num2str(round(mean(float_data.PH(idx)-float_data.pH_est(idx)),4)) ...
+    ' +/- ' num2str(round(std(float_data.PH(idx)-float_data.pH_est(idx)),4))]);
+xlabel('Float measured pH'); ylabel('Estimated pH (ESPER w/ T/S/O2)');
+export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_uncorr_' ...
+    file_date float_file_ext '.png']); close;
+% adjust float pH via compariaon with ESPER estimates (profile by profile)
+unique_profs = unique(float_data.PROF_ID);
+float_data.PH_ESPER_ADJUSTED = nan(size(float_data.PH));
+for p = 1:length(unique_profs)
+    idx_p = find(float_data.PROF_ID == unique_profs(p) & ~isnan(float_data.PH) & ~isnan(float_data.pH_est));
+    fit_params = polyfit(float_data.PH(idx_p),float_data.PH(idx_p)-float_data.pH_est(idx_p),1);
+    float_data.PH_ESPER_ADJUSTED(idx_p) = float_data.PH(idx_p) - (float_data.PH(idx_p).*fit_params(1) + fit_params(2));
+    adjustment(p) = mean((float_data.PH(idx_p).*fit_params(1) + fit_params(2)));
+end
+% plot measured (adjusted) vs. estimated pH
+figure; scatter(float_data.PH_ESPER_ADJUSTED,float_data.pH_est,'.k');
+hold on; plot([7.4 8.6],[7.4 8.6]);
+text(7.5,8.5,['Average Diff. = ' ...
+    num2str(round(mean(float_data.PH_ESPER_ADJUSTED(idx)-float_data.pH_est(idx)),4)) ...
+    ' +/- ' num2str(round(std(float_data.PH_ESPER_ADJUSTED(idx)-float_data.pH_est(idx)),4))]);
+xlabel('Float measured pH (Adjusted to ESPER)'); ylabel('Estimated pH (ESPER w/ T/S/O2)');
+export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_corr_' ...
+    file_date float_file_ext '.png']); close;
 % carbonate system calculations for DIC
-float_data.PH(float_data.PH > 8.5) = NaN; % eliminate obviously bad pH values
-carb = CO2SYS(float_data.TA,float_data.PH,1,3,float_data.SAL,...
-    float_data.TEMP,NaN,float_data.PRES,NaN,float_data.SIL,float_data.PHOS,...
+float_data.PH(float_data.PH_ESPER_ADJUSTED > 8.5) = NaN; % eliminate obviously bad pH values
+carb = CO2SYS(float_data.TA_est,float_data.PH_ESPER_ADJUSTED,1,3,float_data.SAL,...
+    float_data.TEMP,NaN,float_data.PRES,NaN,float_data.SIL_est,float_data.PHOS_est,...
     0,0,1,10,1,2,2);
 float_data.DIC = carb(:,2);
 float_data.DIC(float_data.DIC==-999) = NaN;
@@ -105,105 +136,105 @@ float_data.DIC(float_data.DIC==-999) = NaN;
 % clear x_edges x_bins y_bins z_edges z_bins t_bins
 
 %% Co-locate and compare float and glodap data (via profile crossovers)
-% pres_levels = [2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975]';
-% float_profile_IDs = unique(float_data.PROF_ID);
-% % pre-allocate
-% crossover.id = [];
-% crossover.lon = [];
-% crossover.lat = [];
-% crossover.pres = [];
-% crossover.sigma_float = [];
-% crossover.dic_float = [];
-% crossover.dic_float_gradient = [];
-% crossover.temp_float = [];
-% crossover.sal_float = [];
-% crossover.dic_glodap = [];
-% crossover.dic_glodap_gradient = [];
-% crossover.sigma_glodap = [];
-% crossover.dic_delta = [];
-% crossover.dic_delta_per = [];
-% % cycle through float profiles 
-% for p = 1:length(float_profile_IDs)
-%     % float position
-%     lon = mean(float_data.LON(float_data.PROF_ID==float_profile_IDs(p)));
-%     lat = mean(float_data.LAT(float_data.PROF_ID==float_profile_IDs(p)));
-%     time = mean(float_data.TIME(float_data.PROF_ID==float_profile_IDs(p)));
-%     % match index
-%     idx_lon = abs(glodap_data.LON - lon) <= 0.5;
-%     idx_lat = abs(glodap_data.LAT - lat) <= 0.5;
-%     idx_time = abs(glodap_data.TIME - time) <= 30;
-%     idx_all = idx_lon & idx_lat & idx_time;
-%     % if there is a matching glodap profile
-%     if sum(idx_all) > 0
-%         % float dic and depth
-%         dic_float = float_data.DIC(float_data.PROF_ID==float_profile_IDs(p));
-%         pres_float = float_data.PRES(float_data.PROF_ID==float_profile_IDs(p));
-%         sigma_float = float_data.SIGMA(float_data.PROF_ID==float_profile_IDs(p));
-%         lon_float = float_data.LON(float_data.PROF_ID==float_profile_IDs(p));
-%         lat_float = float_data.LAT(float_data.PROF_ID==float_profile_IDs(p));
-%         temp_float = float_data.TEMP(float_data.PROF_ID==float_profile_IDs(p));
-%         sal_float = float_data.SAL(float_data.PROF_ID==float_profile_IDs(p));
-%         % combine float profiles if there are more than one
-%         if length(dic_float) > 58
-%             dic_temp = nan(length(pres_levels),1);
-%             pres_temp = nan(length(pres_levels),1);
-%             sigma_temp = nan(length(pres_levels),1);
-%             lon_temp = nan(length(pres_levels),1);
-%             lat_temp = nan(length(pres_levels),1);
-%             temp_temp = nan(length(pres_levels),1);
-%             sal_temp = nan(length(pres_levels),1);
-%             for z = 1:length(pres_levels)
-%                 idx = pres_float == pres_levels(z);
-%                 dic_temp(z) = mean(dic_float(idx),'omitnan');
-%                 pres_temp(z) = mean(pres_float(idx),'omitnan');
-%                 sigma_temp(z) = mean(sigma_float(idx),'omitnan');
-%                 lon_temp(z) = mean(lon_float(idx),'omitnan');
-%                 lat_temp(z) = mean(lat_float(idx),'omitnan');
-%                 temp_temp(z) = mean(temp_float(idx),'omitnan');
-%                 sal_temp(z) = mean(sal_float(idx),'omitnan');
-%             end
-%             dic_float = dic_temp(~isnan(dic_temp));
-%             pres_float = pres_temp(~isnan(pres_temp));
-%             sigma_float = sigma_temp(~isnan(sigma_temp));
-%             lon_float = lon_temp(~isnan(lon_temp));
-%             lat_float = lat_temp(~isnan(lat_temp));
-%             temp_float = temp_temp(~isnan(temp_temp));
-%             sal_float = sal_temp(~isnan(sal_temp));
-%         end
-%         % get dic gradient
-%         dic_float_gradient = [0;diff(dic_float)];
-%         % pressure index
-%         idx_pres = ismember(pres_levels,pres_float);
-%         % extract glodap data
-%         dic_glodap_temp = glodap_data.DIC(idx_all);
-%         sigma_glodap_temp = glodap_data.SIGMA(idx_all);
-%         % take average of all matching glodap profiles (helps if there are multiple)
-%         dic_glodap = nan(58,1);
-%         sigma_glodap = nan(58,1);
-%         for gld_z = 1:58
-%             dic_glodap(gld_z) = mean(dic_glodap_temp(gld_z:58:end),'omitnan');
-%             sigma_glodap(gld_z) = mean(sigma_glodap_temp(gld_z:58:end),'omitnan');
-%         end
-%         % get dic gradient
-%         dic_glodap_gradient = [0;diff(dic_glodap)];
-%         % log matched data
-%         crossover.id = [crossover.id;repmat(float_profile_IDs(p),length(pres_float),1)];
-%         crossover.lon = [crossover.lon;lon_float];
-%         crossover.lat = [crossover.lat;lat_float];
-%         crossover.pres = [crossover.pres;pres_float];
-%         crossover.dic_float = [crossover.dic_float;dic_float];
-%         crossover.dic_float_gradient = [crossover.dic_float_gradient;dic_float_gradient];
-%         crossover.temp_float = [crossover.temp_float;temp_float];
-%         crossover.sal_float = [crossover.sal_float;sal_float];
-%         crossover.dic_glodap = [crossover.dic_glodap;dic_glodap(idx_pres)];
-%         crossover.dic_glodap_gradient = [crossover.dic_glodap_gradient;dic_glodap_gradient(idx_pres)];
-%         crossover.sigma_float = [crossover.sigma_float;sigma_float];
-%         crossover.sigma_glodap = [crossover.sigma_glodap;sigma_glodap];
-%         crossover.dic_delta = [crossover.dic_delta;dic_float-dic_glodap(idx_pres)];
-%         crossover.dic_delta_per = [crossover.dic_delta_per;...
-%             (dic_float-dic_glodap(idx_pres))./dic_float];
-%     end
-% end
+pres_levels = [2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975]';
+float_profile_IDs = unique(float_data.PROF_ID);
+% pre-allocate
+crossover.id = [];
+crossover.lon = [];
+crossover.lat = [];
+crossover.pres = [];
+crossover.sigma_float = [];
+crossover.dic_float = [];
+crossover.dic_float_gradient = [];
+crossover.temp_float = [];
+crossover.sal_float = [];
+crossover.dic_glodap = [];
+crossover.dic_glodap_gradient = [];
+crossover.sigma_glodap = [];
+crossover.dic_delta = [];
+crossover.dic_delta_per = [];
+% cycle through float profiles 
+for p = 1:length(float_profile_IDs)
+    % float position
+    lon = mean(float_data.LON(float_data.PROF_ID==float_profile_IDs(p)));
+    lat = mean(float_data.LAT(float_data.PROF_ID==float_profile_IDs(p)));
+    time = mean(float_data.TIME(float_data.PROF_ID==float_profile_IDs(p)));
+    % match index
+    idx_lon = abs(glodap_data.LON - lon) <= 0.5;
+    idx_lat = abs(glodap_data.LAT - lat) <= 0.5;
+    idx_time = abs(glodap_data.TIME - time) <= 30;
+    idx_all = idx_lon & idx_lat & idx_time;
+    % if there is a matching glodap profile
+    if sum(idx_all) > 0
+        % float dic and depth
+        dic_float = float_data.DIC(float_data.PROF_ID==float_profile_IDs(p));
+        pres_float = float_data.PRES(float_data.PROF_ID==float_profile_IDs(p));
+        sigma_float = float_data.SIGMA(float_data.PROF_ID==float_profile_IDs(p));
+        lon_float = float_data.LON(float_data.PROF_ID==float_profile_IDs(p));
+        lat_float = float_data.LAT(float_data.PROF_ID==float_profile_IDs(p));
+        temp_float = float_data.TEMP(float_data.PROF_ID==float_profile_IDs(p));
+        sal_float = float_data.SAL(float_data.PROF_ID==float_profile_IDs(p));
+        % combine float profiles if there are more than one
+        if length(dic_float) > 58
+            dic_temp = nan(length(pres_levels),1);
+            pres_temp = nan(length(pres_levels),1);
+            sigma_temp = nan(length(pres_levels),1);
+            lon_temp = nan(length(pres_levels),1);
+            lat_temp = nan(length(pres_levels),1);
+            temp_temp = nan(length(pres_levels),1);
+            sal_temp = nan(length(pres_levels),1);
+            for z = 1:length(pres_levels)
+                idx = pres_float == pres_levels(z);
+                dic_temp(z) = mean(dic_float(idx),'omitnan');
+                pres_temp(z) = mean(pres_float(idx),'omitnan');
+                sigma_temp(z) = mean(sigma_float(idx),'omitnan');
+                lon_temp(z) = mean(lon_float(idx),'omitnan');
+                lat_temp(z) = mean(lat_float(idx),'omitnan');
+                temp_temp(z) = mean(temp_float(idx),'omitnan');
+                sal_temp(z) = mean(sal_float(idx),'omitnan');
+            end
+            dic_float = dic_temp(~isnan(dic_temp));
+            pres_float = pres_temp(~isnan(pres_temp));
+            sigma_float = sigma_temp(~isnan(sigma_temp));
+            lon_float = lon_temp(~isnan(lon_temp));
+            lat_float = lat_temp(~isnan(lat_temp));
+            temp_float = temp_temp(~isnan(temp_temp));
+            sal_float = sal_temp(~isnan(sal_temp));
+        end
+        % get dic gradient
+        dic_float_gradient = [0;diff(dic_float)];
+        % pressure index
+        idx_pres = ismember(pres_levels,pres_float);
+        % extract glodap data
+        dic_glodap_temp = glodap_data.DIC(idx_all);
+        sigma_glodap_temp = glodap_data.SIGMA(idx_all);
+        % take average of all matching glodap profiles (helps if there are multiple)
+        dic_glodap = nan(58,1);
+        sigma_glodap = nan(58,1);
+        for gld_z = 1:58
+            dic_glodap(gld_z) = mean(dic_glodap_temp(gld_z:58:end),'omitnan');
+            sigma_glodap(gld_z) = mean(sigma_glodap_temp(gld_z:58:end),'omitnan');
+        end
+        % get dic gradient
+        dic_glodap_gradient = [0;diff(dic_glodap)];
+        % log matched data
+        crossover.id = [crossover.id;repmat(float_profile_IDs(p),length(pres_float),1)];
+        crossover.lon = [crossover.lon;lon_float];
+        crossover.lat = [crossover.lat;lat_float];
+        crossover.pres = [crossover.pres;pres_float];
+        crossover.dic_float = [crossover.dic_float;dic_float];
+        crossover.dic_float_gradient = [crossover.dic_float_gradient;dic_float_gradient];
+        crossover.temp_float = [crossover.temp_float;temp_float];
+        crossover.sal_float = [crossover.sal_float;sal_float];
+        crossover.dic_glodap = [crossover.dic_glodap;dic_glodap(idx_pres)];
+        crossover.dic_glodap_gradient = [crossover.dic_glodap_gradient;dic_glodap_gradient(idx_pres)];
+        crossover.sigma_float = [crossover.sigma_float;sigma_float];
+        crossover.sigma_glodap = [crossover.sigma_glodap;sigma_glodap];
+        crossover.dic_delta = [crossover.dic_delta;dic_float-dic_glodap(idx_pres)];
+        crossover.dic_delta_per = [crossover.dic_delta_per;...
+            (dic_float-dic_glodap(idx_pres))./dic_float];
+    end
+end
 
 % index to below 300 dbars
 idx = crossover.pres > 300 & ~isnan(crossover.dic_float) & ~isnan(crossover.dic_glodap);
