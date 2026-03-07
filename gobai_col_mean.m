@@ -9,7 +9,7 @@ set(gca,'layer','top');
 title('GOBAI-O_{2} Column Mean [O_{2}] (\mumol kg^{-1})','fontsize',32);
 
 % file information
-ver = 'v2.2'; % version
+ver = 'v2.3'; % version
 var = 'O2'; % variable
 path = ['/raid/Data/GOBAI-' var '/' ver '/']; % file path
 % download dimensions

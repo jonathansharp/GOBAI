@@ -7,7 +7,7 @@ set(gca,'fontsize',26,'YDir','reverse','linewidth',3,'layer','top','box','on');
 title('GOBAI-O_{2} Zonal Mean [O_{2}] (\mumol kg^{-1})','fontsize',32);
 
 % file information
-ver = 'v2.2'; % version
+ver = 'v2.3'; % version
 var = 'O2'; % variable
 path = ['/raid/Data/GOBAI-' var '/' ver '/']; % file path
 % download dimensions
