@@ -1,7 +1,7 @@
 function  output = run_RFR(RFR,data,probabilities,index,variables,thresh)
 
 % index for prediction based on input index and cluster probabilities
-idx_test = index & probabilities > thresh;
+idx_test = index & probabilities >= thresh;
 test_sum = sum(idx_test);
 
 % assemble matrix of predictors

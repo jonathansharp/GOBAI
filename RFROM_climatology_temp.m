@@ -6,22 +6,21 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 5/29/2025
+% DATE: 3/19/2026
+
+function RFROM_climatology_temp(ver,start_year,end_year)
 
 %% establish paths, folders, and options
 % file paths and names
 fpath = '/fast2/temperature/';
-folder = 'RFROM_TEMP_v2.2';
-fname = '/RFROMV22_TEMP_STABLE_';
+folder = ['RFROM_TEMP_' ver];
+fname = ['/RFROMV' ver(2) ver(4) '_TEMP_STABLE_'];
 % create annual file folder
 if ~isfolder([fpath folder '_annual']); mkdir([fpath folder '_annual']); end
-% timespan
-y1 = 1993;
-y2 = 2024;
 
 %% create monthly annual files
 % loop through each year to create annual files
-for y = y1:y2
+for y = start_year:end_year
     % pre-allocate annual monthly RFROMs
     RFROM.(['m' num2str(y)]) = [];
     RFROM.(['m' num2str(y) '_time']) = [];
@@ -69,16 +68,16 @@ end
 schema = ncinfo([fpath folder '_annual' fname '2004.nc']);
 schema.Variables(3).Attributes(1).Value = 'month of year';
 schema.Variables(3).Attributes(2).Value = 'Number of Month, 1 (Jan.) to 12 (Dec.)';
-if isfile([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'])
-    delete([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc']);
+if isfile([fpath fname 'CLIM_' num2str(start_year) '_' num2str(end_year) '.nc'])
+    delete([fpath fname 'CLIM_' num2str(start_year) '_' num2str(end_year) '.nc']);
 end
-ncwriteschema([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],schema);
+ncwriteschema([fpath fname 'CLIM_' num2str(start_year) '_' num2str(end_year) '.nc'],schema);
 clear schema
 % add dimensional variables to monthly file
 vars = {'longitude' 'latitude' 'mean_pressure' 'mean_pressure_bnds'};
 for v = 1:length(vars)
     a=ncread([fpath folder '_annual' fname '2004.nc'],vars{v});
-    ncwrite([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],vars{v},a);
+    ncwrite([fpath fname 'CLIM_' num2str(start_year) '_' num2str(end_year) '.nc'],vars{v},a);
 end
 % clean up
 clear a m v y vars
@@ -87,7 +86,7 @@ clear a m v y vars
 for m = 1:12
     RFROM_clim = [];
     % extract monthly temperature values
-    for y = y1:y2
+    for y = start_year:end_year
         RFROM_temp = ncread([fpath folder '_annual' fname num2str(y) '.nc'],...
             'ocean_temperature',[1 1 1 m],[Inf Inf Inf 1]);
         RFROM_clim = ...
@@ -97,8 +96,8 @@ for m = 1:12
     % average monthly values to climatological means
     RFROM_clim = mean(RFROM_clim,4,'omitnan');
     % add to NetCDF
-    ncwrite([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'time',m,m);
-    ncwrite([fpath fname 'CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'ocean_temperature',...
+    ncwrite([fpath fname 'CLIM_' num2str(start_year) '_' num2str(end_year) '.nc'],'time',m,m);
+    ncwrite([fpath fname 'CLIM_' num2str(start_year) '_' num2str(end_year) '.nc'],'ocean_temperature',...
         RFROM_clim,[1 1 1 m]);
     % clean up
     clear RFROM_clim a m v y vars

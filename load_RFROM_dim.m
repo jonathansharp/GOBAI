@@ -9,7 +9,7 @@
 %
 % DATE: 1/23/2024
 
-function [TS,months,weeks,timesteps] = load_RFROM_dim(fpath,y1,y2)
+function [TS,months,weeks,timesteps] = load_RFROM_dim(fpath,ver,y1,y2)
 
 % % check for existence of file
 % if ~isfile([fpath 'RFROMV22_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'])
@@ -17,15 +17,15 @@ function [TS,months,weeks,timesteps] = load_RFROM_dim(fpath,y1,y2)
 % end
 
 % load RFROM climatological temp and salinity
-TS.Longitude = ncread([fpath 'RFROMV22_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'longitude');
-TS.Latitude = ncread([fpath 'RFROMV22_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'latitude');
-TS.Pressure = ncread([fpath 'RFROMV22_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'mean_pressure');
+TS.Longitude = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'longitude');
+TS.Latitude = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'latitude');
+TS.Pressure = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'mean_pressure');
 % compute dimensions
 TS.xdim = length(TS.Longitude);
 TS.ydim = length(TS.Latitude);
 TS.zdim = length(TS.Pressure);
 % determine number of monthly timesteps
-files = dir([fpath '/RFROM_TEMP_v2.2/*.nc']);
+files = dir([fpath '/RFROM_TEMP_v2.2_2025/*_STABLE_*.nc']);
 for t = 1:length(files)
     file_date = char(extractBetween(files(t).name,'STABLE_','.nc'));
     file_year(t) = str2num(file_date(1:4));
@@ -59,7 +59,7 @@ for n = 1:length(files)
     TS.months(n) = str2double(date(6:7));
 end
 % add pressure bounds
-TS.Pressure_Bounds = ncread([files(m).folder '/' files(m).name],'mean_pressure_bnds');
+TS.Pressure_Bounds = ncread([files(n).folder '/' files(n).name],'mean_pressure_bnds');
 % remove months and years outside range
 idx = TS.years < y1 | TS.years > y2;
 TS.years(idx) = [];

@@ -9,12 +9,22 @@
 % DATE: 7/31/2025
 
 function assign_data_to_clusters(param_props,base_grid,snap_date,float_file_ext,...
-    clust_vars,num_clusters,flt,gld,ctd)
+    clust_vars,num_clusters,flt,gld,ctd,varargin)
 
 %% define dataset extensions
 if flt == 1; float_ext = 'f'; else float_ext = ''; end
 if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
 if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
+
+%% process optional input arguments
+% pre-allocate
+coverage = '';
+% process inputs
+for i = 1:2:length(varargin)-1
+    if strcmpi(varargin{i}, 'coverage')
+        coverage = ['_' num2str(varargin{i+1}) '_coverage'];
+    end
+end
 
 %% process date
 date_str = num2str(snap_date);
@@ -29,7 +39,7 @@ if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
 else
     load([param_props.dir_name '/Data/' base_grid '_' ...
         param_props.file_name '_data_' float_ext glodap_ext ctd_ext ...
-        '_' file_date float_file_ext '.mat'],...
+        '_' file_date float_file_ext coverage '.mat'],...
          'all_data','file_date');
 end
 
@@ -45,7 +55,7 @@ else
         base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
     if ~isfolder(gmm_folder_name); mkdir(gmm_folder_name); end
     gmm_model_name = [gmm_folder_name '/model_' float_ext ...
-        glodap_ext ctd_ext '_' date_str];
+        glodap_ext ctd_ext '_' date_str coverage];
 end
 
 %% assign data points and probabilities to clusters
@@ -66,19 +76,20 @@ for c = 1:size(p,2)
 end
 % save data clusters
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    if ~isfolder([pwd '/Data/GMM_' num2str(num_clusters)])
-        mkdir([pwd '/Data/GMM_' num2str(num_clusters)]); end
-    save([param_props.dir_name '/Data/GMM_' num2str(num_clusters) ...
-        '/all_data_clusters_' num2str(num_clusters) '_' ...
+    if ~isfolder([param_props.dir_name '/Data/GMM'])
+        mkdir([param_props.dir_name '/Data/GMM']); end
+    save([param_props.dir_name '/Data/GMM/' ...
+        'all_data_clusters_' num2str(num_clusters) '_' ...
         float_ext glodap_ext ctd_ext '_' file_date float_file_ext ...
         '.mat'],'all_data_clusters','-v7.3');
 else
-    if ~isfolder([param_props.dir_name  '/Data/GMM_' base_grid '_' num2str(num_clusters)])
-        mkdir([param_props.dir_name  '/Data/GMM_' base_grid '_' num2str(num_clusters)]); end
-    save([param_props.dir_name '/Data/GMM_' base_grid '_' ...
-        num2str(num_clusters) '/all_data_clusters_' ...
-        num2str(num_clusters) '_' float_ext glodap_ext ctd_ext ...
-        '_' file_date float_file_ext '.mat'],'all_data_clusters','-v7.3');
+    if ~isfolder([param_props.dir_name '/Data/GMM_' base_grid])
+        mkdir([param_props.dir_name '/Data/GMM_' base_grid]); end
+    save([param_props.dir_name '/Data/GMM_' base_grid '/' ...
+        'all_data_clusters_' num2str(num_clusters) ...
+        '_' float_ext glodap_ext ctd_ext ...
+        '_' file_date float_file_ext coverage ...
+        '.mat'],'all_data_clusters','-v7.3');
 end
 % display information
 disp(['data assigned to ' num2str(num_clusters) ' clusters']);

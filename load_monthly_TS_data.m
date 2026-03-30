@@ -30,7 +30,7 @@ if strcmp(base_grid,'RG')
         gsw_CT_from_t(TS.salinity_abs(idx),TS.temperature(idx),TS.pressure(idx));
 elseif strcmp(base_grid,'RFROM')
     % load dimensions
-    TS = load_RFROM_dim(fpaths.temp_path,start_year,end_year);
+    TS = load_RFROM_dim(fpaths.temp_path,'v2.2',start_year,end_year);
     TS = replicate_dims(base_grid,TS,1);
     % get RFROM absolute salinity and conservative temperature
     TS.temperature_cns = ncread([fpaths.temp_path 'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
@@ -57,3 +57,6 @@ else
     TS.salinity_abs = ncread(nc_filepath_abs_sal,'abs_sal',[1 1 1 m],[Inf Inf Inf 1]);
     TS.temperature_cns = ncread(nc_filepath_cns_tmp,'cns_tmp',[1 1 1 m],[Inf Inf Inf 1]);
 end
+
+% calculate potential density
+TS.sigma = gsw_sigma0(TS.salinity_abs,TS.temperature_cns);

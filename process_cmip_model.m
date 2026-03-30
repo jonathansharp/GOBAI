@@ -129,6 +129,18 @@ depth = depth(idx_depth);
 dpth_bnds = [dpth_bnds(1,idx_depth),dpth_bnds(2,idx_depth(end))]';
 
 %% load, combine, and save potential temperature
+% delete previous files
+nc_files_old = dir([fpath 'combined/regridded/thetao' path2 ...
+    'combined_' rlz '_gr_*01-*.nc']); % define filepath
+for f = 1:length(nc_files_old)
+    date_end = extractBetween(string(nc_files_old(f).name),'01-','.nc');
+    % delete if old file ends before desired new file
+    if datenum(str2double(date_end{1}(1:4)),str2double(date_end{1}(5:6)),1) < ...
+            datenum(str2double(date_str(1:4)),str2double(date_str(5:6)),1)
+        delete([fpath 'combined/regridded/' nc_files_old(f).name]);
+    end
+end
+% define new file path
 nc_filepath = [fpath 'combined/regridded/thetao' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 nc_filepath_temp = [fpath 'combined/regridded/thetao' path2 ... % define temporary filepath
@@ -148,6 +160,18 @@ if l ~= length(time)
 end
 
 %% load, combine, and save salinity
+% delete previous files
+nc_files_old = dir([fpath 'combined/regridded/so' path2 ...
+    'combined_' rlz '_gr_*01-*.nc']); % define filepath
+for f = 1:length(nc_files_old)
+    date_end = extractBetween(string(nc_files_old(f).name),'01-','.nc');
+    % delete if old file ends before desired new file
+    if datenum(str2double(date_end{1}(1:4)),str2double(date_end{1}(5:6)),1) < ...
+            datenum(str2double(date_str(1:4)),str2double(date_str(5:6)),1)
+        delete([fpath 'combined/regridded/' nc_files_old(f).name]);
+    end
+end
+% define new file path
 nc_filepath = [fpath 'combined/regridded/so' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 nc_filepath_temp = [fpath 'combined/regridded/so' path2 ... % define temporary filepath
@@ -184,6 +208,10 @@ end
 %% process dimensional variables
 
 %%%%%%%%%%%%%%%%%%%%%%%% GOTTA DO SOMETHING ABOUT 2D and 1D LONGITUDE
+%%%%%%%%%%%%%%%%%%%%%%%% I forget what this means (3/20/26)
+if min(size(lon)) ~= 1
+    keyboard
+end
 
 % establish dimensions
 xdim = length(lon); ydim = length(lat); zdim = length(depth);
@@ -199,6 +227,18 @@ else
 end
 
 %% calculate and save absolute salinity
+% delete previous files
+nc_files_old = dir([fpath 'combined/regridded/abs_sal' path2 ...
+    'combined_' rlz '_gr_*01-*.nc']); % define filepath
+for f = 1:length(nc_files_old)
+    date_end = extractBetween(string(nc_files_old(f).name),'01-','.nc');
+    % delete if old file ends before desired new file
+    if datenum(str2double(date_end{1}(1:4)),str2double(date_end{1}(5:6)),1) < ...
+            datenum(str2double(date_str(1:4)),str2double(date_str(5:6)),1)
+        delete([fpath 'combined/regridded/' nc_files_old(f).name]);
+    end
+end
+% define new file path
 nc_filepath = [fpath 'combined/regridded/abs_sal' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
@@ -206,6 +246,7 @@ if l ~= length(time)
     so = ncread([fpath 'combined/regridded/so' path2 'combined_' ...
         rlz '_gr_' num2str(start_year) '01-' date_str '.nc'],'so');
     abs_sal = single(nan(size(so)));
+    % calculate absolute salinity
     for m = 1:length(time)
         abs_sal(:,:,:,m) = gsw_SA_from_SP(so(:,:,:,m),pres_3d,lon_3d,lat_3d);
     end
@@ -228,6 +269,18 @@ if l ~= length(time)
 end
 
 %% calculate and save conservative temperature
+% delete previous files
+nc_files_old = dir([fpath 'combined/regridded/cns_tmp' path2 ...
+    'combined_' rlz '_gr_*01-*.nc']); % define filepath
+for f = 1:length(nc_files_old)
+    date_end = extractBetween(string(nc_files_old(f).name),'01-','.nc');
+    % delete if old file ends before desired new file
+    if datenum(str2double(date_end{1}(1:4)),str2double(date_end{1}(5:6)),1) < ...
+            datenum(str2double(date_str(1:4)),str2double(date_str(5:6)),1)
+        delete([fpath 'combined/regridded/' nc_files_old(f).name]);
+    end
+end
+% define new file path
 nc_filepath = [fpath 'combined/regridded/cns_tmp' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
@@ -237,6 +290,7 @@ if l ~= length(time)
     abs_sal = ncread([fpath 'combined/regridded/abs_sal' path2 ...
         'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'],'abs_sal');
     cns_tmp = single(nan(size(thetao)));
+    % calculate conservative temperature
     for m = 1:length(time)
         cns_tmp(:,:,:,m) = gsw_CT_from_pt(abs_sal(:,:,:,m),thetao(:,:,:,m));
     end
@@ -260,6 +314,18 @@ if l ~= length(time)
 end
 
 %% calculate and save in situ temperature
+% delete previous files
+nc_files_old = dir([fpath 'combined/regridded/tmp' path2 ...
+    'combined_' rlz '_gr_*01-*.nc']); % define filepath
+for f = 1:length(nc_files_old)
+    date_end = extractBetween(string(nc_files_old(f).name),'01-','.nc');
+    % delete if old file ends before desired new file
+    if datenum(str2double(date_end{1}(1:4)),str2double(date_end{1}(5:6)),1) < ...
+            datenum(str2double(date_str(1:4)),str2double(date_str(5:6)),1)
+        delete([fpath 'combined/regridded/' nc_files_old(f).name]);
+    end
+end
+% define new file path
 nc_filepath = [fpath 'combined/regridded/tmp' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
@@ -269,6 +335,7 @@ if l ~= length(time)
     abs_sal = ncread([fpath 'combined/regridded/abs_sal' path2 ...
         'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'],'abs_sal');
     tmp = single(nan(size(thetao)));
+    % calculate in situ temperature
     for m = 1:length(time)
         tmp(:,:,:,m) = gsw_t_from_pt0(abs_sal(:,:,:,m),thetao(:,:,:,m),pres_3d);
     end
@@ -291,6 +358,18 @@ if l ~= length(time)
 end
 
 %% calculate and save potential density anomaly
+% delete previous files
+nc_files_old = dir([fpath 'combined/regridded/sigma' path2 ...
+    'combined_' rlz '_gr_*01-*.nc']); % define filepath
+for f = 1:length(nc_files_old)
+    date_end = extractBetween(string(nc_files_old(f).name),'01-','.nc');
+    % delete if old file ends before desired new file
+    if datenum(str2double(date_end{1}(1:4)),str2double(date_end{1}(5:6)),1) < ...
+            datenum(str2double(date_str(1:4)),str2double(date_str(5:6)),1)
+        delete([fpath 'combined/regridded/' nc_files_old(f).name]);
+    end
+end
+% define new file path
 nc_filepath = [fpath 'combined/regridded/sigma' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
@@ -300,6 +379,7 @@ if l ~= length(time)
     abs_sal = ncread([fpath 'combined/regridded/abs_sal' path2 ...
         'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'],'abs_sal');
     sigma = single(nan(size(cns_tmp)));
+    % calculate potential density
     for m = 1:length(time)
         sigma(:,:,:,m) = gsw_sigma0(abs_sal(:,:,:,m),cns_tmp(:,:,:,m));
     end
@@ -322,6 +402,18 @@ if l ~= length(time)
 end
 
 %% calculate and save in situ density
+% delete previous files
+nc_files_old = dir([fpath 'combined/regridded/dens' path2 ...
+    'combined_' rlz '_gr_*01-*.nc']); % define filepath
+for f = 1:length(nc_files_old)
+    date_end = extractBetween(string(nc_files_old(f).name),'01-','.nc');
+    % delete if old file ends before desired new file
+    if datenum(str2double(date_end{1}(1:4)),str2double(date_end{1}(5:6)),1) < ...
+            datenum(str2double(date_str(1:4)),str2double(date_str(5:6)),1)
+        delete([fpath 'combined/regridded/' nc_files_old(f).name]);
+    end
+end
+% define new file path
 nc_filepath = [fpath 'combined/regridded/dens' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
@@ -331,6 +423,7 @@ if l ~= length(time)
     abs_sal = ncread([fpath 'combined/regridded/abs_sal' path2 ...
         'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'],'abs_sal');
     dens = single(nan(size(cns_tmp)));
+    % calculate in situ density
     for m = 1:length(time)
         dens(:,:,:,m) = gsw_rho(abs_sal(:,:,:,m),cns_tmp(:,:,:,m),pres_3d);
     end
@@ -353,6 +446,18 @@ if l ~= length(time)
 end
 
 %% calculate and save oxygen saturation
+% delete previous files
+nc_files_old = dir([fpath 'combined/regridded/o2_sat' path2 ...
+    'combined_' rlz '_gr_*01-*.nc']); % define filepath
+for f = 1:length(nc_files_old)
+    date_end = extractBetween(string(nc_files_old(f).name),'01-','.nc');
+    % delete if old file ends before desired new file
+    if datenum(str2double(date_end{1}(1:4)),str2double(date_end{1}(5:6)),1) < ...
+            datenum(str2double(date_str(1:4)),str2double(date_str(5:6)),1)
+        delete([fpath 'combined/regridded/' nc_files_old(f).name]);
+    end
+end
+% define new file path
 nc_filepath = [fpath 'combined/regridded/o2_sat' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
@@ -362,6 +467,7 @@ if l ~= length(time)
     so = ncread([fpath 'combined/regridded/so' path2 ...
         'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'],'so');
     o2_sat = single(nan(size(tmp)));
+    % calculate o2 saturation
     for m = 1:length(time)
         o2_sat(:,:,:,m) = o2satv2b(so(:,:,:,m),tmp(:,:,:,m));
     end
@@ -384,6 +490,18 @@ if l ~= length(time)
 end
 
 %% load, combine, and save o2
+% delete previous files
+nc_files_old = dir([fpath 'combined/regridded/o2' path2 ...
+    'combined_' rlz '_gr_*01-*.nc']); % define filepath
+for f = 1:length(nc_files_old)
+    date_end = extractBetween(string(nc_files_old(f).name),'01-','.nc');
+    % delete if old file ends before desired new file
+    if datenum(str2double(date_end{1}(1:4)),str2double(date_end{1}(5:6)),1) < ...
+            datenum(str2double(date_str(1:4)),str2double(date_str(5:6)),1)
+        delete([fpath 'combined/regridded/' nc_files_old(f).name]);
+    end
+end
+% define new file path
 nc_filepath = [fpath 'combined/regridded/o2' path2 ... % define filepath
     'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
 nc_filepath_temp = [fpath 'combined/regridded/o2' path2 ... % define temporary filepath
@@ -522,7 +640,7 @@ if strcmp(model,'GFDL-ESM4') || strcmp(model,'MPI-ESM1-2-LR')
     dims_hist2 = ncinfo([path1_hist var_name path2 'historical' path3 '_' ext_hist2 '.nc'],var_name);
 
     % set up parallel pool
-    tic; parpool; fprintf('Pool initiation: '); toc;
+    tic; parpool(20); fprintf('Pool initiation: '); toc;
 
     parfor t = 1:length(time)
         % read historical or ssp variable
@@ -555,7 +673,7 @@ elseif strcmp(model,'NorESM2-LM') || strcmp(model,'ACCESS-ESM1-5') || strcmp(mod
     dims_ssp2 = ncinfo([path1_ssp var_name path2 'ssp245' path3 '_' ext_ssp2 '.nc'],var_name);
 
     % set up parallel pool
-    tic; parpool; fprintf('Pool initiation: '); toc;
+    tic; parpool(20); fprintf('Pool initiation: '); toc;
 
     parfor t = 1:length(time)
         % read historical or ssp variable
@@ -591,7 +709,7 @@ elseif strcmp(model,'IPSL-CM6A-LR')
     dims_hist1 = ncinfo([path1_hist var_name path2 'historical' path3 '_' ext_hist1 '.nc'],var_name);
 
     % set up parallel pool
-    tic; parpool; fprintf('Pool initiation: '); toc;
+    tic; parpool(20); fprintf('Pool initiation: '); toc;
 
     parfor t = 1:length(time)
         % read historical or ssp variable

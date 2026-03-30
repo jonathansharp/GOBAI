@@ -1,5 +1,5 @@
 % save variables within parfor loop
-% syntax = parsave(filename,var1,'var2name',var2,'var2name',...)
+% syntax = parsave(filename,var1,'var1name',var2,'var2name',...)
 
 function parsave(fname,varargin)
 

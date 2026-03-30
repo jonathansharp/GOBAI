@@ -20,10 +20,13 @@ if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
 %% process optional input arguments
 % pre-allocate
 rlz = NaN;
+coverage = '';
 % process inputs
 for i = 1:2:length(varargin)-1
     if strcmpi(varargin{i}, 'rlz')
         rlz = varargin{i+1};
+    elseif strcmpi(varargin{i}, 'coverage')
+        coverage = ['_' num2str(varargin{i+1}) '_coverage'];
     end
 end
 
@@ -97,7 +100,7 @@ if strcmp(alg_type,'FFNN')
     path_ext = ['GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) ...
         '_' file_date float_file_ext '/train' num2str(100*train_ratio) ...
         '_val' num2str(100*val_ratio) '_test' num2str(100*test_ratio) ...
-        '/' float_ext glodap_ext ctd_ext '/'];
+        '/' float_ext glodap_ext ctd_ext coverage '/'];
 elseif strcmp(alg_type,'RFR')
     path_ext = ['GOBAI/' base_grid '/RFR/c' num2str(num_clusters) ...
         '_' file_date float_file_ext '/tr' num2str(numtrees) '_lf' ...
@@ -122,7 +125,7 @@ end
 if strcmp(base_grid,'RG')
     TS = load_RG_dim(fpaths.temp_path);
 elseif strcmp(base_grid,'RFROM')
-    TS = load_RFROM_dim(fpaths.temp_path,start_year,end_year);
+    TS = load_RFROM_dim(fpaths.temp_path,'v2.2',start_year,end_year);
 else
     % define paths
     path2 = ['_Omon_' base_grid '_'];
@@ -135,13 +138,13 @@ else
 end
 
 %% set up parallel pool
-%tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% start timing predictions
 tStart = tic;
 
 %% compute and save estimates for each month
-for m = 1:length(TS.months)
+parfor m = 1:length(TS.months)
     if strcmp(base_grid,'RG')
         % counter 
         cnt = m;
@@ -163,12 +166,12 @@ for m = 1:length(TS.months)
         % load bgc variables if applicable
         if any(strcmp(variables,'o2'))
             TS.o2 = ncread([fpaths.param_path_o2 'GOBAI/' base_grid '/' ...
-                alg_type '/' 'c15_Jan-2026_D_A/train80_val10_test10/fg' ...
+                alg_type '/' 'c15_Mar-2026_D_A/train80_val10_test10/fg' ...
                 '/gobai-o2.nc'],'o2',[1 1 1 cnt],[Inf Inf Inf 1]);
         end
         if any(strcmp(variables,'no3'))
             TS.no3 = ncread([fpaths.param_path_no3 'GOBAI/' base_grid '/' ...
-                alg_type '/' 'c15_Jan-2026_D/train80_val10_test10/fg' ...
+                alg_type '/' 'c15_Mar-2026_D/train80_val10_test10/fg' ...
                 '/gobai-no3.nc'],'no3',[1 1 1 cnt],[Inf Inf Inf 1]);
         end
         % get time variables for just this timestep
@@ -189,30 +192,32 @@ for m = 1:length(TS.months)
             file_date,float_file_ext);
     elseif strcmp(base_grid,'RFROM')
         % load dimensions
-        TS = load_RFROM_dim(fpaths.temp_path,start_year,end_year);
+        TS = load_RFROM_dim(fpaths.temp_path,'v2.2',start_year,end_year);
         TS = replicate_dims(base_grid,TS,1);
         % determine number of weeks in file
-        nc_atts = ncinfo([fpaths.temp_path 'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
+        nc_atts = ncinfo([fpaths.temp_path 'RFROM_TEMP_v2.2_2025/RFROMV22_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
         for w = 1:nc_atts.Dimensions(3).Length
             % counter
             cnt = TS.cnt{m}(w);
             % get RFROM T and S
-            TS.temperature_cns = ncread([fpaths.temp_path 'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
+            TS.temperature_cns = ncread([fpaths.temp_path 'RFROM_TEMP_v2.2_2025/RFROMV22_TEMP_STABLE_' ...
                 num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                     'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
-            TS.salinity_abs = ncread([fpaths.sal_path 'RFROM_SAL_v2.2/RFROMV22_SAL_STABLE_' ...
+            TS.salinity_abs = ncread([fpaths.sal_path 'RFROM_SAL_v2.2_2025/RFROMV22_SAL_STABLE_' ...
                 num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                     'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
             % load bgc variables if applicable
             if any(strcmp(variables,'o2'))
                 TS.o2 = ncread([fpaths.param_path_o2 'GOBAI/' base_grid '/' ...
-                    alg_type '/' 'c15_Jan-2026_D_A/train80_val10_test10/fg' ...
+                    alg_type '/' 'c' num2str(num_clusters) '_' ...
+                    file_date '_D_A/train80_val10_test10/fg' ...
                     '/gobai-o2.nc'],'o2',[1 1 1 cnt],[Inf Inf Inf 1]);
             end
             if any(strcmp(variables,'no3'))
                 TS.no3 = ncread([fpaths.param_path_no3 'GOBAI/' base_grid '/' ...
-                    alg_type '/' 'c15_Jan-2026_D/train80_val10_test10/fg' ...
+                    alg_type '/' 'c' num2str(num_clusters) '_' ...
+                    file_date '_D/train80_val10_test10/fg' ...
                     '/gobai-no3.nc'],'no3',[1 1 1 cnt],[Inf Inf Inf 1]);
             end
             % get time variables for just this timestep
@@ -263,7 +268,7 @@ for m = 1:length(TS.months)
             base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
             thresh,gobai_alg_dir_temp,param_props,fpaths.param_path,...
             date_str,clust_vars,float_ext,glodap_ext,ctd_ext,...
-            file_date,float_file_ext);
+            file_date,float_file_ext,coverage);
 
     end
 end
@@ -277,7 +282,7 @@ if strcmp(base_grid,'RG')
    % create file
    create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props);
 elseif strcmp(base_grid,'RFROM')
-    TS = load_RFROM_dim(fpaths.temp_path,start_year,end_year);
+    TS = load_RFROM_dim(fpaths.temp_path,'v2.2',start_year,end_year);
     % create file
     create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props);
 else
@@ -293,27 +298,72 @@ else
     create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props);
 end
 
-%% concatenate gobai in weekly files to match RFROM
-% files = dir([gobai_alg_dir_temp '/gobai-' param_props.file_name '-*.nc']); % count files in folder
-% idx_rem = [];
-% for fln = 1:length(files)
-%     % index to remove filenames with uncertinaty
-%     if contains(files(fln).name,'uncer')
-%         idx_rem = [idx_rem;fln];
-%     end
-% end
-% files(idx_rem) = [];
+%% concatenate gobai in monthly files to match RFROM, and 1x1 degree files
 if strcmp(base_grid,'RFROM')
-    cnt = 1; %set counter
+    % define gobai monthly mean file name
+    filename_monthly_mean = [gobai_alg_dir 'gobai-monthly-mean-1x1-' ...
+        param_props.file_name '.nc'];
+    if isfile(filename_monthly_mean); delete(filename_monthly_mean); end
+    % new lat/lon
+    lon_new = (0.5:359.5)'; lon_bins_new = (0:365)';
+    lat_new = (-89.5:89.5)'; lat_bins_new = (-90:90)';
+    pres = ncread([gobai_alg_dir 'gobai-' param_props.file_name '.nc'],'pres');
+    prs_bnds = ncread([gobai_alg_dir 'gobai-' param_props.file_name '.nc'],'prs_bnds');
+    % read rfrom schema
+    rfrom_info = ncinfo([fpaths.temp_path ...
+        'RFROM_TEMP_v2.2_2025/RFROMV22_TEMP_STABLE_1993_01.nc']);
+    % adjust variable-specific schema
+    rfrom_info.Variables(1).Size = length(lon_new);
+    rfrom_info.Variables(1).Dimensions.Length = length(lon_new);
+    rfrom_info.Variables(2).Size = length(lat_new);
+    rfrom_info.Variables(2).Dimensions.Length = length(lat_new);
+    rfrom_info.Variables(3).Size = Inf;
+    rfrom_info.Variables(3).Dimensions.Length = Inf;
+    for v = 1:length(rfrom_info.Variables)
+        if strcmp(rfrom_info.Variables(v).Name,'ocean_temperature')
+            var_idx = v;
+        end
+    end
+    rfrom_info.Variables(var_idx).Name = param_props.file_name;
+    rfrom_info.Variables(var_idx).Attributes(1).Value = param_props.units_long;
+    rfrom_info.Variables(var_idx).Attributes(2).Value = ['Mapped ' ...
+        param_props.long_param_name ' averaged from upper to lower ' ...
+        'bounds of mean pressure with the seasonal cycle '];
+    rfrom_info.Variables(var_idx).Size = [length(lon_new) length(lat_new) length(pres) Inf];
+    rfrom_info.Variables(var_idx).Dimensions(1).Length = length(lon_new);
+    rfrom_info.Variables(var_idx).Dimensions(2).Length = length(lat_new);
+    rfrom_info.Variables(var_idx).Dimensions(4).Length = Inf;
+    % adjust attributes
+    rfrom_info.Attributes(3).Value = 'NOAA PMEL, UW CICOES';
+    rfrom_info.Attributes(4).Value = ['Argo float data, GLODAP ship data, ' ...
+        rfrom_info.Attributes(2).Value];
+    rfrom_info.Attributes(2).Value = ['GOBAI-' param_props.dir_name ...
+        '-HR-Monthly-Mean-1x1-v' num2str(snap_date)];
+    rfrom_info.Attributes(5).Value = 'Sharp, et al. GOBAI High Resolution Data Products, in prep.';
+    rfrom_info.Attributes(6).Value = ['Created: ' char(datetime('today'))];
+    rfrom_info.Attributes(7).Value = 'preliminary';
+    % adjust dimensions
+    rfrom_info.Dimensions(1).Length = length(lon_new);
+    rfrom_info.Dimensions(2).Length = length(lat_new);
+    rfrom_info.Dimensions(3).Length = Inf;
+    % write schema to monthly mean 1x1 file
+    ncwriteschema(filename_monthly_mean,rfrom_info);
+    % write dimensions to monthly mean file
+    ncwrite(filename_monthly_mean,'longitude',lon_new);
+    ncwrite(filename_monthly_mean,'latitude',lat_new);
+    ncwrite(filename_monthly_mean,'mean_pressure',pres);
+    ncwrite(filename_monthly_mean,'mean_pressure_bnds',prs_bnds');
     if ~isfolder([gobai_alg_dir 'monthly']); mkdir([gobai_alg_dir 'monthly']); end
+    % loop through months
+    cnt = 1; % set counter
     for m = 1:length(TS.months)
-        % define gobai file name
+        % define gobai monthly file name
         filename = [gobai_alg_dir 'monthly/gobai-' param_props.file_name '-' ...
             num2str(TS.years(m)) '-' sprintf('%02d',TS.months(m)) '.nc'];
         if isfile(filename); delete(filename); end
         % read rfrom schema
         rfrom_info = ncinfo([fpaths.temp_path ...
-            'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_' ...
+            'RFROM_TEMP_v2.2_2025/RFROMV22_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
         % adjust variable-specific schema
         for v = 1:length(rfrom_info.Variables)
@@ -337,7 +387,7 @@ if strcmp(base_grid,'RFROM')
         rfrom_info.Attributes(7).Value = 'preliminary';
         % write schema to gobai file
         ncwriteschema(filename,rfrom_info);
-        % read and write parameters
+        % read and write weekly parameters in monthly files
         for w = 1:rfrom_info.Dimensions(3).Length
             % define temporary file name
             filename_temp = [gobai_alg_dir_temp 'gobai-' ...
@@ -350,8 +400,9 @@ if strcmp(base_grid,'RFROM')
             ncwrite(filename,param_props.file_name,gobai_3d,[1 1 1 w]); % write
             % increase counter
             cnt = cnt+1;
+            clear gobai_3d
         end
-        % write dimensions
+        % write dimensions to monthly file
         lon = ncread([gobai_alg_dir 'gobai-' param_props.file_name '.nc'],'lon');
         ncwrite(filename,'longitude',lon);
         lat = ncread([gobai_alg_dir 'gobai-' param_props.file_name '.nc'],'lat');
@@ -360,6 +411,25 @@ if strcmp(base_grid,'RFROM')
         ncwrite(filename,'mean_pressure',pres);
         prs_bnds = ncread([gobai_alg_dir 'gobai-' param_props.file_name '.nc'],'prs_bnds');
         ncwrite(filename,'mean_pressure_bnds',prs_bnds');
+        % write monthly mean 1x1 degree file
+        gobai_4d = ncread(filename,param_props.file_name); % read
+        gobai_3d = mean(gobai_4d,4,'omitnan');
+        [lon_3d,lat_3d] = ndgrid(lon,lat);
+        [~,~,Xnum] = histcounts(lon_3d(:),lon_bins_new);
+        [~,~,Ynum] = histcounts(lat_3d(:),lat_bins_new);
+        subs = [Xnum, Ynum];
+        sz = [length(lon_new),length(lat_new)];
+        gobai_3d_1x1 = nan(length(lon_new),length(lat_new),length(pres));
+        for z = 1:length(pres)
+            gobai_temp = gobai_3d(:,:,z);
+            gobai_3d_1x1(:,:,z) = ...
+                accumarray(subs,gobai_temp(:),sz,@nanmean);
+        end
+        ncwrite(filename_monthly_mean,param_props.file_name,...
+            gobai_3d_1x1,[1 1 1 m]); % write
+        % write time to monthly mean 1x1 degree file
+        time = ncread(filename,'time'); % read
+        ncwrite(filename_monthly_mean,'time',mean(time),m); % write
     end
 end
 
@@ -387,18 +457,6 @@ for cnt = 1:length(files)
     delete(filename_temp);
 end
 
-%% create monthly,one degree file
-% for x = 1:length(TS.Longitude)
-%     for y = 1:length(TS.Latitude)
-%         for z = 1:length(TS.Pressure)
-%             var = squeeze(ncread(filename,param_props.file_name,[x y z 1],[1 1 1 Inf]));
-%             if any(~isnan(var))
-% 
-%             end
-%         end
-%     end
-% end
-
 %% stop timing predictions
 fprintf([alg_type ' Prediction (' num2str(start_year) ' to ' date_str(1:4) '): ']);
 
@@ -411,7 +469,7 @@ end
 function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     base_grid,m,w,cnt,xdim,ydim,zdim,variables_TS,thresh,gobai_alg_dir_temp,...
     param_props,param_path,date_str,clust_vars,float_ext,glodap_ext,ctd_ext,...
-    file_date,float_file_ext)
+    file_date,float_file_ext,coverage)
 
     % convert to arrays
     TS_index = ~isnan(TS.temperature_cns);
@@ -446,12 +504,12 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         if ~isfolder(gmm_folder_name); mkdir(gmm_folder_name); end
         gmm_model_name = [gmm_folder_name '/model_' float_ext ...
             glodap_ext ctd_ext];
-    else
+    else % for models
         gmm_folder_name = [param_props.dir_name '/Models/GMM/' ...
             base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
         if ~isfolder(gmm_folder_name); mkdir(gmm_folder_name); end
         gmm_model_name = [gmm_folder_name '/model_' float_ext ...
-            glodap_ext ctd_ext '_' date_str];
+            glodap_ext ctd_ext '_' date_str coverage];
     end
     % load GMM model
     load(gmm_model_name,'gmm','C','S');
@@ -489,11 +547,13 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         % define temporary variable list
         variables_TS_tmp = variables_TS;
         
-        % % remove year for cluster 13 for RG grid
-        % if c == 13
-        %     disp('EXCLUDING YEAR FOR CLUSTER #13 PREDICTIONS');
-        %     variables_TS_tmp(strcmp(variables_TS_tmp,'year_array'))=[];
-        % end
+        % remove year for Med cluster
+        mean_lat = mean(TS.latitude_array(probabilities_array > thresh));
+        mean_lon = mean(TS.longitude_array(probabilities_array > thresh));
+        if mean_lat > 32 && mean_lat < 41 && mean_lon > 10 && mean_lon < 30 % check for Med cluster
+            variables_TS_tmp(strcmp(variables_TS_tmp,'year_array'))=[];
+        end
+
         % predict data for each cluster
         if strcmp(alg_type,'FFNN')
             gobai_matrix(:,c) = ...
@@ -549,7 +609,7 @@ function create_nc_file(TS,base_grid,xdim,ydim,zdim,gobai_alg_dir,...
 filename = [gobai_alg_dir 'gobai-' param_props.file_name '.nc'];
 
 % create folder and file
-if ~isfolder([gobai_alg_dir]); mkdir(gobai_alg_dir); end
+if ~isfolder(gobai_alg_dir); mkdir(gobai_alg_dir); end
 if isfile(filename); delete(filename); end % delete file if it exists
 % bgc parameter
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')

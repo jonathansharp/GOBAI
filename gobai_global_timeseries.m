@@ -42,7 +42,7 @@ if ~isfile([gobai_alg_dir 'global_mean.mat']) || ...
         ~isfile([gobai_alg_dir 'global_inv.mat'])
     global_mean = nan(size(GOBAI.time));
     global_inv = nan(size(GOBAI.time));
-    TS = load_RFROM_dim(fpaths.temp_path,start_year,end_year);
+    TS = load_RFROM_dim(fpaths.temp_path,'v2.2',start_year,end_year);
     cnt = 1;
     for m = 1:length(TS.months)
         % determine number of weeks in RFROM file

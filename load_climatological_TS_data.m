@@ -28,7 +28,8 @@ if strcmp(base_grid,'RG')
     % load chlorophyll
 elseif strcmp(base_grid,'RFROM')
     % load absolute salinity and conservative temperature from RFROM grid
-    [TS,months,weeks,timesteps] = load_RFROM_dim([fpath '/Data/RFROM/']);
+    [TS,months,weeks,timesteps] = load_RFROM_dim([fpath '/Data/RFROM/'],...
+        'v2.2',start_year,end_year);
     TS = load_RFROM_clim(TS,[fpath '/Data/RFROM/']);
     TS = replicate_dims(base_grid,TS,1);
     % load chlorophyll 

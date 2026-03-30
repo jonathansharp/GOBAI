@@ -5,7 +5,7 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 6/25/2025
+% DATE: 3/10/2026
 
 function train_gobai(alg_type,param_props,base_grid,file_date,...
     float_file_ext,num_clusters,variables,thresh,numWorkers_train,...
@@ -20,6 +20,7 @@ if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
 num_folds = 1;
 glodap_only = 0;
 data_per = 1;
+coverage = '';
 for i = 1:2:length(varargin)-1
     if strcmpi(varargin{i}, 'num_folds')
         num_folds = varargin{i+1};
@@ -27,6 +28,8 @@ for i = 1:2:length(varargin)-1
         glodap_only = varargin{i+1};
     elseif strcmpi(varargin{i}, 'reduce_data')
         data_per = varargin{i+1};
+    elseif strcmpi(varargin{i}, 'coverage')
+        coverage = ['_' num2str(varargin{i+1}) '_coverage'];
     end
 end
 
@@ -90,23 +93,23 @@ if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
     load([param_props.dir_name '/Data/processed_all_' ...
         param_props.file_name '_data_' float_ext glodap_ext ctd_ext ...
         '_' file_date float_file_ext '.mat'],'all_data');
-else
+else % for cmip models
     load([param_props.dir_name '/Data/' base_grid '_' ...
         param_props.file_name '_data_' float_ext glodap_ext ctd_ext ...
-        '_' file_date float_file_ext '.mat'],'all_data');
+        '_' file_date float_file_ext coverage '.mat'],'all_data');
 end
 
 %% load data clusters
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    load([param_props.dir_name '/Data/GMM_' num2str(num_clusters) ...
-        '/all_data_clusters_' num2str(num_clusters) '_' ...
+    load([param_props.dir_name '/Data/GMM/' ...
+        'all_data_clusters_' num2str(num_clusters) '_' ...
         float_ext glodap_ext ctd_ext '_' file_date float_file_ext ...
         '.mat'],'all_data_clusters');
 else
-    load([param_props.dir_name '/Data/GMM_' base_grid '_' ...
-        num2str(num_clusters) '/all_data_clusters_' ...
-        num2str(num_clusters) '_' float_ext glodap_ext ctd_ext '_' ...
-        file_date float_file_ext '.mat'],'all_data_clusters');
+    load([param_props.dir_name '/Data/GMM_' base_grid '/' ...
+        'all_data_clusters_' num2str(num_clusters) '_' ...
+        float_ext glodap_ext ctd_ext '_' ...
+        file_date float_file_ext coverage '.mat'],'all_data_clusters');
 end
 
 %% load data cluster indices (for k-fold testing)
@@ -192,7 +195,7 @@ clusters = repmat(1:num_clusters,1,num_folds)';
             alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
             train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
             numtrees,minLeafSize,numstumps,numbins,thresh,'yes',...
-            folds(cnt),clusters(cnt),base_grid);
+            folds(cnt),clusters(cnt),base_grid,coverage);
     end
 % else
 %     % set up parallel pool
@@ -395,7 +398,8 @@ end
 function train_models(param_props,num_folds,...
     alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
     train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
-    numtrees,minLeafSize,numstumps,numbins,thresh,par_use,f,c,base_grid)
+    numtrees,minLeafSize,numstumps,numbins,thresh,par_use,f,c,base_grid,...
+    coverage)
 
 %% define index for observations
 if num_folds > 1
@@ -411,17 +415,18 @@ rng(f); numbers = randperm(num_obs);
 % adjust observation index to fraction (i.e., 'data_per') its current sum
 obs_index_train(numbers > (data_per.*num_obs)) = false;
 
-% exclude Mediterranean cluster data before 2000 (for v2.3)
-if strcmp(base_grid,'RG')
-    % in_med_new_idx = (all_data.longitude > -7 & all_data.longitude < 36) & ...
-    %     (all_data.latitude > 30 & all_data.latitude < 45) & all_data.year > 2000;
-    % if c == 13
-    %     disp('EXCLUDING YEAR FOR CLUSTER #13')
-    %     obs_index_train(all_data_clusters.clusters == 13 & ...
-    %         ~in_med_new_idx) = false;
-    %     variables(strcmp(variables,'year')) = [];
-    % % elseif c == 5
-    % end
+% exclude Mediterranean cluster data before 2000
+mean_lat = mean(all_data.latitude(all_data_clusters.(['c' num2str(c)]) > thresh));
+mean_lon = mean(all_data.longitude(all_data_clusters.(['c' num2str(c)]) > thresh));
+% if strcmp(base_grid,'RG')
+if mean_lat > 32 && mean_lat < 41 && mean_lon > 10 && mean_lon < 30 % check for Med cluster
+    in_med_new_idx = (all_data.longitude > -7 & all_data.longitude < 36) & ...
+        (all_data.latitude > 30 & all_data.latitude < 45) & all_data.year > 2000;
+    disp(['EXCLUDING YEAR FOR MED CLUSTER, #' num2str(c)])
+    obs_index_train(all_data_clusters.(['c' num2str(c)]) > thresh & ...
+        ~in_med_new_idx) = false;
+    variables(strcmp(variables,'year')) = [];
+    % elseif c == 5
     % figure; scatter(all_data.year(all_data_clusters.clusters == 5 & in_med_new_idx),...
     %      all_data.o2(all_data_clusters.clusters == 5 & in_med_new_idx));
     % 
@@ -433,6 +438,7 @@ if strcmp(base_grid,'RG')
     %      all_data.o2(all_data_clusters.clusters == 5));
     %     plot_land('xy'); colorbar;
 end
+% end
 
 %% define observations index for k-fold testing
 if num_folds > 1
@@ -447,7 +453,7 @@ if num_folds > 1
 end
 
 % check for data in cluster
-if any(all_data_clusters.clusters(obs_index_train) == c)
+if any(all_data_clusters.(['c' num2str(c)]) > thresh)
 
     % start timing fit
     tic
@@ -514,6 +520,19 @@ if any(all_data_clusters.clusters(obs_index_train) == c)
                 output_ESPER = nan(size(idx_test));
                 output_ESPER(idx_test) = ESPER_calc.oxygen;
                 output_ESPER = output_ESPER(obs_index_test);
+            elseif strcmp(param_props.file_name,'no3')
+                idx_test = obs_index_test & ...
+                    all_data_clusters.(['c' num2str(c)]) > thresh;
+                ESPER_calc = ESPER_NN(5,[all_data.longitude(idx_test),...
+                                           all_data.latitude(idx_test),...
+                                           all_data.depth(idx_test)],...
+                                           [all_data.salinity(idx_test),...
+                                           all_data.temperature(idx_test),...
+                                           all_data.o2(idx_test)],...
+                                           [1 2 6],'Equations',7);
+                output_ESPER = nan(size(idx_test));
+                output_ESPER(idx_test) = ESPER_calc.nitrate;
+                output_ESPER = output_ESPER(obs_index_test);
             else
                 output_ESPER = nan(sum(obs_index_test),1);
             end
@@ -557,12 +576,12 @@ end
 
 % save test model and output for each cluster
 if ~isfolder([pwd '/' alg_dir]); mkdir(alg_dir); end
-if any(all_data_clusters.clusters(obs_index_train) == c)
+if any(all_data_clusters.(['c' num2str(c)]) > thresh)
     if num_folds > 1
         parsave([alg_dir '/' alg_fnames{f,c} '.mat'],alg,alg_type,output,'output',output_ESPER,'output_ESPER',obs_index_test,'obs_index_test');
     else
         % genFunction(FFNN.n1,['functions/' 'FFNN1_o2_C13_rg.m'])
-        parsave([alg_dir '/' alg_fnames{f,c} '.mat'],alg,alg_type);
+        parsave([alg_dir '/' alg_fnames{f,c} coverage '.mat'],alg,alg_type);
     end
 else
     if num_folds > 1

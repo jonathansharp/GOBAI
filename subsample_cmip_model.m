@@ -1,8 +1,19 @@
 function subsample_cmip_model(param_props,data,model,fpath,file_date,...
-    snap_date,float_file_ext,start_year,rlz,float_ext,glodap_ext,ctd_ext)
+    snap_date,float_file_ext,start_year,rlz,float_ext,glodap_ext,ctd_ext,...
+    varargin)
 
 %% process date
 date_str = num2str(snap_date);
+
+%% process optional input arguments
+% pre-allocate
+coverage = '';
+% process inputs
+for i = 1:2:length(varargin)-1
+    if strcmpi(varargin{i}, 'coverage')
+        coverage = ['_' num2str(varargin{i+1}) '_coverage'];
+    end
+end
 
 %% check if processed file already exists
 % if ~isfile([param_props.dir_name '/Data/' model '_' float_ext ...
@@ -126,7 +137,7 @@ subs = [Xnum, Ynum, Znum];
 idx_subs = any(subs==0,2);
 sz = [length(lon),length(lat),length(pres)];
 all_data.(['gridded_' param_props.file_name]) = accumarray(subs(~idx_subs,:),...
-    abs(all_data.(param_props.file_name)(~idx_subs)),sz,@nanmean);
+    abs(all_data.(param_props.file_name)(~idx_subs)),sz,@mean,NaN);
 clear subs sz
 % make plot
 idx_depth = find(min(abs(all_data.depth-20))==abs(all_data.depth-20));
@@ -148,17 +159,17 @@ c.FontSize = 12;
 mlabel off; plabel off;
 if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
 export_fig(['Figures/' model '/subsampled_' param_props.fig_name '_' ...
-    float_ext glodap_ext ctd_ext '_20m.png'],'-transparent');
+    float_ext glodap_ext ctd_ext coverage '_20m.png'],'-transparent');
 close
 
 %% save data
 save([param_props.dir_name '/Data/' model '_' param_props.file_name ...
-    '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext '.mat'],...
+    '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext coverage '.mat'],...
     'all_data','file_date','-v7.3');
 
 %% save data as NetCDF
 nc_fname = [param_props.dir_name '/Data/' model '_' param_props.file_name ...
-        '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext '.nc'];
+        '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext coverage '.nc'];
 if isfile(nc_fname); delete(nc_fname); end
 vars = fieldnames(all_data);
 for v = 1:length(vars)

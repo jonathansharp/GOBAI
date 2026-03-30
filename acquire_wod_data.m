@@ -1,8 +1,10 @@
-function wod = acquire_wod_osd_data(param_props,glodap_year,start_year)
+function wod = acquire_wod_data(param_props,glodap_year,start_year,osd_opt,ctd_opt)
 
 %% process parameter name
 if strcmp(param_props.file_name,'o2')
     var_name = 'Oxygen';
+elseif strcmp(param_props.file_name,'no3')
+    var_name = 'Nitrate';
 end
 
 %% load glodap data
@@ -14,28 +16,28 @@ todays_date = datevec(date);
 end_year = todays_date(1);
 year = num2str(end_year);
 
-if exist([param_props.dir_name '/Data/processed_wod_osd_' param_props.file_name '_data_' year '.mat'],'file') ~= 2
-
-%% Download WOD CTD and OSD profiles
-% for y = start_year:end_year
-%     for x = 1:length(types)
-%         if exist(['Data/WOD_Combined_Profiles/wod_' types{x} '_' num2str(y) '.nc'],'file') ~= 2
-%             https://www.ncei.noaa.gov/data/oceans/ncei/wod/1965/wod_osd_1965.nc
-%         end
-%     end
-% end
+% if exist([param_props.dir_name '/Data/processed_wod_osd_' param_props.file_name '_data_' year '.mat'],'file') ~= 2
 
 %% load WOD OSD profile data
 folder = 'Data/WOD_Profiles_data';
-types = {'OSD'};
+if osd_opt == 1 && ctd_opt == 1
+    types = {'osd' 'ctd'};
+elseif osd_opt == 1 && ctd_opt == 0
+    types = {'osd'};
+elseif osd_opt == 0 && ctd_opt == 1
+    types = {'ctd'};
+else
+    types = {};
+end
 
 %% define variables
-vars = {'cruise' 'profile' 'time' 'year' 'month' 'day' 'lat' 'lon' 'depth' var_name};
-vars_other = {'Temperature' 'Salinity'};
-vars_both = [vars vars_other];
+dims = {'wod_unique_cast' 'time' 'date' 'lat' 'lon'};
+vars = {'Temperature' 'Salinity' 'z' var_name};
+vars_both = [dims vars];
 
 %% pre-allocate osd data structure
 for v = 1:length(vars_both); wod.(vars_both{v}) = []; end
+for v = 1:length(vars); wod.([vars{v} '_flag']) = []; end
 wod_data.(param_props.temp_name) = [];
 wod_data.LAT = [];
 wod_data.LON = [];
@@ -55,58 +57,111 @@ m_proj('robinson','lon',[20 380]);
 m_coast('patch',rgb('gray'));
 m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
 
-%% load oxygen variables
+%% load variables
 for y = start_year:end_year
     for x = 1:length(types)
-        file = [folder '/' var_name '_' types{x} '_NCEI/' var_name '_' types{x} '_' num2str(y) '.nc'];
+        file = [folder '/wod_' types{x} '_' num2str(y) '.nc'];
+        if ~exist(file,'file')
+            try
+                websave(file,['https://www.ncei.noaa.gov/data/oceans/ncei/wod/' ...
+                    num2str(y) '/wod_' types{x} '_' num2str(y) '.nc']);
+            catch
+                disp(['No wod ' types{x} ' file for ' num2str(y)])
+            end
+        end
         if exist(file,'file')
             schema = ncinfo(file);
             pdim = schema.Dimensions(1).Length;
             zdim = schema.Dimensions(2).Length;
-            % oxygen
+            % dimensions
+            for d = 1:length(dims)
+                wod_temp.(dims{d}) = ncread(file,dims{d});
+            end
+            
+            % download variabless
             for v = 1:length(vars)
                 wod_temp.(vars{v}) = ncread(file,vars{v});
+                wod_temp.([vars{v} '_flag']) = ncread(file,[vars{v} '_WODflag']);
+                wod_temp.([vars{v} '_rows']) = ncread(file,[vars{v} '_row_size']);
+                wod_temp.([vars{v} '_rows'])(isnan(wod_temp.([vars{v} '_rows']))) = 0;
+                wod_temp.([vars{v} '_casts']) = ...
+                    wod_temp.wod_unique_cast(wod_temp.([vars{v} '_rows']) > 0);
             end
-            % temp
-            file = [folder '/Temperature_' types{x} '_NCEI/Temperature_' types{x} '_' num2str(y) '.nc'];
-            wod_temp.Temperature = ncread(file,'Temperature');
-            wod_temp.temp_profile = ncread(file,'profile');
-            % sal
-            file = [folder '/Salinity_' types{x} '_NCEI/Salinity_' types{x} '_' num2str(y) '.nc'];
-            wod_temp.Salinity = ncread(file,'Salinity');
-            wod_temp.sal_profile = ncread(file,'profile');
-            % indices
-            idx_o2 = ismember(wod_temp.profile,wod_temp.temp_profile) & ismember(wod_temp.profile,wod_temp.sal_profile);
-            idx_temp = ismember(wod_temp.temp_profile,wod_temp.profile) & ismember(wod_temp.temp_profile,wod_temp.sal_profile);
-            idx_sal = ismember(wod_temp.sal_profile,wod_temp.profile) & ismember(wod_temp.sal_profile,wod_temp.temp_profile);
-            % filter to only profiles with oxygen, temperature, and salinity
+
+            % index to common casts
+            if strcmp(param_props.file_name,'o2')
+                idx = ismember(wod_temp.wod_unique_cast,wod_temp.Oxygen_casts) & ...
+                      ismember(wod_temp.wod_unique_cast,wod_temp.Temperature_casts) & ...
+                      ismember(wod_temp.wod_unique_cast,wod_temp.Salinity_casts) & ...
+                      ismember(wod_temp.wod_unique_cast,wod_temp.z_casts);
+            elseif strcmp(param_props.file_name,'no3')
+                idx = ismember(wod_temp.wod_unique_cast,wod_temp.Nitrate_casts) & ...
+                      ismember(wod_temp.wod_unique_cast,wod_temp.Oxygen_casts) & ...
+                      ismember(wod_temp.wod_unique_cast,wod_temp.Temperature_casts) & ...
+                      ismember(wod_temp.wod_unique_cast,wod_temp.Salinity_casts) & ...
+                      ismember(wod_temp.wod_unique_cast,wod_temp.z_casts);
+            end
+
+            % pre-allocate data for common casts
             for v = 1:length(vars)
-                if strcmp(vars{v},'depth')
-                    wod_temp.(vars{v}) = repmat(wod_temp.(vars{v}),1,sum(idx_o2));
-                elseif strcmp(vars{v},'Oxygen')
-                    wod_temp.(vars{v}) = wod_temp.(vars{v})(1:zdim,idx_o2);
-                else
-                    wod_temp.(vars{v}) = repmat(wod_temp.(vars{v})(idx_o2)',zdim,1);
+                wod_temp.([vars{v} '_idx']) = 1;
+                wod_temp.([vars{v} '_common']) = [];
+                wod_temp.([vars{v} '_flag_common']) = [];
+            end
+            for d = 1:length(dims)
+                wod_temp.([dims{d} '_common']) = [];
+            end
+
+            % extract data from common casts
+            for c = 1:length(wod_temp.wod_unique_cast)
+                if idx(c) % check for common cast
+                    for v = 1:length(vars)
+                        % extract variables and flags for common casts
+                        wod_temp.([vars{v} '_common']) = [wod_temp.([vars{v} '_common']);...
+                            wod_temp.([vars{v}])(wod_temp.([vars{v} '_idx']):wod_temp.([vars{v} '_idx'])+wod_temp.([vars{v} '_rows'])(c)-1,:)];
+                        wod_temp.([vars{v} '_flag_common']) = [wod_temp.([vars{v} '_flag_common']);...
+                            wod_temp.([vars{v} '_flag'])(wod_temp.([vars{v} '_idx']):wod_temp.([vars{v} '_idx'])+wod_temp.([vars{v} '_rows'])(c)-1,:)];
+                    end
+                    % add dimensions for unique casts
+                    for d = 1:length(dims)
+                        wod_temp.([dims{d} '_common']) = [wod_temp.([dims{d} '_common']);...
+                            repmat(wod_temp.([dims{d}])(c),wod_temp.([vars{v} '_rows'])(c),1)];
+                    end
+                end
+                % increase index for each variable
+                for v = 1:length(vars)
+                    wod_temp.([vars{v} '_idx']) = wod_temp.([vars{v} '_idx'])+wod_temp.([vars{v} '_rows'])(c);
                 end
             end
-            wod_temp.Temperature = wod_temp.Temperature(1:zdim,idx_temp);
-            wod_temp.Salinity = wod_temp.Salinity(1:zdim,idx_sal);
 
-            %% add values to structure
-            idx = ~isnan(wod_temp.(var_name));
-            for v = 1:length(vars_both)
-                wod.(vars_both{v}) = [wod.(vars_both{v});wod_temp.(vars_both{v})(idx)];
+            % index to where all data points have a value and good flag
+            idx = ~isnan(wod_temp.Temperature_common) & wod_temp.Temperature_flag_common == 0 & ...
+                ~isnan(wod_temp.Salinity_common) & wod_temp.Salinity_flag_common == 0 & ...
+                ~isnan(wod_temp.z_common) & wod_temp.z_flag_common == 0 & ...
+                ~isnan(wod_temp.Oxygen_common) & wod_temp.Oxygen_flag_common == 0;
+            for v = 1:length(vars)
+                wod.(vars{v}) = [wod.(vars{v});...
+                    wod_temp.([vars{v} '_common'])(idx)];
+                wod.([vars{v} '_flag']) = [wod.([vars{v} '_flag']);...
+                    wod_temp.([vars{v} '_flag_common'])(idx)];
+            end
+            for d = 1:length(dims)
+                wod.(dims{d}) = [wod.(dims{d});...
+                    wod_temp.([dims{d} '_common'])(idx)];
             end
 
         end
+        disp([num2str(y) ' processed - ' types{x} '.'])
     end
 end
 
+keyboard
+
 %% adjust time
-wod.time = datenum(1900,1,wod.time);
+wod.time = datenum(1770,1,1+wod.time);
 
 %% calculate pressure from depth
-wod.pres = gsw_p_from_z(-wod.depth,wod.lat);
+wod.pres = gsw_p_from_z(-wod.z,wod.lat);
 
 %% plot unprocessed profile locations
 figure(1); hold on;
@@ -231,11 +286,11 @@ if ~exist([pwd '/' param_props.dir_name '/Data'],'dir')
 save([param_props.dir_name '/Data/processed_wod_osd_' param_props.file_name '_data_' year '.mat'],...
     'wod_data','-v7.3');
 
-else
-
-% display information
-disp('WOD data already processed.')
-
-end
+% else
+% 
+% % display information
+% disp('WOD data already processed.')
+% 
+% end
 
 end

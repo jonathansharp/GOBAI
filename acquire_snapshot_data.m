@@ -431,7 +431,7 @@ for n = 1:length(idx_folders) % for each DAC
         end
 
     % check for float processed but no data added to structure
-    % print float ID if this is the case (O2 sensor but not good data?)
+    % print float ID if this is the case (O2 sensor but no good data?)
     if cmp_idx == 1 && sum(~nan_idx) == 0; disp(floatnum); end
 
     % clean up
@@ -488,8 +488,9 @@ float_data.DAY = datenum(date_temp) - datenum(date_temp0) + 1;
 clear date_temp date_temp0
 
 %% Calculate absolute salinity, conservative temperature, potential density, and spice
-% float_data.LON(float_data.LON<-200) = NaN;
-% float_data.LAT(float_data.LAT<-90) = NaN;
+% got this error before: gsw_SA_from_SP: longitude is out of range
+float_data.LON(float_data.LON<-200) = NaN;
+float_data.LAT(float_data.LAT<-90) = NaN;
 float_data.ABSSAL = gsw_SA_from_SP(float_data.SAL,float_data.PRES,float_data.LON,float_data.LAT);
 float_data.CNSTEMP = gsw_CT_from_t(float_data.ABSSAL,float_data.TEMP,float_data.PRES);
 float_data.SIGMA = gsw_sigma0(float_data.ABSSAL,float_data.CNSTEMP);

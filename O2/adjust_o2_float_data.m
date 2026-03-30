@@ -24,7 +24,11 @@ if include_float; load(['O2/Data/processed_float_o2_data_' ...
 if include_glodap; load(['O2/Data/processed_glodap_o2_data_' ...
         num2str(glodap_year) '.mat'],'glodap_data'); end
 if include_ctd; load(['O2/Data/processed_wod_ctd_o2_data_' ...
-        num2str(glodap_year) '.mat'],wod_data'); end
+        num2str(glodap_year) '.mat'],'wod_data'); end
+
+%% only do if file doesn't exist
+if ~exist(['O2/Data/processed_float_o2_data_adjusted_' file_date ...
+        float_file_ext '.mat'],'file')
 
 %% remove data points based on global range test
 % 479 umol/kg is max for WOD range checks
@@ -571,3 +575,9 @@ if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
 save(['O2/Data/processed_float_o2_data_adjusted_' file_date float_file_ext '.mat'],...
     'float_data_adjusted','file_date','-v7.3');
 clear slp int float_data float_data_adjusted v vars
+
+else
+
+disp(['Float data (' erase(float_file_ext,'_') ') for ' file_date ' already adjusted.']);
+
+end
