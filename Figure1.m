@@ -1,11 +1,12 @@
 % file information
 ver1 = 'v2.3'; % version
-ver2 = 'v1.0-HR';
+ver2 = 'v1.1-HR';
 var1 = 'O2'; % var11iable
 path1 = ['/raid/Data/GOBAI-' var1 '/' ver1 '/']; % file path
 path2 = ['/raid/Data/GOBAI-' var1 '/' ver2 '/']; % file path
 var2 = 'NO3'; % var11iable
 path3 = ['/raid/Data/GOBAI-' var2 '/' ver2 '/']; % file path
+pressure_level = 100;
 
 % 
 regions = {'CCS','HUM','CAN','BENG'};
@@ -13,7 +14,7 @@ lat = [5 25.5; -25 -4.5; 5 25.5; -25 -4.5];
 lon = [225 255.5; 265 295.5; 325 355.5; -10 19.5];
 o2_lims = [0 300; 0 300; 0 300; 0 300];
 nit_lims = [0 30; 0 30; 0 30; 0 30];
-pres = [100; 100; 100; 100];
+pres = repmat(pressure_level,4,1);
 time = [datenum(2017,6,15);datenum(2017,6,15);...
     datenum(2017,6,15);datenum(2017,6,15)];
 
@@ -174,5 +175,7 @@ for r = 1:length(regions)
 
 end
 
-% export_fig(gcf,'Paper_Figs/Fig1.png','-transparent');
-exportgraphics(gcf,'Paper_Figs/Fig1.png');
+% export_fig(gcf,['Paper_Figs/Fig1' num2str(pressure_level) '.png'],'-transparent');
+exportgraphics(gcf,['Paper_Figs/Fig1_new_' num2str(pressure_level) '.png']);
+
+% close

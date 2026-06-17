@@ -2,7 +2,7 @@
 float_only = 0;
 accum = 1;
 param = 'no3';
-data_date = 'Jan-2025';
+data_date = 'Mar-2026';
 sz = 10;
 
 % load data
@@ -74,7 +74,7 @@ else
 end
 
 % create plot
-f = figure('visible','off'); hold on; grid on;
+f = figure('visible','on'); hold on; grid on;
 set(f,'Position',[20 400 1000 600],'color','w');
 ax = gca; ax.FontSize = 16; ax.Color = 'w'; ax.TickLength = [0.005 0.005];
 %text(-235,-105,'J. Sharp, 2024','color',rgb('gray'));

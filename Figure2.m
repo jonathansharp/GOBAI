@@ -1,20 +1,21 @@
 % file information
 ver1 = 'v2.3'; % version
-ver2 = 'v1.0-HR';
+ver2 = 'v1.1-HR';
 var1 = 'O2'; % var11iable
 path1 = ['/raid/Data/GOBAI-' var1 '/' ver1 '/']; % file path
 path2 = ['/raid/Data/GOBAI-' var1 '/' ver2 '/']; % file path
 var2 = 'NO3'; % var11iable
 path3 = ['/raid/Data/GOBAI-' var2 '/' ver2 '/']; % file path
+pres = 100;
 
 % establish figure
-figure('Position',[100 100 1200 800]);
-tiledlayout(3,2,'TileSpacing','compact','Padding','compact');
+figure('Position',[100 100 1200 1200]);
+tiledlayout(2,2,'TileSpacing','none','Padding','tight');
 
 % time and depth
-pres = 100;
 time = datenum(2017,6,15);
 o2_lims = [0 300];
+nit_lims = [0 30; 0 30; 0 30; 0 30];
 
 % download dimensions
 gobai1.lon = double(ncread([path1 'GOBAI-' var1 '-' ver1 '.nc'],'lon'));
@@ -40,13 +41,13 @@ gobai3.time = double(ncread([path3 'GOBAI-' var2 '-' ver2 '.nc'],'time'));
 [~,idx_time_3] = min(abs(time-(datenum(1950,1,1)+gobai3.time))); 
 
 % plot v2.3 map (O2)
-axis1 = nexttile;
+axis1 = nexttile();
 worldmap([-90 90],[20 380]); setm(gca,'FontSize',12);
 set(findobj(axis1.Children,'Tag','MLabel'),'FontSize',6);
 set(findobj(axis1.Children,'Tag','PLabel'),'FontSize',6);
 gobai1.oxy = squeeze(double(ncread([path1 'GOBAI-' var1 '-' ver1 '.nc'],'oxy',...
-    [1 1 idx_pres_1 1],[Inf Inf 1 Inf])));
-pcolorm(gobai1.lat-0.25,gobai1.lon-0.25,mean(gobai1.oxy,3,'omitnan')');
+    [1 1 idx_pres_1 idx_time_1],[Inf Inf 1 1])));
+pcolorm(gobai1.lat-0.25,gobai1.lon-0.25,gobai1.oxy');
 plot_land('map');
 c=colorbar(axis1);
 c.Label.String = '[O_{2}] (\mumol kg^{-1})';
@@ -62,8 +63,8 @@ worldmap([-90 90],[20 380]); setm(gca,'FontSize',12);
 set(findobj(axis2.Children,'Tag','MLabel'),'FontSize',6);
 set(findobj(axis2.Children,'Tag','PLabel'),'FontSize',6);
 gobai2.oxy = squeeze(double(ncread([path2 'GOBAI-' var1 '-' ver2 '.nc'],'o2',...
-    [1 1  idx_pres_2 1],[Inf Inf 1 Inf])));
-pcolorm(gobai2.lat-0.25,gobai2.lon-0.25,mean(gobai2.oxy,3,'omitnan')');
+    [1 1  idx_pres_2 idx_time_2],[Inf Inf 1 1])));
+pcolorm(gobai2.lat-0.25,gobai2.lon-0.25,gobai2.oxy');
 plot_land('map');
 c=colorbar(axis2);
 c.Label.String = '[O_{2}] (\mumol kg^{-1})';
@@ -78,15 +79,15 @@ axis3 = nexttile;
 worldmap([-90 90],[20 380]); setm(gca,'FontSize',12);
 set(findobj(axis3.Children,'Tag','MLabel'),'FontSize',6);
 set(findobj(axis3.Children,'Tag','PLabel'),'FontSize',6);
-gobai3.nit = squeeze(double(ncread([path2 'GOBAI-' var1 '-' ver2 '.nc'],'no3',...
-    [1 1  idx_pres_2 1],[Inf Inf 1 Inf])));
-pcolorm(gobai3.lat-0.25,gobai3.lon-0.25,mean(gobai3.nit,3,'omitnan')');
+gobai3.nit = squeeze(double(ncread([path3 'GOBAI-' var2 '-' ver2 '.nc'],'no3',...
+    [1 1  idx_pres_3 idx_time_3],[Inf Inf 1 1])));
+pcolorm(gobai3.lat-0.25,gobai3.lon-0.25,gobai3.nit');
 plot_land('map');
 c=colorbar(axis3);
 c.Label.String = '[NO_{3}] (\mumol kg^{-1})';
 c.Label.FontSize = 12;
-colormap(axis3,cmocean('ice'));
-clim(axis3,o2_lims);
+colormap(axis3,cmocean('speed'));
+clim(axis3,nit_lims);
 title(axis3,['GOBAI-NO_{3}-' ver2 ' at ' num2str(gobai3.pres(idx_pres_2)) ' dbar']);
 clear gobai3
 

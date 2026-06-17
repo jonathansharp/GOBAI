@@ -432,6 +432,7 @@ for n = 1:length(idx_folders) % for each DAC
 
     % check for float processed but no data added to structure
     % print float ID if this is the case (O2 sensor but no good data?)
+    % I thought I fixed this by adjusting the mode index for T and S, did I?
     if cmp_idx == 1 && sum(~nan_idx) == 0; disp(floatnum); end
 
     % clean up

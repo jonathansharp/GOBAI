@@ -1,7 +1,7 @@
 
 %% load v2.2
 % file information
-ver = 'v2.2'; % version
+ver = 'v1.1-HR'; % version
 var = 'O2'; % variable
 path = ['/raid/Data/GOBAI-' var '/' ver '/']; % file path
 % download dimensions
@@ -10,8 +10,8 @@ GOBAI.lat = ncread([path 'GOBAI-' var '-' ver '.nc'],'lat');
 GOBAI.pres = ncread([path 'GOBAI-' var '-' ver '.nc'],'pres');
 GOBAI.time = ncread([path 'GOBAI-' var '-' ver '.nc'],'time');
 % download oxygen
-GOBAI.oxy = ncread([path 'GOBAI-' var '-' ver '.nc'],'oxy');
-GOBAI.temp = ncread([path 'GOBAI-' var '-' ver '.nc'],'temp');
+% GOBAI.oxy = ncread([path 'GOBAI-' var '-' ver '.nc'],'oxy');
+% GOBAI.temp = ncread([path 'GOBAI-' var '-' ver '.nc'],'temp');
 
 %% determine dimension lengths
 xdim = length(GOBAI.lon);

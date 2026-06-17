@@ -40,17 +40,35 @@ lon = convert_lon(lon,'format','-180:180');
 % view coordinates
 %xpos = 0;
 %ypos = 0;
-xpos = [repmat(0,1,104),-30/260:-30/260:-30,-30+30/260:30/260:30];
-ypos = [repmat(90,1,104),90-30/260:-30/260:60,repmat(60,1,520)];
-lat_idx = 50;
+xpos = [repmat(0,1,104),...
+    -30/260:-30/260:-30,...
+    -30+30/260:30/260:30,...
+    repmat(30,1,600)];
+ypos = [repmat(90,1,104),...
+    90-30/260:-30/260:60,...
+    repmat(60,1,1120)];
+lat_idx = 320;
+nl=2;
 
-for t = 1:884
+for t = 1:1484%length(time)
         % load gobai
         gobai = ncread([gpath 'GOBAI-O2-v1.0-HR.nc'],'o2',[1,1,1,t],[Inf,Inf,Inf,1]);
         gobai = gobai(lon_idx,:,:);
         % plot data
         view(xpos(t),ypos(t));
         % plot surface
+%         bottom = nan(size(gobai,1),size(gobai,3));
+%         gobai_idx = ~isnan(gobai);
+%         for x = 1:size(gobai_idx,1)
+%             for y = 1:size(gobai_idx,3)
+%             idx_val = find(gobai_idx(x,:,y),1,'first');
+%                 if isempty(idx_val)
+%                     bottom(x,y) = NaN;
+%                 else 
+%                     bottom(x,y) = idx_val;
+%                 end
+%             end
+%         end
         if t <= 540
             h1=surf(lon3d(:,:,1),lat3d(:,:,1),-pres3d(:,:,1),gobai(:,:,1),...
                 'EdgeColor','none');
@@ -58,14 +76,14 @@ for t = 1:884
                 -squeeze(pres3d(1,:,:)),squeeze(gobai(1,:,:)),'EdgeColor','none');
             h3=surf(squeeze(lon3d(end,:,:)),squeeze(lat3d(end,:,:)),...
                 -squeeze(pres3d(end,:,:)),squeeze(gobai(end,:,:)),'EdgeColor','none');
-            h4=surf(squeeze(lon3d(:,1,:)),squeeze(lat3d(:,1,:)),...
-                -squeeze(pres3d(:,1,:)),squeeze(gobai(:,1,:)),'EdgeColor','none');
-            h5=surf(squeeze(lon3d(:,2,:)),squeeze(lat3d(:,2,:)),...
-                -squeeze(pres3d(:,2,:)),squeeze(gobai(:,2,:)),'EdgeColor','none');
-            h6=surf(squeeze(lon3d(:,3,:)),squeeze(lat3d(:,3,:)),...
-                -squeeze(pres3d(:,3,:)),squeeze(gobai(:,3,:)),'EdgeColor','none');
+            h4=surf(squeeze(lon3d(:,120,:)),squeeze(lat3d(:,120,:)),...
+                -squeeze(pres3d(:,120,:)),squeeze(gobai(:,120,:)),'EdgeColor','none');
+%             for xlon = 1:length(lon)
+%             surf(squeeze(lon3d(xlon,1,:)),squeeze(lat3d(bottom(xlon,1),:,bottom(xlon,:))),...
+%                 -squeeze(pres3d(:,120,:)),squeeze(gobai(:,120,:)),'EdgeColor','none');
+%             end
         % plot with equatorial cutout
-        elseif t <= 550
+        elseif t <= 884
             h1=surf(lon3d(:,lat_idx:end,1),lat3d(:,lat_idx:end,1),-pres3d(:,lat_idx:end,1),gobai(:,lat_idx:end,1),...
                 'EdgeColor','none');
             h2=surf(squeeze(lon3d(1,lat_idx:end,:)),squeeze(lat3d(1,lat_idx:end,:)),...
@@ -74,9 +92,35 @@ for t = 1:884
                 -squeeze(pres3d(end,lat_idx:end,:)),squeeze(gobai(end,lat_idx:end,:)),'EdgeColor','none');
             h4=surf(squeeze(lon3d(:,lat_idx,:)),squeeze(lat3d(:,lat_idx,:)),...
                 -squeeze(pres3d(:,lat_idx,:)),squeeze(gobai(:,lat_idx,:)),'EdgeColor','none');
-            h5=surf(squeeze(lon3d(:,lat_idx+1,:)),squeeze(lat3d(:,lat_idx+1,:)),...
-                -squeeze(pres3d(:,lat_idx+1,:)),squeeze(gobai(:,lat_idx+1,:)),'EdgeColor','none');
-        else
+            plot3([lon(1) lon(end)],[lat(lat_idx) lat(lat_idx)],...
+                -[pres(1) pres(1)],'k--');
+            plot3([lon(1) lon(1)],[lat(lat_idx) lat(end)],...
+                -[pres(1) pres(1)],'k--');
+            plot3([lon(end) lon(end)],[lat(lat_idx) lat(end)],...
+                -[pres(1) pres(1)],'k--');
+        elseif t <= 1484
+            xlim([-180+nl*(4/10) 180-nl*(6/10)]);
+            ylim([-90+nl*(9/20) 90-nl*(1/20)]);
+            if nl < 280
+                lat_idx = round(lat_idx + nl/4);
+            end
+            h1=surf(lon3d(:,lat_idx:end,1),lat3d(:,lat_idx:end,1),-pres3d(:,lat_idx:end,1),gobai(:,lat_idx:end,1),...
+                'EdgeColor','none');
+            h2=surf(squeeze(lon3d(1,lat_idx:end,:)),squeeze(lat3d(1,lat_idx:end,:)),...
+                -squeeze(pres3d(1,lat_idx:end,:)),squeeze(gobai(1,lat_idx:end,:)),'EdgeColor','none');
+            h3=surf(squeeze(lon3d(end,lat_idx:end,:)),squeeze(lat3d(end,lat_idx:end,:)),...
+                -squeeze(pres3d(end,lat_idx:end,:)),squeeze(gobai(end,lat_idx:end,:)),'EdgeColor','none');
+            h4=surf(squeeze(lon3d(:,lat_idx,:)),squeeze(lat3d(:,lat_idx,:)),...
+                -squeeze(pres3d(:,lat_idx,:)),squeeze(gobai(:,lat_idx,:)),'EdgeColor','none');
+            plot3([lon(1) lon(end)],[lat(lat_idx) lat(lat_idx)],...
+                -[pres(1) pres(1)],'k--');
+            plot3([lon(1) lon(1)],[lat(lat_idx) lat(end)],...
+                -[pres(1) pres(1)],'k--');
+            plot3([lon(end) lon(end)],[lat(lat_idx) lat(end)],...
+                -[pres(1) pres(1)],'k--');
+            if nl < 280
+                nl=nl+4;
+            end
         end
         title(datestr(time(t)+datenum(1950,0,1)));
         % capture frame
@@ -89,11 +133,11 @@ for t = 1:884
         else
             imwrite(imind,cm,fname,'gif','WriteMode','append','DelayTime',0.075);
         end
-        % increase counter
+        % delete faces
         if t <= 540
-            delete(h1); delete(h2); delete(h3); delete(h4); delete(h5); delete(h6);
+            delete(h1); delete(h2); delete(h3); delete(h4);
         else
-            delete(h1); delete(h2); delete(h3); delete(h4); delete(h5);
+            delete(h1); delete(h2); delete(h3); delete(h4);
         end
         if t == 270
             delete(l);

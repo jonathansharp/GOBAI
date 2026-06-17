@@ -1,7 +1,7 @@
 
 %% Plot RFROM over time
 
-function plot_rfrom_animation(fpaths,param,ver,base_grid,start_year,...
+function plot_rfrom_animation(fpath,param,ver,base_grid,start_year,...
     end_year,min_val,max_val,step_val,varargin)
 
 %% process optional input arguments
