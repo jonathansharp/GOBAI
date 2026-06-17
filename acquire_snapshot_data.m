@@ -86,7 +86,12 @@ if snap_download == 1
     if ~exist('BGC_Argo_Snapshots','dir'); mkdir('BGC_Argo_Snapshots'); end
     if exist(['BGC_Argo_Snapshots/' num2str(snap_date) '-BgcArgoSprof/'],'dir') ~= 7
         url = 'https://www.seanoe.org/data/00311/42182/data/';
-        websave(filename,[url filename]); % download zipped file
+        try
+            websave(filename,[url filename]); % download zipped file
+        catch
+            disp('There may be no snapshot file available for the specified month.');
+            return
+        end
         gunzip(filename,'BGC_Argo_Snapshots'); % unzip file
         % define tarball name
         tarname = regexp(filename, '\d+\.tar', 'match', 'once');
@@ -291,7 +296,8 @@ for n = 1:length(idx_folders) % for each DAC
                 
                 % loop through profiles and interpolate
                 for p = 1:length(float.(['F' floatnum]).CYCLE_NUMBER) % for each profile
-                    if sum(index(:,p)) > 10 % if more than ten data points are available
+                    % if more than ten data points are available
+                    if length(unique(pressure(index(:,p),p))) > 10
                         % extract temporary pressure axis and parameter
                         temp_pres = pressure(index(:,p),p);
                         if strcmp(vars{k},'TEMP') || strcmp(vars{k},'PSAL')
@@ -313,7 +319,7 @@ for n = 1:length(idx_folders) % for each DAC
                             temp_var_i = interp1(temp_pres(unique_idx_pres),...
                                 temp_var(unique_idx_pres),zi,'linear','extrap');
                         catch
-                            keyboard
+                            disp(['Issue with float #' floatnum ', profile #' num2str(p)]);
                         end
 
                         % remove interpolated data that matches a bad T/S index

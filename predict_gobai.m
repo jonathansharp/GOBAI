@@ -10,12 +10,13 @@
 
 function predict_gobai(alg_type,param_props,fpaths,base_grid,file_date,...
     float_file_ext,num_clusters,variables,thresh,numWorkers_predict,...
-    clust_vars,start_year,end_year,snap_date,flt,gld,ctd,varargin)
+    clust_vars,start_year,end_year,snap_date,flt,gld,osd,ctd,varargin)
 
 %% define dataset extensions
 if flt == 1; float_ext = 'f'; else float_ext = ''; end
 if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
-if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
+if osd == 1; osd_ext = 'o'; else osd_ext = ''; end
+if ctd == 1; ctd_ext = 'c'; else ctd_ext = ''; end
 
 %% process optional input arguments
 % pre-allocate
@@ -94,21 +95,22 @@ end
 alg_fnames = cell(num_clusters,1);
 for c = 1:num_clusters
     alg_fnames(c) = ...
-        {[alg_type '_' param_props.file_name '_C' num2str(c) '_' float_ext glodap_ext ctd_ext]};
+        {[alg_type '_' param_props.file_name '_C' num2str(c) '_' ...
+        float_ext glodap_ext osd_ext ctd_ext]};
 end
 if strcmp(alg_type,'FFNN')
     path_ext = ['GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) ...
         '_' file_date float_file_ext '/train' num2str(100*train_ratio) ...
         '_val' num2str(100*val_ratio) '_test' num2str(100*test_ratio) ...
-        '/' float_ext glodap_ext ctd_ext coverage '/'];
+        '/' float_ext glodap_ext osd_ext ctd_ext coverage '/'];
 elseif strcmp(alg_type,'RFR')
     path_ext = ['GOBAI/' base_grid '/RFR/c' num2str(num_clusters) ...
         '_' file_date float_file_ext '/tr' num2str(numtrees) '_lf' ...
-        num2str(minLeafSize) '/' float_ext glodap_ext ctd_ext '/'];
+        num2str(minLeafSize) '/' float_ext glodap_ext osd_ext ctd_ext '/'];
 elseif strcmp(alg_type,'GBM')
     path_ext = ['GOBAI/' base_grid '/GBM/c' num2str(num_clusters) ...
         '_' file_date float_file_ext '/tr' num2str(numstumps) ...
-        '_bin' num2str(numbins) '/' float_ext glodap_ext ctd_ext '/'];
+        '_bin' num2str(numbins) '/' float_ext glodap_ext osd_ext ctd_ext '/'];
 end
 gobai_alg_dir_temp = [fpaths.param_path_temp path_ext];
 if ~isfolder(gobai_alg_dir_temp); mkdir(gobai_alg_dir_temp); end
@@ -138,13 +140,13 @@ else
 end
 
 %% set up parallel pool
-tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+% tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% start timing predictions
 tStart = tic;
 
 %% compute and save estimates for each month
-parfor m = 1:length(TS.months)
+for m = 1:length(TS.months)
     if strcmp(base_grid,'RG')
         % counter 
         cnt = m;
@@ -188,7 +190,7 @@ parfor m = 1:length(TS.months)
         apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
             base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
             thresh,gobai_alg_dir_temp,param_props,fpaths.param_path,...
-            date_str,clust_vars,float_ext,glodap_ext,ctd_ext,...
+            date_str,clust_vars,float_ext,glodap_ext,osd_ext,ctd_ext,...
             file_date,float_file_ext);
     elseif strcmp(base_grid,'RFROM')
         % load dimensions
@@ -233,7 +235,7 @@ parfor m = 1:length(TS.months)
             apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
                 base_grid,m,w,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
                 thresh,gobai_alg_dir_temp,param_props,fpaths.param_path,...
-                date_str,clust_vars,float_ext,glodap_ext,ctd_ext,...
+                date_str,clust_vars,float_ext,glodap_ext,osd_ext,ctd_ext,...
                 file_date,float_file_ext);
         end
     else
@@ -253,6 +255,17 @@ parfor m = 1:length(TS.months)
         % get practical salinity and in situ temperature from cmip model
         TS.salinity_abs = ncread(nc_filepath_abs_sal,'abs_sal',[1 1 1 m],[Inf Inf Inf 1]);
         TS.temperature_cns = ncread(nc_filepath_cns_tmp,'cns_tmp',[1 1 1 m],[Inf Inf Inf 1]);
+        % load bgc variables if applicable
+        if any(strcmp(variables,'o2'))
+            nc_filepath_o2 = [fpaths.model_path base_grid '/combined/regridded/o2' path2 ...
+                'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+            TS.o2 = ncread(nc_filepath_o2,'o2',[1 1 1 m],[Inf Inf Inf 1]);
+        end
+        if any(strcmp(variables,'no3'))
+            nc_filepath_no3 = [fpaths.model_path base_grid '/combined/regridded/no3' path2 ...
+                'combined' path3 '_' num2str(start_year) '01-' date_str '.nc'];
+            TS.no3 = ncread(nc_filepath_no3,'no3',[1 1 1 m],[Inf Inf Inf 1]);
+        end
         % get time variables for just this timestep
         TS.Time = ncread(nc_filepath_abs_sal,'time',m,1);
         date_temp = datevec(datenum(0,0,double(TS.Time)));
@@ -267,7 +280,7 @@ parfor m = 1:length(TS.months)
         apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
             base_grid,m,1,cnt,TS.xdim,TS.ydim,TS.zdim,variables_TS,...
             thresh,gobai_alg_dir_temp,param_props,fpaths.param_path,...
-            date_str,clust_vars,float_ext,glodap_ext,ctd_ext,...
+            date_str,clust_vars,float_ext,glodap_ext,osd_ext,ctd_ext,...
             file_date,float_file_ext,coverage);
 
     end
@@ -468,7 +481,7 @@ end
 %% for processing 3D grids and applying trained models to them
 function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
     base_grid,m,w,cnt,xdim,ydim,zdim,variables_TS,thresh,gobai_alg_dir_temp,...
-    param_props,param_path,date_str,clust_vars,float_ext,glodap_ext,ctd_ext,...
+    param_props,param_path,date_str,clust_vars,float_ext,glodap_ext,osd_ext,ctd_ext,...
     file_date,float_file_ext,coverage)
 
     % convert to arrays
@@ -503,13 +516,13 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
             num2str(num_clusters) '_' file_date float_file_ext];
         if ~isfolder(gmm_folder_name); mkdir(gmm_folder_name); end
         gmm_model_name = [gmm_folder_name '/model_' float_ext ...
-            glodap_ext ctd_ext];
+            glodap_ext osd_ext ctd_ext];
     else % for models
         gmm_folder_name = [param_props.dir_name '/Models/GMM/' ...
             base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
         if ~isfolder(gmm_folder_name); mkdir(gmm_folder_name); end
         gmm_model_name = [gmm_folder_name '/model_' float_ext ...
-            glodap_ext ctd_ext '_' date_str coverage];
+            glodap_ext osd_ext ctd_ext '_' date_str coverage];
     end
     % load GMM model
     load(gmm_model_name,'gmm','C','S');
@@ -548,11 +561,11 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
         variables_TS_tmp = variables_TS;
         
         % remove year for Med cluster
-        mean_lat = mean(TS.latitude_array(probabilities_array > thresh));
-        mean_lon = mean(TS.longitude_array(probabilities_array > thresh));
-        if mean_lat > 32 && mean_lat < 41 && mean_lon > 10 && mean_lon < 30 % check for Med cluster
-            variables_TS_tmp(strcmp(variables_TS_tmp,'year_array'))=[];
-        end
+        % mean_lat = mean(TS.latitude_array(probabilities_array > thresh));
+        % mean_lon = mean(TS.longitude_array(probabilities_array > thresh));
+        % if mean_lat > 28 && mean_lat < 46 && mean_lon > 0 && mean_lon < 40 % check for Med cluster
+        %     variables_TS_tmp(strcmp(variables_TS_tmp,'year_array'))=[];
+        % end
 
         % predict data for each cluster
         if strcmp(alg_type,'FFNN')

@@ -8,18 +8,23 @@
 %
 % DATE: 2/5/2025
 
-function combine_data(param_props,float_file_ext,start_year,glodap_year,snap_date,...
-    include_float,include_glodap,include_ctd)
+function combine_data(param_props,float_file_ext,glodap_year,snap_date,...
+    include_float,include_glodap,include_osd,include_ctd)
 
 %% change temporary param name for DIC
 if strcmp(param_props.temp_name,'PH')
     param_props.temp_name = 'DIC';
 end
 
+%% define end year
+todays_date = datevec(datetime('today'));
+end_year = todays_date(1);
+
 %% define dataset extensions
 if include_float == 1; float_ext = 'f'; else float_ext = ''; end
 if include_glodap == 1; glodap_ext = 'g'; else glodap_ext = ''; end
-if include_ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
+if include_osd == 1; osd_ext = 'o'; else osd_ext = ''; end
+if include_ctd == 1; ctd_ext = 'c'; else ctd_ext = ''; end
 
 %% load data after implementing float data adjustment and define variable names
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
@@ -33,15 +38,15 @@ else
 end
 if include_glodap == 1
     load([param_props.dir_name ...
-        '/Data/processed_glodap_' param_props.file_name '_data_' ...
+        '/Data/processed_glodap_' param_props.file_name '_data_adjusted_' ...
         num2str(glodap_year) '.mat'],'glodap_data');
     glodap_vars = fieldnames(glodap_data);
 else
     glodap_data = [];
 end
-if include_ctd == 1
-    load(['O2/Data/processed_wod_ctd_' ...
-        param_props.file_name '_data_' num2str(glodap_year) '.mat'],...
+if include_ctd == 1 || include_osd == 1
+    load(['O2/Data/processed_wod_' ...
+        param_props.file_name '_data_adjusted_' num2str(end_year) '.mat'],...
         'wod_data');
     wod_vars = fieldnames(wod_data);
 else
@@ -71,7 +76,7 @@ if include_glodap == 1
 end
 
 %% Assemble index for wod data
-if include_ctd == 1
+if include_ctd == 1 || include_osd == 1
     wod_idx = true(size(wod_data.(param_props.temp_name)));
     for v = 1:length(wod_vars)
         wod_idx(isnan(wod_data.(wod_vars{v}))) = false;
@@ -158,7 +163,7 @@ end
 
 %% Add ctd to combined dataset
 if include_ctd == 1
-    all_data.type = [all_data.type;repmat(3,sum(wod_idx),1)];
+    all_data.type = [all_data.type;wod_data.TYPE(wod_idx)+2];
     all_data.platform = [all_data.platform;wod_data.CRU(wod_idx)];
     all_data.id = [all_data.id;wod_data.ID(wod_idx)];
     all_data.latitude = [all_data.latitude;wod_data.LAT(wod_idx)];
@@ -184,35 +189,16 @@ end
 %% transform longitude and day of year
 all_data.lon_cos_1 = cosd(all_data.longitude-20);
 all_data.lon_cos_2 = cosd(all_data.longitude-110);
-date = datevec(all_data.time);
-date0 = date;
+dates = datevec(all_data.time);
+date0 = dates;
 date0(:,2:3) = 0;
-all_data.day = datenum(date) - datenum(date0);
+all_data.day = datenum(dates) - datenum(date0);
 all_data.day_sin = sin((2.*pi.*all_data.day)/365.25);
 all_data.day_cos = cos((2.*pi.*all_data.day)/365.25);
-all_data.year = date(:,1);
+all_data.year = dates(:,1);
 
 % calculate depth
 all_data.depth = -gsw_z_from_p(all_data.pressure,all_data.latitude);
-
-%%
-% determine bin number of each test data point on 1 degree grid
-lon_edges = -180:180; lon = -179.5:179.5;
-lat_edges = -90:90; lat = -89.5:89.5;
-time_edges = datenum([repelem([2000:2025]',12,1);2026],[repmat([1:12]',26,1);1],0);
-time = datenum(repelem([2000:2025]',12,15),repmat([1:12]',26,15),0);
-[~,~,Xnum] = histcounts(all_data.longitude,lon_edges);
-[~,~,Ynum] = histcounts(all_data.latitude,lat_edges);
-[~,~,Znum] = histcounts(all_data.time,time_edges);
-% accumulate 3D grid of test data point errors
-subs = [Xnum, Ynum, Znum];
-idx_subs = any(subs==0,2);
-sz = [length(lon),length(lat),length(time)];
-% average parameter
-count_profiles = accumarray(subs(~idx_subs,:),...
-    abs(all_data.(param_props.file_name)(~idx_subs)),sz,@nanmean,NaN);
-count_profiles = count_profiles(:,:,1:300);
-100.*(sum(~isnan(count_profiles(:)))/(360*180*300));
 
 %% plot gridded observations
 % determine bin number of each test data point on 1 degree grid
@@ -253,7 +239,7 @@ parfor lev = 1:length(pres)
     c.TickLength = 0;
     if ~isfolder([pwd '/' param_props.dir_name '/Figures/Surface_Plots']); mkdir([param_props.dir_name '/Figures/Surface_Plots']); end
     export_fig(gcf,[pwd '/' param_props.dir_name '/Figures/Surface_Plots/Gridded_' ...
-        param_props.dir_name '_' num2str(pres(lev)) 'dbar_' float_ext glodap_ext ctd_ext ...
+        param_props.dir_name '_' num2str(pres(lev)) 'dbar_' float_ext glodap_ext osd_ext ctd_ext ...
         '_' file_date float_file_ext '.png'],'-transparent');
     close
 end
@@ -278,7 +264,7 @@ parfor lev = 1:length(pres)
     c.TickLength = 0;
     if ~isfolder([pwd '/' param_props.dir_name '/Figures/Surface_Plots']); mkdir([param_props.dir_name '/Figures/Surface_Plots']); end
     export_fig(gcf,[pwd '/' param_props.dir_name '/Figures/Surface_Plots/' ...
-        param_props.dir_name '_Obs_' num2str(pres(lev)) 'dbar_' float_ext glodap_ext ctd_ext ...
+        param_props.dir_name '_Obs_' num2str(pres(lev)) 'dbar_' float_ext glodap_ext osd_ext ctd_ext ...
         '_' file_date float_file_ext '.png'],'-transparent');
     close
 end
@@ -288,7 +274,7 @@ delete(gcp('nocreate'));
 %% save combined oxygen data
 if ~exist([pwd '/' param_props.dir_name '/Data'],'dir'); mkdir([param_props.dir_name '/Data']); end
 save([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' ...
-    float_ext glodap_ext ctd_ext '_' file_date float_file_ext '.mat'],...
+    float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext '.mat'],...
     'all_data','file_date','-v7.3');
 
 end

@@ -8,19 +8,24 @@
 %
 % DATE: 7/28/2025
 
-function display_data(param_props,float_file_ext,glodap_year,start_year,snap_date,flt,gld,ctd)
+function display_data(param_props,float_file_ext,glodap_year,...
+    start_year,snap_date,flt,gld,osd,ctd)
+
+%% define year
+todays_date = datevec(datetime('today'));
+end_year = todays_date(1);
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
 if flt == 1; load([param_props.dir_name '/Data/processed_float_' ...
-    param_props.file_name '_data_' file_date float_file_ext '.mat'],...
-    'float_data','file_date'); end
+    param_props.file_name '_data_adjusted_' file_date float_file_ext '.mat'],...
+    'float_data_adjusted','file_date'); end
 if gld == 1; load([param_props.dir_name '/Data/processed_glodap_' ...
-    param_props.file_name '_data_' num2str(glodap_year) '.mat'],...
+    param_props.file_name '_data_adjusted_' num2str(glodap_year) '.mat'],...
     'glodap_data'); end
-if ctd == 1; load([param_props.dir_name '/Data/processed_wod_ctd_' ...
-    param_props.file_name '_data_' num2str(glodap_year) '.mat'],...
+if ctd == 1 || osd == 1; load([param_props.dir_name '/Data/processed_wod_' ...
+    param_props.file_name '_data_adjusted_' num2str(end_year) '.mat'],...
     'wod_data'); end
 
 %% plot for sanity
@@ -30,9 +35,9 @@ if ctd == 1; load([param_props.dir_name '/Data/processed_wod_ctd_' ...
 % float_mean = nan(size(zi));
 % float_std = nan(size(zi));
 % for z = 1:length(zi)
-%     idx_float = float_data.PRES == zi(z);
-%     float_mean(z) = mean(float_data.(param_props.temp_name)(idx_float));
-%     float_std(z) = std(float_data.(param_props.temp_name)(idx_float));
+%     idx_float = float_data_adjusted.PRES == zi(z);
+%     float_mean(z) = mean(float_data_adjusted.(param_props.temp_name)(idx_float));
+%     float_std(z) = std(float_data_adjusted.(param_props.temp_name)(idx_float));
 % end
 % figure; hold on;
 % title('Average Float Profile');
@@ -52,10 +57,10 @@ if ctd == 1; load([param_props.dir_name '/Data/processed_wod_ctd_' ...
 % % floats (individual profiles)
 % figure; hold on;
 % title('5% of Float Profiles');
-% profs = unique(float_data.PROF_ID);
+% profs = unique(float_data_adjusted.PROF_ID);
 % for z = 1:length(profs)/20
-%     idx = float_data.PROF_ID == profs(z*20);
-%     plot(float_data.(param_props.temp_name)(idx),float_data.PRES(idx));
+%     idx = float_data_adjusted.PROF_ID == profs(z*20);
+%     plot(float_data_adjusted.(param_props.temp_name)(idx),float_data_adjusted.PRES(idx));
 % end
 % set(gca,'YDir','reverse');
 % ylabel('Depth (dbar)');
@@ -113,18 +118,22 @@ if ctd == 1; load([param_props.dir_name '/Data/processed_wod_ctd_' ...
 %    ~isfile([param_props.dir_name '/Figures/Data/data_by_longitude_' file_date float_file_ext '.png'])
 
 % float
-if flt == 1; [f_profiles,f_idx] = unique(float_data.PROF_ID); end
+if flt == 1; [~,f_idx] = unique(float_data_adjusted.PROF_ID); end
 % glodap
-if gld == 1; [g_profiles,g_idx] = unique(glodap_data.ID); end
-% wod
-if ctd == 1; [w_profiles,w_idx] = unique(wod_data.ID); end
+if gld == 1; [~,g_idx] = unique(glodap_data.ID); end
+% osd
+if osd == 1; id_temp = wod_data.ID; id_temp(wod_data.TYPE==2) = NaN;
+    [~,o_idx] = unique(id_temp); end
+% ctd
+if ctd == 1; id_temp = wod_data.ID; id_temp(wod_data.TYPE==1) = NaN;
+    [~,c_idx] = unique(id_temp); end
 
 % % By time
 % figure; hold on;
 % set(gca,'fontsize',20);
 % set(gcf,'units','inches','position',[0 5 10 10]);
 % all_time = [];
-% if flt == 1; all_time = [all_time;float_data.TIME]; end
+% if flt == 1; all_time = [all_time;float_data_adjusted.TIME]; end
 % if gld == 1; all_time = [all_time;glodap_data.TIME]; end
 % if ctd == 1; all_time = [all_time;wd_data.TIME]; end
 % min_year = datevec(min(all_time));
@@ -134,7 +143,7 @@ if ctd == 1; [w_profiles,w_idx] = unique(wod_data.ID); end
 % year_temp = (min_year:max_year+1)';
 % edges = datenum([year_temp ones(length(year_temp),1) ones(length(year_temp),1)]);
 % if gld == 1; g_counts = histcounts(glodap_data.TIME(g_idx),edges); else g_counts = zeros(1,length(edges)-1); end
-% if flt == 1; f_counts = histcounts(float_data.TIME(f_idx),edges); else f_counts = zeros(1,length(edges)-1); end
+% if flt == 1; f_counts = histcounts(float_data_adjusted.TIME(f_idx),edges); else f_counts = zeros(1,length(edges)-1); end
 % if ctd == 1; w_counts = histcounts(wod_data.TIME(w_idx),edges); else w_counts = zeros(1,length(edges)-1); end
 % bar(edges(1:end-1),[g_counts',w_counts',f_counts'],'stacked');
 % legend({'GLODAP' 'CTD' 'Floats'},'location','northwest');
@@ -153,7 +162,7 @@ if ctd == 1; [w_profiles,w_idx] = unique(wod_data.ID); end
 % set(gcf,'units','inches','position',[0 5 10 10]);
 % edges=-90:5:90;
 % if gld == 1; g_counts = histcounts(glodap_data.LAT(g_idx),edges); else g_counts = zeros(1,length(edges)-1); end
-% if flt == 1; f_counts = histcounts(float_data.LAT(f_idx),edges); else f_counts = zeros(1,length(edges)-1); end
+% if flt == 1; f_counts = histcounts(float_data_adjusted.LAT(f_idx),edges); else f_counts = zeros(1,length(edges)-1); end
 % if ctd == 1; w_counts = histcounts(wod_data.LAT(w_idx),edges); else w_counts = zeros(1,length(edges)-1); end
 % bar(edges(1:end-1),[g_counts',w_counts',f_counts'],'stacked');
 % legend({'CTD' 'Floats' 'GLODAP'});
@@ -170,7 +179,7 @@ if ctd == 1; [w_profiles,w_idx] = unique(wod_data.ID); end
 % set(gcf,'units','inches','position',[0 5 10 10]);
 % edges=-180:5:180;
 % if gld == 1; g_counts = histcounts(glodap_data.LON(g_idx),edges); else g_counts = zeros(1,length(edges)-1); end
-% if flt == 1; f_counts = histcounts(float_data.LON(f_idx),edges); else f_counts = zeros(1,length(edges)-1); end
+% if flt == 1; f_counts = histcounts(float_data_adjusted.LON(f_idx),edges); else f_counts = zeros(1,length(edges)-1); end
 % if ctd == 1; w_counts = histcounts(wod_data.LON(w_idx),edges); else w_counts = zeros(1,length(edges)-1); end
 % bar(edges(1:end-1),[g_counts',w_counts',f_counts'],'stacked');
 % legend({'CTD' 'Floats' 'GLODAP'});
@@ -194,24 +203,36 @@ for d = 1:length(dec_start)
     m_proj('robinson','lon',[20 380]);
     % index coordinates by decade
     if flt == 1
-        f_idx_y = float_data.YEAR >= dec_start(d) & float_data.YEAR < dec_end(d);
-        lon_f = float_data.LON; lon_f(~f_idx_y) = NaN;
-        lat_f = float_data.LAT; lat_f(~f_idx_y) = NaN;
+        f_idx_y = float_data_adjusted.YEAR >= dec_start(d) & float_data_adjusted.YEAR < dec_end(d);
+        lon_f = float_data_adjusted.LON; lon_f(~f_idx_y) = NaN;
+        lat_f = float_data_adjusted.LAT; lat_f(~f_idx_y) = NaN;
         % convert longitude to proper format
         temp_lon_f = convert_lon(lon_f(f_idx),'format','0-360');
         temp_lon_f(temp_lon_f < 20) = temp_lon_f(temp_lon_f < 20) + 360;
         % scatter data
         m_scatter(temp_lon_f,lat_f(f_idx),5,clrs(1,:),'filled');
     end
-    if ctd == 1
-        w_idx_y = wod_data.YEAR >= dec_start(d) & wod_data.YEAR < dec_end(d);
-        lon_w = wod_data.LON; lon_w(~w_idx_y) = NaN;
-        lat_w = wod_data.LAT; lat_w(~w_idx_y) = NaN;
+    if osd == 1
+        o_idx_y = wod_data.YEAR >= dec_start(d) & ...
+            wod_data.YEAR < dec_end(d) & wod_data.TYPE == 1;
+        lon_o = wod_data.LON; lon_o(~o_idx_y) = NaN;
+        lat_o = wod_data.LAT; lat_o(~o_idx_y) = NaN;
         % convert longitude to proper format
-        temp_lon_w = convert_lon(lon_w(w_idx),'format','0-360');
-        temp_lon_w(temp_lon_w < 20) = temp_lon_w(temp_lon_w < 20) + 360;
+        temp_lon_o = convert_lon(lon_o,'format','0-360');
+        temp_lon_o(temp_lon_o < 20) = temp_lon_o(temp_lon_o < 20) + 360;
         % scatter data
-        m_scatter(temp_lon_w,lat_w(w_idx),5,clrs(2,:),'filled');
+        m_scatter(temp_lon_o,lat_o,5,clrs(2,:),'filled');
+    end
+    if ctd == 1
+        c_idx_y = wod_data.YEAR >= dec_start(d) & ...
+            wod_data.YEAR < dec_end(d) & wod_data.TYPE == 2;
+        lon_c = wod_data.LON; lon_c(~c_idx_y) = NaN;
+        lat_c = wod_data.LAT; lat_c(~c_idx_y) = NaN;
+        % convert longitude to proper format
+        temp_lon_c = convert_lon(lon_c,'format','0-360');
+        temp_lon_c(temp_lon_c < 20) = temp_lon_c(temp_lon_c < 20) + 360;
+        % scatter data
+        m_scatter(temp_lon_c,lat_c,5,clrs(3,:),'filled');
     end
     if gld == 1
         g_idx_y = glodap_data.YEAR >= dec_start(d) & glodap_data.YEAR < dec_end(d);
@@ -221,7 +242,7 @@ for d = 1:length(dec_start)
         temp_lon_g = convert_lon(lon_g(g_idx),'format','0-360');
         temp_lon_g(temp_lon_g < 20) = temp_lon_g(temp_lon_g < 20) + 360;
         % scatter data
-        m_scatter(temp_lon_g,lat_g(g_idx),5,clrs(3,:),'filled');
+        m_scatter(temp_lon_g,lat_g(g_idx),5,clrs(5,:),'filled');
     end
     % set properties
     title([num2str(dec_start(d)) 's'],'FontSize',24);
@@ -230,10 +251,17 @@ for d = 1:length(dec_start)
         'yticklabels',[],'ytick',-90:30:90);
     % legend({'Float Data' 'CTD Data' 'GLODAP Data'});
 end
-if flt == 1 && gld == 1 && ctd == 1; map_legend = {'' 'Float Data' 'CTD Data' 'GLODAP Data'}; end
-if flt == 1 && gld == 1 && ctd == 0; map_legend = {'' 'Argo Float Profiles' 'GLODAP Ship Profiles'}; end
-if flt == 0 && gld == 1 && ctd == 0; map_legend = {'' 'GLODAP Data'}; end
-legend(map_legend,'Location','northwest','FontSize',24);
+if flt == 1 && gld == 1 && osd == 1 && ctd == 1
+    map_legend = {'' 'Argo Float Profiles' 'WOD Profiles (OSD)' 'WOD Profiles (CTD)' 'GLODAP Ship Profiles'}; end
+if flt == 1 && gld == 1 && osd == 1 && ctd == 0
+    map_legend = {'' 'Argo Float Profiles' 'WOD Profiles (OSD)' 'GLODAP Ship Profiles'}; end
+if flt == 1 && gld == 1 && osd == 0 && ctd == 0
+    map_legend = {'' 'Argo Float Profiles' 'GLODAP Ship Profiles'}; end
+if flt == 0 && gld == 1 && osd == 0 && ctd == 0
+    map_legend = {'' 'GLODAP Ship Profiles'}; end
+hl = legend(map_legend,'Location','northwest','FontSize',20);
+hl.Units = 'normalized';
+hl.Position = [0.4 0.4 0.2 0.2];
 export_fig(gcf,[param_props.dir_name '/Figures/Data/Mapped_' ...
     param_props.dir_name '_' file_date float_file_ext '.png'],'-transparent');
 close
@@ -246,28 +274,38 @@ set(gcf,'units','inches','position',[0 5 20 10]);
 m_proj('robinson','lon',[20 380]);
 % obtain and scatter data
 if flt == 1
-    temp_lon_f = convert_lon(float_data.LON,'format','0-360');
+    temp_lon_f = convert_lon(float_data_adjusted.LON(f_idx),'format','0-360');
     temp_lon_f(temp_lon_f < 20) = temp_lon_f(temp_lon_f < 20) + 360;
-    m_scatter(temp_lon_f,float_data.LAT,10,clrs(1,:),'filled');
+    m_scatter(temp_lon_f,float_data_adjusted.LAT(f_idx),10,clrs(1,:),'filled');
+end
+if osd ==1
+    temp_lon_o = convert_lon(wod_data.LON(wod_data.TYPE == 1),'format','0-360');
+    temp_lon_o(temp_lon_o < 20) = temp_lon_o(temp_lon_o < 20) + 360;
+    m_scatter(temp_lon_o,wod_data.LAT(wod_data.TYPE == 1),10,clrs(2,:),'filled');
 end
 if ctd ==1
-    temp_lon_w = convert_lon(woa_data.LON,'format','0-360');
-    temp_lon_w(temp_lon_w < 20) = temp_lon_w(temp_lon_w < 20) + 360;
-    m_scatter(temp_lon_w,woa_data.LAT,10,clrs(2,:),'filled');
+    temp_lon_c = convert_lon(wod_data.LON(wod_data.TYPE == 2),'format','0-360');
+    temp_lon_c(temp_lon_c < 20) = temp_lon_c(temp_lon_c < 20) + 360;
+    m_scatter(temp_lon_c,wod_data.LAT(wod_data.TYPE == 2),10,clrs(3,:),'filled');
 end
 if gld == 1
-    temp_lon_g = convert_lon(glodap_data.LON,'format','0-360');
+    temp_lon_g = convert_lon(glodap_data.LON(g_idx),'format','0-360');
     temp_lon_g(temp_lon_g < 20) = temp_lon_g(temp_lon_g < 20) + 360;
-    m_scatter(temp_lon_g,glodap_data.LAT,10,clrs(3,:),'filled');
+    m_scatter(temp_lon_g,glodap_data.LAT(g_idx),10,clrs(5,:),'filled');
 end
 % set properties
 title([param_props.label ' Data Distribution']);
 m_coast('patch',rgb('grey'));
 m_grid('linestyle','none','xticklabels',[],...
     'yticklabels',[],'ytick',-90:30:90);
-if flt == 1 && gld == 1 && ctd == 1; map_legend = {'' 'Argo Float Profiles' 'CTD Data' 'GLODAP Data'}; end
-if flt == 1 && gld == 1 && ctd == 0; map_legend = {'' 'Argo Float Profiles' 'GLODAP Ship Profiles'}; end
-if flt == 0 && gld == 1 && ctd == 0; map_legend = {'' 'GLODAP Data'}; end
+if flt == 1 && gld == 1 && osd == 1 && ctd == 1
+    map_legend = {'' 'Argo Float Profiles' 'WOD Profiles (OSD)' 'WOD Profiles (CTD)' 'GLODAP Ship Profiles'}; end
+if flt == 1 && gld == 1 && osd == 1 && ctd == 0
+    map_legend = {'' 'Argo Float Profiles' 'WOD Profiles (OSD)' 'GLODAP Ship Profiles'}; end
+if flt == 1 && gld == 1 && osd == 0 && ctd == 0
+    map_legend = {'' 'Argo Float Profiles' 'GLODAP Ship Profiles'}; end
+if flt == 0 && gld == 1 && osd == 0 && ctd == 0
+    map_legend = {'' 'GLODAP Ship Profiles'}; end
 legend(map_legend,'Location','northwest');
 set(gca,'FontSize',24);
 export_fig(gcf,[param_props.dir_name '/Figures/Data/All_Mapped_' ...

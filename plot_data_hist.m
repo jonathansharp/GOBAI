@@ -1,15 +1,16 @@
 % plot data histogram
-function plot_data_hist(param_props,file_date,float_file_ext,...
-    include_float,include_glodap,include_ctd,y1,y2)
+function plot_data_hist(param_props,file_date,start_year,end_year,float_file_ext,...
+    include_float,include_glodap,include_osd,include_ctd,y1,y2)
 
 % define dataset extensions
 if include_float == 1; float_ext = 'f'; else float_ext = ''; end
 if include_glodap == 1; glodap_ext = 'g'; else glodap_ext = ''; end
-if include_ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
+if include_osd == 1; osd_ext = 'o'; else osd_ext = ''; end
+if include_ctd == 1; ctd_ext = 'c'; else ctd_ext = ''; end
 
 % load data
 load([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' ...
-    float_ext glodap_ext ctd_ext '_' file_date float_file_ext '.mat'],'all_data');
+    float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext '.mat'],'all_data');
 
 % establish figure
 figure('visible','on');
@@ -26,21 +27,23 @@ for v = 1:length(vars)
 end
 
 % index to each dataset type
-if include_ctd; y_ctd = all_data.year(all_data.type==3); end
-if include_glodap; y_osd = all_data.year(all_data.type==2); end
+if include_osd; y_osd = all_data.year(all_data.type==3); end
+if include_ctd; y_ctd = all_data.year(all_data.type==4); end
+if include_glodap; y_gld = all_data.year(all_data.type==2); end
 if include_float; y_flt = all_data.year(all_data.type==1); end
 
 % count profiles in each year
+if include_osd; counts_osd = histc(y_osd,y1:y2); end
 if include_ctd; counts_ctd = histc(y_ctd,y1:y2); end
-if include_glodap; counts_osd = histc(y_osd,y1:y2); end
+if include_glodap; counts_gld = histc(y_gld,y1:y2); end
 if include_float; counts_flt = histc(y_flt,y1:y2); end
 
 % plot histogram
-if include_ctd
-    bar(start_year:end_year,[counts_osd counts_ctd counts_flt],'stacked');
-    legend({'GLODAP' 'CTD' 'Argo Float'},'Location','northwest','FontSize',14);
+if include_ctd && include_osd
+    bar(start_year:end_year,[counts_osd counts_ctd counts_gld counts_flt],'stacked');
+    legend({'OSD' 'CTD' 'GLODAP' 'Argo Float'},'Location','northwest','FontSize',14);
 else
-    bar(y1:y2,[counts_osd counts_flt],'stacked');
+    bar(y1:y2,[counts_gld counts_flt],'stacked');
     legend({'GLODAP' 'Argo Float'},'Location','northwest','FontSize',14);
 end
 ylabel('Number of Profiles');

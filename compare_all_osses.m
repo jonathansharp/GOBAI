@@ -23,7 +23,7 @@ ylim([-2 2]);
 plot([datenum(1990,1,1) datenum(2025,1,1)],[0 0],'k--');
 datetick('x');
 xlabel('Year');
-ylabel('\Delta[O_{2}] (GOBAI - CMIP)');
+ylabel(['\Delta' param_props.label ' (GOBAI - CMIP)']);
 hold off;
 
 % establish timeseries of global means figure
@@ -34,7 +34,7 @@ set(gca,'fontsize',18);
 plot([datenum(1990,1,1) datenum(2025,1,1)],[0 0],'k--')
 datetick('x');
 xlabel('Year');
-ylabel('[O_{2}] (\mumol kg^{-1})');
+ylabel([param_props.label ' (\mumol kg^{-1})']);
 hold off;
 
 % establish profile figure
@@ -46,7 +46,7 @@ set(gca,'YDir','reverse');
 xlim([-4 4]);
 ylim([0 2]);
 plot([0 0],[0 2000],'k--');
-xlabel('\Delta[O_{2}] (GOBAI - CMIP)');
+xlabel('\Delta' param_props.label ' (GOBAI - CMIP)');
 ylabel('Depth (km)');
 hold off;
 
@@ -78,15 +78,16 @@ for m = 1:length(model_types)
 
     % plot timeseries of residuals
     figure(1); hold on;
-    idx = ~isnan(gobai_inv) & ~isnan(cmip_inv);
-    ts_plot(m) = plot(time,gobai_inv-cmip_inv,'color',clrs(m,:),'linewidth',3);
+    idx = ~isnan(gobai_inv.global) & ~isnan(cmip_inv.global);
+    ts_plot(m) = plot(time,gobai_inv.global-cmip_inv.global,'color',clrs(m,:),'linewidth',3);
     hold off;
 
     % plot timeseries of each global mean
     figure(2); hold on;
-    ylim([floor(min([cmip_inv;gobai_inv])) ceil(max([cmip_inv;gobai_inv]))]);
-    p1=plot(time,cmip_inv,':','color',clrs(m,:),'linewidth',3);
-    p2=plot(time,gobai_inv,'color',clrs(m,:),'linewidth',3);
+    ylim([floor(min([cmip_inv.global;gobai_inv.global])) ...
+        ceil(max([cmip_inv.global;gobai_inv.global]))]);
+    p1=plot(time,cmip_inv.global,':','color',clrs(m,:),'linewidth',3);
+    p2=plot(time,gobai_inv.global,'color',clrs(m,:),'linewidth',3);
     legend([p1 p2 ],{model_types{m} ['GOBAI-O_{2(' model_types{m} ')}']});
     export_fig(gcf,[param_props.dir_name '/Figures/osse_global_mean_timeseries_' ...
         float_ext glodap_ext ctd_ext '_' model_types{m} '.png'],'-transparent');
@@ -140,7 +141,7 @@ for m = 1:length(model_types)
     c=colorbar;
     clim([-25 25]);
     colormap(cmocean('balance'));
-    c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - ' model_types{m} ')}'];
+    c.Label.String = ['Avg. \Delta' param_props.label '_{(GOBAI - ' model_types{m} ')}'];
     mlabel off;
     plabel off;
     if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
@@ -162,7 +163,7 @@ for m = 1:length(model_types)
         c=colorbar;
         clim([-25 25]);
         colormap(cmocean('balance'));
-        c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - ' model_types{m} ')}'];
+        c.Label.String = ['Avg. \Delta' param_props.label '_{(GOBAI - ' model_types{m} ')}'];
         mlabel off;
         plabel off;
         if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
@@ -180,7 +181,7 @@ for m = 1:length(model_types)
         c=colorbar;
         clim([0 20]);
         colormap(cmocean('tempo'));
-        c.Label.String = ['RMSD \Delta[O_{2}]_{(GOBAI - ' model_types{m} ')}'];
+        c.Label.String = ['RMSD \Delta' param_props.label '_{(GOBAI - ' model_types{m} ')}'];
         mlabel off;
         plabel off;
         if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
@@ -203,7 +204,7 @@ for m = 1:length(model_types)
     c=colorbar;
     %caxis([-25 ]);
     colormap(cmocean('ice'));
-    c.Label.String = 'Avg. [O_{2}] (0-500m, \mumol kg^{-1})';
+    c.Label.String = ['Avg. ' param_props.label ' (0-500m, \mumol kg^{-1})'];
     mlabel off;
     plabel off;
     if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
@@ -216,25 +217,25 @@ for m = 1:length(model_types)
     %% display statistics
     % global monthly
     disp([model_types{m} ' Avg. Diff. (Global Monthly Means) = ' ...
-        num2str(mean(gobai_inv-cmip_inv,1,'omitnan')) ' +/- ' ...
-        num2str(std(gobai_inv-cmip_inv,1,'omitnan')) ' Pmol']);
+        num2str(mean(gobai_inv.global-cmip_inv.global,1,'omitnan')) ' +/- ' ...
+        num2str(std(gobai_inv.global-cmip_inv.global,1,'omitnan')) ' Pmol']);
     % grid-cell-level
     disp([model_types{m} ' Avg. Diff. (Grid-cell-level Values) = ' ...
         num2str(mean(delta(:),1,'omitnan')) ' +/- ' ...
         num2str(std(delta(:),1,'omitnan')) 'Pmol']);
     % cmip trend
-    idx = ~isnan(cmip_inv);
-    [yf_cmip,yr_cmip,x_cmip,err_cmip] = leastsq2(time(idx),cmip_inv(idx),time(1),2,[365.2424 365.2424/2]);
+    idx = ~isnan(cmip_inv.global);
+    [yf_cmip,yr_cmip,x_cmip,err_cmip] = leastsq2(time(idx),cmip_inv.global(idx),time(1),2,[365.2424 365.2424/2]);
     [~,acor,lag,dof] = autocov(time(idx),yr_cmip(idx),365.2424*5); % Determined lagged autocorrelation of residuals
     % figure; plot(lag,acor); 
-    % figure; plot(time(idx),yf_cmip(idx),time(idx),cmip_inv(idx));
+    % figure; plot(time(idx),yf_cmip(idx),time(idx),cmip_inv.global(idx));
     edof = dof-6; if edof < 1; edof = 1; end
     trend = x_cmip(2)*365.2424*10; % scale to decadal
     uncer = err_cmip(2)*365.2424*10*(sqrt(length(time))/sqrt(edof))*2; % scale to decadal, by eDOF, and to 95%
     disp([model_types{m} ' Trend  = ' num2str(trend) ' +/- ' num2str(uncer) ' Pmol/year']);
     % gobai trend
-    idx = ~isnan(gobai_inv);
-    [~,yr_gobai,x_gobai,err_gobai] = leastsq2(time(idx),gobai_inv(idx),time(1),2,[365.2424 365.2424/2]);
+    idx = ~isnan(gobai_inv.global);
+    [~,yr_gobai,x_gobai,err_gobai] = leastsq2(time(idx),gobai_inv.global(idx),time(1),2,[365.2424 365.2424/2]);
     [~,acor,lag,dof] = autocov(time(idx),yr_gobai(idx),365.2424*5); % Determined lagged autocorrelation of residuals
     edof = dof-6; if edof < 1; edof = 1; end
     trend = x_gobai(2)*365.2424*10; % scale to decadal
@@ -269,9 +270,9 @@ pcolorm(lat,[lon;lon(end)+1],[mean(delta_wtd_mean,3,'omitnan');mean(delta_wtd_me
 title('Ensemble Average');
 plot_land('map');
 c=colorbar;
-caxis([-25 25]);
+caxis([-max(param_props.edges)/16 max(param_props.edges)/16]);
 colormap(cmocean('balance'));
-c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - ESM)}'];
+c.Label.String = ['Avg. \Delta' param_props.label '_{(GOBAI - ESM)}'];
 mlabel off;
 plabel off;
 export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_delta_' ...
@@ -287,9 +288,9 @@ pcolorm(lat,[lon;lon(end)+1],[std(delta_wtd_mean,[],3,'omitnan');...
 title('Ensemble Variability');
 plot_land('map');
 c=colorbar;
-caxis([0 20]);
+caxis([0 max(param_props.edges)/20]);
 colormap(cmocean('tempo'));
-c.Label.String = ['\Delta[O_{2}]_{(GOBAI - ESM)} Var.'];
+c.Label.String = ['\Delta' param_props.label '_{(GOBAI - ESM)} Var.'];
 mlabel off;
 plabel off;
 export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_variability_' ...
@@ -305,9 +306,9 @@ pcolorm(lat,[lon;lon(end)+1],[sqrt(mean(delta_wtd_mean.^2,3,'omitnan'));...
 title('Ensemble RMSD');
 plot_land('map');
 c=colorbar;
-caxis([0 20]);
+caxis([0 max(param_props.edges)/20]);
 colormap(cmocean('tempo'));
-c.Label.String = ['\Delta[O_{2}]_{(GOBAI - ESM)} RMSD'];
+c.Label.String = ['\Delta' param_props.label '_{(GOBAI - ESM)} RMSD'];
 mlabel off;
 plabel off;
 export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_rmsd_' ...
