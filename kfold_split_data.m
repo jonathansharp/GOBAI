@@ -8,21 +8,22 @@
 % DATE: 6/20/2025
 
 function kfold_split_data(param_props,file_date,float_file_ext,...
-    num_clusters,num_folds,thresh,flt,gld,ctd)
+    num_clusters,num_folds,thresh,flt,gld,osd,ctd)
 
 %% define dataset extensions
 if flt == 1; float_ext = 'f'; else float_ext = ''; end
 if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
-if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
+if osd == 1; osd_ext = 'o'; else osd_ext = ''; end
+if ctd == 1; ctd_ext = 'c'; else ctd_ext = ''; end
 
 %% load combined data
 load([param_props.dir_name '/Data/processed_all_' param_props.file_name ...
-    '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext '.mat'],...
+    '_data_' float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
 load([param_props.dir_name '/Data/GMM/all_data_clusters_' num2str(num_clusters) '_' ...
-    float_ext glodap_ext ctd_ext '_' file_date float_file_ext '.mat'],'all_data_clusters');
+    float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% split data into testing and training sets equal to k
 rng(8); % for reproducibility
@@ -78,7 +79,7 @@ clear test_data_points test_data_points_table idx_test
 %% save k-fold evaluation indices
 if ~isfolder([param_props.dir_name '/Data']); mkdir([param_props.dir_name '/Data']); end
 save([param_props.dir_name '/Data/k_fold_data_indices_' num2str(num_clusters) ...
-    '_' num2str(num_folds) '_' float_ext glodap_ext ctd_ext '_' ...
+    '_' num2str(num_folds) '_' float_ext glodap_ext osd_ext ctd_ext '_' ...
     file_date float_file_ext '.mat'],'num_folds','train_idx','test_idx','-v7.3');
 
 %% display information

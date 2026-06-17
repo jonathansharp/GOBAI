@@ -11,12 +11,13 @@
 function calculate_uncertainty(param_props,base_grid,fpaths,...
     model_types,num_clusters,numWorkers_predict,file_date,...
     float_file_ext,glodap_year,train_ratio,val_ratio,test_ratio,...
-    flt,gld,ctd)
+    flt,gld,osd,ctd)
 
 %% define dataset extensions
 if flt == 1; float_ext = 'f'; else float_ext = ''; end
 if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
-if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
+if ctd == 1; osd_ext = 'o'; else osd_ext = ''; end
+if ctd == 1; ctd_ext = 'c'; else ctd_ext = ''; end
 
 %% define gobai filepaths
 gobai_alg_dir = ...
@@ -34,62 +35,86 @@ time = ncread(gobai_filepath,'time');
 lon_0_360 = convert_lon(lon,'format','0-360');
 [lon_0_360_3d,lat_3d,pres_3d] = ndgrid(lon_0_360,lat,pres);
 
-%% determine coefficients to calculate gridding uncertainty
-% [b,stats] = calculate_gridding_uncertainty_coeffs(file_date,...
-%     fpaths.temp_path,fpaths.sal_path,float_file_ext,glodap_year,...
-%     lon,lat,time,lon_0_360_3d,lat_3d,pres_3d);
+%% calculate gridding uncertainty
+% load data
+load([param_props.dir_name '/Data/processed_all_' ...
+    param_props.file_name '_data_' float_ext glodap_ext ctd_ext ...
+    '_' file_date float_file_ext '.mat'],'all_data');
+% convert longitude
+all_data.longitude = convert_lon(all_data.longitude,'format','0-360');
+% calculate binned standard deviation
+lon_diff = unique(diff(lon));
+lon_edges = [lon - lon_diff;lon(end) + lon_diff];
+lat_diff = unique(diff(lat));
+lat_edges = [lat - lat_diff;lat(end) + lat_diff];
+pres_edges = [0 5:10:175 190:20:450 475:50:1375 1450:100:1950 2000];
+% get histogram counts in each bin
+[~,~,Xnum] = histcounts(all_data.longitude,lon_edges);
+[~,~,Ynum] = histcounts(all_data.latitude,lat_edges);
+[~,~,Znum] = histcounts(all_data.pressure,pres_edges);
+% calculate standard deviation in each bin
+subs = [Xnum,Ynum,Znum];
+sz = [length(lon),length(lat),length(pres)];
+idx = ~any(subs==0,2);
+stdev_grid = accumarray(subs,all_data.(param_props.file_name),sz,@nanstd,nan);
+sigma_grid = accumarray(subs,all_data.sigma,sz,@nanmean,nan);
+% test plot
+% figure; set(gcf,'position',[100 100 800 400]);
+% pcolor(lon,lat,stdev_grid(:,:,11)'); shading flat; colorbar;
+% caxis([0 30]); colormap(cmocean('balance','pivot',0));
+% calculate distance from coast
+dist_3d = dist2coast(lat_3d,lon_0_360_3d);
+% calculate bottom depth
+bot_3d = bottom_depth(lat_3d,lon_0_360_3d);
+% fit model of variability vs depth, sigma, and bottom depth
+idx = ~isnan(stdev_grid) & ~isnan(pres_3d) & ~isnan(sigma_grid) & ~isnan(bot_3d);
+[b,~,~,~,stats] = regress(stdev_grid(idx),[ones(size(stdev_grid(idx))) ...
+            pres_3d(idx) pres_3d(idx).^2 sigma_grid(idx) ...
+            sigma_grid(idx).^2 bot_3d(idx) bot_3d(idx).^2]);
 
-%% loop through each model
-for m = 1:length(model_types)
-
-        %% combined filepath
-        % gobai
+%% calculate algorithm uncertainty
+% loop through each model
+for m = 1%:length(model_types)
+        % gobai filepath
         osse_filepath{m} = ...
             [fpaths.param_path 'GOBAI/' model_types{m} '/FFNN/c' ...
             num2str(num_clusters) '_' file_date float_file_ext '/train' ...
                 num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' ...
                 num2str(100*test_ratio) '/' float_ext glodap_ext ctd_ext ...
                 '/gobai-' param_props.file_name '.nc'];
-        % delta
+        % delta filepath
         delta_filepath{m} = ...
             [fpaths.param_path 'GOBAI/' model_types{m} '/DELTA/c' ...
             num2str(num_clusters) '_' file_date float_file_ext '/' ...
             float_ext glodap_ext ctd_ext];
-        
-        %% load osse dimensions
+        % load osse dimensions
         osse_lat = ncread(osse_filepath{m},'lat');
         osse_lon = ncread(osse_filepath{m},'lon');
         osse_depth = ncread(osse_filepath{m},'depth');
         osse_time = ncread(osse_filepath{m},'time');
-
         % calculate pressure
         [osse_lon_3d{m},osse_lat_3d{m},osse_depth_3d] = ...
             ndgrid(osse_lon,osse_lat,osse_depth);
         osse_pres_3d{m} = gsw_p_from_z(-abs(osse_depth_3d),osse_lat_3d{m});
         clear osse_depth_3d
-
 end
 
-%% set up parallel pool
-tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+% set up parallel pool
+%tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
-%% loop through each month
-parfor t = 1:length(time)
-
+% loop through each timestep
+for t = 1%:length(time)
     % read in gobai for timestep and pre-define delta
     gobai = ncread(gobai_filepath,param_props.file_name,...
             [1 1 1 t],[Inf Inf Inf 1]);
     idx_gobai = ~isnan(gobai);
     gobai_delta = nan([size(gobai),length(model_types)]);
-
-    %% loop through each model
-    for m = 1:length(model_types)
-
+    % loop through each model
+    for m = 1%:length(model_types)
         % load difference between model and reconstruction
         delta_o2 = ncread([delta_filepath{m} '/delta_gobai-' ...
             param_props.file_name '.nc'],['delta_' param_props.file_name],...
             [1 1 1 t],[Inf Inf Inf 1]);
-
         % interpolate to gobai
         idx_del = ~isnan(delta_o2); % index to valid points for interpolation
         interp_temp = scatteredInterpolant(osse_lon_3d{m}(idx_del),...
@@ -99,22 +124,29 @@ parfor t = 1:length(time)
         gobai_delta_temp(idx_gobai) = interp_temp(lon_0_360_3d(idx_gobai),...
             lat_3d(idx_gobai),pres_3d(idx_gobai));
         gobai_delta(:,:,:,m) = gobai_delta_temp;
-
     end
 
     % calculate algorithm uncertainty as root mean squared differences
     % between models and reconstructions
     gobai_alg_uncer = sqrt(mean(gobai_delta.^2,4,'omitnan'));
 
-    % % calculate measurement uncertainty as 3% of [O2]
-    % gobai_meas_uncer = gobai.*0.03;
-    % 
-    % % calculate gridding uncertainty
-    % bot_3d = bottom_depth(lat_3d,lon_0_360_3d);
-    % bot_3d(bot_3d > 2000) = 2000;
-    % gobai_grid_uncer = b(1) + b(2).*pres_3d + b(3).*bot_3d;
-    % gobai_grid_uncer(~idx_gobai) = NaN;
-    % % figure; pcolor(lon,lat,gobai_grid_uncer(:,:,11)'); shading flat; colorbar; clim([0 15]);
+    % calculate measurement uncertainty as 3% of [O2]
+    gobai_meas_uncer = gobai.*0.03;
+
+    % calculate gridding uncertainty
+    dates = datevec(time+datenum(1950,1,1));
+    week = ceil(dates(:,3)/7);
+    abs_sal = ncread([fpaths.temp_path 'RFROM_TEMP_v2.2_2025/RFROMV22_TEMP_STABLE_' ...
+                num2str(dates(t)) '_' sprintf('%02d',dates(t,3)) '.nc'],...
+                'ocean_temperature',[1 1 1 week(t)],[Inf Inf Inf 1]);
+    cns_tmp = ncread([fpaths.sal_path 'RFROM_SAL_v2.2_2025/RFROMV22_SAL_STABLE_' ...
+                num2str(dates(t)) '_' sprintf('%02d',dates(t,3)) '.nc'],...
+                'ocean_salinity',[1 1 1 week(t)],[Inf Inf Inf 1]);
+    sigma_3d = gsw_sigma0(abs_sal,cns_tmp);
+    gobai_grid_uncer = b(1) + b(2).*pres_3d + b(3).*pres_3d.^2 + ...
+        b(4).*sigma_3d + b(5).*sigma_3d.^2 + b(6).*bot_3d + b(7).*bot_3d.^2;
+    gobai_grid_uncer(~idx_gobai) = NaN;
+    % figure; pcolor(lon,lat,gobai_grid_uncer(:,:,11)'); shading flat; colorbar; clim([0 15]);
 
     % save uncertainty for timestep in temporary files
     filename = [gobai_alg_dir 'gobai-' param_props.file_name '-uncer-' num2str(t) '.nc'];
@@ -122,10 +154,10 @@ parfor t = 1:length(time)
     % time
     nccreate(filename,'time','Dimensions',{'time' 1});
     ncwrite(filename,'time',time(t));
-    % algorithm uncertainty
-    nccreate(filename,['u_alg_' param_props.file_name],'Dimensions',...
-        {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
-    ncwrite(filename,['u_alg_' param_props.file_name],gobai_alg_uncer);
+    % % algorithm uncertainty
+    % nccreate(filename,['u_alg_' param_props.file_name],'Dimensions',...
+    %     {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
+    % ncwrite(filename,['u_alg_' param_props.file_name],gobai_alg_uncer);
     % % measurment uncertainty
     % nccreate(filename,['u_meas_' param_props.file_name],'Dimensions',...
     %     {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
@@ -134,12 +166,12 @@ parfor t = 1:length(time)
     % nccreate(filename,['u_grid_' param_props.file_name],'Dimensions',...
     %     {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
     % ncwrite(filename,['u_grid_' param_props.file_name],gobai_grid_uncer);
-    % % total uncertainty
-    % gobai_tot_uncer = sqrt(gobai_alg_uncer.^2 + gobai_meas_uncer.^2 + ...
-    %     gobai_grid_uncer.^2);
-    % nccreate(filename,['u_tot_' param_props.file_name],'Dimensions',...
-    %     {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
-    % ncwrite(filename,['u_tot_' param_props.file_name],gobai_tot_uncer);
+    % total uncertainty
+    gobai_tot_uncer = sqrt(gobai_alg_uncer.^2 + gobai_meas_uncer.^2 + ...
+        gobai_grid_uncer.^2);
+    nccreate(filename,['u_tot_' param_props.file_name],'Dimensions',...
+        {'lon' length(lon) 'lat' length(lat) 'pres' length(pres)});
+    ncwrite(filename,['u_tot_' param_props.file_name],gobai_tot_uncer);
 
     % display information
     % fprintf(['Algorithm Uncertainty Obtained for']);
@@ -172,103 +204,6 @@ for cnt = 1:length(files)
     % delete temporary file
     delete(filename_temp);
 end
-
-end
-
-%% subfunction for calculating coefficients for gridding uncertainty
-function [b,stats] = calculate_gridding_uncertainty_coeffs(file_date,temp_path,sal_path,...
-    float_file_ext,glodap_year,lon,lat,time,lon_0_360_3d,lat_3d,pres_3d)
-
-%% load interpolated float and glodap data
-load(['O2/Data/processed_float_o2_data_' file_date float_file_ext '.mat'],...
-    'float_data');
-load(['O2/Data/processed_glodap_o2_data_' num2str(glodap_year) '.mat'],...
-    'glodap_data');
-
-%% determine histogram counts and indices
-% establish edges of bins
-x_edges = min(floor(lon)):1:max(ceil(lon)); x_bins = lon;
-y_edges = min(floor(lat)):1:max(ceil(lat)); y_bins = lat;
-z_edges = [0 5:10:175 190:20:450 475:50:1375 1450:100:1950 2000];
-z_bins = [2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975];
-t_edges = [datenum(1949,12,16)+time(1);datenum(1950,1,15)+time];
-t_bins = datenum(1950,0,0)+time;
-% get histogram counts in each bin for each dataset
-float_lon_conv = convert_lon(float_data.LON,'format','0-360');
-float_lon_conv(float_lon_conv<20) = float_lon_conv(float_lon_conv<20) + 360;
-glodap_lon_conv = convert_lon(glodap_data.LON,'format','0-360');
-glodap_lon_conv(glodap_lon_conv<20) = glodap_lon_conv(glodap_lon_conv<20) + 360;
-[~,~,Xnum_float] = histcounts(float_lon_conv,x_edges);
-[~,~,Ynum_float] = histcounts(float_data.LAT,y_edges);
-[~,~,Znum_float] = histcounts(float_data.PRES,z_edges);
-[~,~,Tnum_float] = histcounts(float_data.TIME,t_edges);
-[~,~,Xnum_glodap] = histcounts(glodap_lon_conv,x_edges);
-[~,~,Ynum_glodap] = histcounts(glodap_data.LAT,y_edges);
-[~,~,Znum_glodap] = histcounts(glodap_data.PRES,z_edges);
-[~,~,Tnum_glodap] = histcounts(glodap_data.TIME,t_edges);
-% accumulate index of counts
-subs_float = [Xnum_float,Ynum_float,Znum_float,Tnum_float];
-idx_float = ~any(subs_float==0,2);
-subs_glodap = [Xnum_glodap,Ynum_glodap,Znum_glodap,Tnum_glodap];
-idx_glodap = ~any(subs_glodap==0,2);
-% determine size of 4D grid
-sz = [length(x_bins),length(y_bins),length(z_bins),length(t_bins)];
-
-% get variability within each grid cell (oxygen)
-float_oxy_std = single(accumarray(subs_float(idx_float,:),float_data.OXY(idx_float),sz,@nanstd,nan));
-glodap_oxy_std = single(accumarray(subs_glodap(idx_glodap,:),glodap_data.OXY(idx_glodap),sz,@nanstd,nan));
-oxy_std = mean(cat(5,float_oxy_std,glodap_oxy_std),5,'omitnan');
-clear float_oxy_std glodap_oxy_std
-idx = ~isnan(oxy_std); % index when oxygen variability exists
-oxy_std = double(oxy_std(idx));
-
-% temperature and salinity variability
-tmp = ncread([temp_path 'RG_Climatology_Temp.nc'],'Temperature');
-tmp_var = repmat(double(std(tmp,[],4)),1,1,1,length(time)); clear tmp;
-tmp_var_fit = tmp_var(idx);
-sal = ncread([temp_path 'RG_Climatology_Sal.nc'],'Salinity');
-sal_var = repmat(double(std(sal,[],4)),1,1,1,length(time)); clear sal;
-sal_var_fit = sal_var(idx);
-
-% get mean within each grid cell (sigma)
-float_sig = single(accumarray(subs_float(idx_float,:),float_data.SIGMA(idx_float),sz,@nanmean,nan));
-glodap_sig = single(accumarray(subs_glodap(idx_glodap,:),glodap_data.SIGMA(idx_glodap),sz,@nanmean,nan));
-sig_fit = mean(cat(5,float_sig,glodap_sig),5,'omitnan');
-clear float_sig glodap_sig
-sig_fit = sig_fit(idx);
-
-% calculate distance from coast
-dist_fit = dist2coast(lat_3d,lon_0_360_3d);
-dist_fit = repmat(dist_fit,1,1,1,length(time));
-dist_fit = dist_fit(idx);
-
-% replicate pressure
-pres_fit = repmat(pres_3d,1,1,1,length(time));
-pres_fit = pres_fit(idx);
-
-% calculate bottom depth
-bot_3d = bottom_depth(lat_3d,lon_0_360_3d);
-bot_fit = repmat(bot_3d,1,1,1,length(time));
-bot_fit = bot_fit(idx);
-
-% remove standard deviations calculated from nine or fewer measurements
-oxygen_count = accumarray(subs_float(idx_float,:),1,sz) + accumarray(subs_glodap(idx_glodap,:),1,sz);
-oxygen_count = oxygen_count(idx);
-oxygen_count_idx = oxygen_count < 10;
-oxy_std(oxygen_count_idx) = [];
-sig_fit(oxygen_count_idx) = [];
-pres_fit(oxygen_count_idx) = [];
-dist_fit(oxygen_count_idx) = [];
-bot_fit(oxygen_count_idx) = [];
-bot_fit(bot_fit>2000) = 2000;
-tmp_var_fit(oxygen_count_idx) = [];
-sal_var_fit(oxygen_count_idx) = [];
-% scatter different parameters against std
-% figure; scatter(sig_fit,oxy_std);
-% fit model of variability vs depth and distance from shore
-[b,~,~,~,stats] = ...
-    regress(oxy_std,[ones(size(pres_fit)) pres_fit bot_fit]);
-stats(1); % R^2 statistic
 
 end
 

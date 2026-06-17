@@ -10,12 +10,13 @@
 % DATE: 7/31/2025
 
 function gmm_clustering(param_props,fpaths,base_grid,start_year,end_year,snap_date,...
-    float_file_ext,clust_vars,num_clusters,numWorkers_cluster,flt,gld,ctd,varargin)
+    float_file_ext,clust_vars,num_clusters,numWorkers_cluster,flt,gld,osd,ctd,varargin)
 
 %% define dataset extensions
 if flt == 1; float_ext = 'f'; else float_ext = ''; end
 if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
-if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
+if osd == 1; osd_ext = 'o'; else osd_ext = ''; end
+if ctd == 1; ctd_ext = 'c'; else ctd_ext = ''; end
 
 %% process optional input arguments
 % pre-allocate
@@ -40,13 +41,13 @@ if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
         num2str(num_clusters) '_' file_date float_file_ext];
     if ~isfolder(gmm_folder_name); mkdir(gmm_folder_name); end
     gmm_model_name = [gmm_folder_name '/model_' float_ext ...
-        glodap_ext ctd_ext];
+        glodap_ext osd_ext ctd_ext];
 else % for cmip models
     gmm_folder_name = [param_props.dir_name '/Models/GMM/' ...
         base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
     if ~isfolder(gmm_folder_name); mkdir(gmm_folder_name); end
     gmm_model_name = [gmm_folder_name '/model_' float_ext ...
-        glodap_ext ctd_ext '_' date_str coverage];
+        glodap_ext osd_ext ctd_ext '_' date_str coverage];
 end
 
 %% check for existence of model
@@ -58,11 +59,11 @@ end
     %% load data
     if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
         load([param_props.dir_name '/Data/processed_all_' param_props.file_name ...
-            '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext ...
+            '_data_' float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext ...
             '.mat'],'all_data');
     else % for cmip models
         load([param_props.dir_name '/Data/' base_grid '_' param_props.file_name '_data_' ...
-            float_ext glodap_ext ctd_ext '_' file_date float_file_ext coverage ...
+            float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext coverage ...
             '.mat'],'all_data');
     end
     
@@ -87,15 +88,13 @@ end
     % fit GMM
     options = statset('MaxIter',1000); % increase max iterations to ensure convergence
     gmm = fitgmdist(X_norm,num_clusters,...
-        'Options',options,...
-        'CovarianceType','diagonal',...
-        'SharedCovariance',true,'Replicates',1);
+        'Options',options,'CovarianceType','diagonal',...
+        'SharedCovariance',true,'Replicates',20);
     % save GMM model
     save(gmm_model_name,'gmm','num_clusters','C','S','-v7.3');
 
     % plot clusters by temperature and salinity
-    % load([param_props.dir_name '/Data/GMM_' num2str(num_clusters) '/model_' date_str],...
-    %      'gmm','num_clusters','C','S');
+    % load(gmm_model_name,'gmm','num_clusters','C','S');
     % clusters = cluster(gmm,X_norm);
     % figure; hold on;
     % predictor_matrix_reduced = predictor_matrix(idx_rand,:);
@@ -104,6 +103,10 @@ end
     % colormap();
     % xlabel('Salinity');
     % ylabel('Temperature');
+    % % gmPDF = @(x,y) arrayfun(@(x0,y0) pdf(GMModel,[x0 y0]),...
+    % %     predictor_matrix_reduced(:,2),predictor_matrix_reduced(:,1));
+    % % g = gca;
+    % % fcontour(gmPDF,[g.XLim g.YLim])
     % title('{\bf Scatter Plot and Fitted Gaussian Mixture Contours}')
     % hold off;
     % export('');
@@ -163,8 +166,8 @@ end
 % end
 % if ~isfolder(folder_name_temp); mkdir(folder_name_temp); end
 % % determine length of cluster file if it exists
-% if exist([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'],'file') == 2
-%     inf = ncinfo([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc']);
+% if exist([folder_name '/clusters_' float_ext glodap_ext osd_ext ctd_ext '.nc'],'file') == 2
+%     inf = ncinfo([folder_name '/clusters_' float_ext glodap_ext osd_ext ctd_ext '.nc']);
 %     for n = 1:length(inf.Dimensions)
 %         if strcmp(inf.Dimensions(n).Name,'time')
 %             time_idx = n;
@@ -178,12 +181,12 @@ end
 % length_expt = (end_year-start_year)*12 + 12;
 % 
 % %% check for existence of cluster file and length of cluster grids
-% % if ~isfile([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc']) || ...
+% % if ~isfile([folder_name '/clusters_' float_ext glodap_ext osd_ext ctd_ext '.nc']) || ...
 % %         inf.Dimensions(time_idx).Length ~= length_expt
 % 
 %     % delete file if it exists
-%     if exist([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'],'file') == 2
-%         delete([folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc']);
+%     if exist([folder_name '/clusters_' float_ext glodap_ext osd_ext ctd_ext '.nc'],'file') == 2
+%         delete([folder_name '/clusters_' float_ext glodap_ext osd_ext ctd_ext '.nc']);
 %     end
 % 
 %     % start timing cluster assignment
@@ -194,12 +197,12 @@ end
 %        [TS,months,weeks,timesteps] = load_RG_dim(fpaths.temp_path);
 %        % create file
 %        create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,...
-%            TS.zdim,folder_name,float_ext,glodap_ext,ctd_ext);
+%            TS.zdim,folder_name,float_ext,glodap_ext,osd_ext,ctd_ext);
 %     elseif strcmp(base_grid,'RFROM')
 %         [TS,months,weeks,timesteps] = load_RFROM_dim(fpaths.temp_path,'v2.2',start_year,end_year);
 %         % create file
 %         create_nc_files(TS,0,base_grid,TS.xdim,TS.ydim,TS.zdim,...
-%             folder_name,float_ext,glodap_ext,ctd_ext); % don't write cluster probs for RFROM
+%             folder_name,float_ext,glodap_ext,osd_ext,ctd_ext); % don't write cluster probs for RFROM
 %     else
 %         % define paths
 %         path2 = ['_Omon_' base_grid '_'];
@@ -212,7 +215,7 @@ end
 %         [TS,months,weeks,timesteps] = load_model_dim(nc_filepath_abs_sal);
 %         % create file
 %         create_nc_files(TS,num_clusters,base_grid,TS.xdim,TS.ydim,...
-%             TS.zdim,folder_name,float_ext,glodap_ext,ctd_ext);
+%             TS.zdim,folder_name,float_ext,glodap_ext,osd_ext,ctd_ext);
 %     end
 % 
 %     % load GMM model
@@ -247,7 +250,7 @@ end
 %     %% concatenate cluster information in main file
 %     for t = 1:timesteps
 %         % define file names
-%         filename = [folder_name '/clusters_' float_ext glodap_ext ctd_ext '.nc'];
+%         filename = [folder_name '/clusters_' float_ext glodap_ext osd_ext ctd_ext '.nc'];
 %         filename_temp = [folder_name_temp '/clust_' num2str(t) '.nc'];
 %         % read information from temporary file and write it to main file
 %         time = ncread(filename_temp,'time'); % read
@@ -315,11 +318,11 @@ end
 
 % for creating netCDF file
 function create_nc_files(TS,num_clusters,base_grid,xdim,ydim,zdim,...
-    folder_name,float_ext,glodap_ext,ctd_ext,coverage)
+    folder_name,float_ext,glodap_ext,osd_ext,ctd_ext,coverage)
 
     % define file name and create file
     if ~isfolder(folder_name); mkdir(folder_name); end
-    filename = [folder_name '/clusters_' float_ext glodap_ext ctd_ext coverage '.nc'];
+    filename = [folder_name '/clusters_' float_ext glodap_ext osd_ext ctd_ext coverage '.nc'];
 
     % longitude
     nccreate(filename,'lon','Dimensions',{'lon',xdim},...

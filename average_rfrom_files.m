@@ -1,5 +1,5 @@
 %% average RFROM files into 1x1 degree monthly files
-function average_rfrom_files(fpaths,ver,year,base_grid,start_year,end_year)
+function average_rfrom_files(fpaths,ver,start_year,end_year)
 
 %% concatenate gobai in monthly files to match RFROM, and 1x1 degree files
 
@@ -14,16 +14,16 @@ if isfile(filename_monthly_mean_sal); delete(filename_monthly_mean_sal); end
 lon_new = (0.5:359.5)'; lon_bins_new = (0:365)';
 lat_new = (-89.5:89.5)'; lat_bins_new = (-90:90)';
 lon = ncread([fpaths.temp_path ...
-    'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_1993_01.nc'],'longitude');
+    'RFROM_TEMP_' ver '/RFROMV' ver(2) ver(4) '_TEMP_STABLE_1993_01.nc'],'longitude');
 lat = ncread([fpaths.temp_path ...
-    'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_1993_01.nc'],'latitude');
+    'RFROM_TEMP_' ver '/RFROMV' ver(2) ver(4) '_TEMP_STABLE_1993_01.nc'],'latitude');
 pres = ncread([fpaths.temp_path ...
-    'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_1993_01.nc'],'mean_pressure');
+    'RFROM_TEMP_' ver '/RFROMV' ver(2) ver(4) '_TEMP_STABLE_1993_01.nc'],'mean_pressure');
 prs_bnds = ncread([fpaths.temp_path ...
-    'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_1993_01.nc'],'mean_pressure_bnds');
+    'RFROM_TEMP_' ver '/RFROMV' ver(2) ver(4) '_TEMP_STABLE_1993_01.nc'],'mean_pressure_bnds');
 
 % read and write rfrom temperature schema
-rfrom_info = ncinfo([fpaths.temp_path 'RFROM_TEMP_v2.2/RFROMV22_TEMP_STABLE_1993_01.nc']);
+rfrom_info = ncinfo([fpaths.temp_path 'RFROM_TEMP_' ver '/RFROMV' ver(2) ver(4) '_TEMP_STABLE_1993_01.nc']);
 % adjust variable-specific schema
 rfrom_info.Variables(1).Size = length(lon_new);
 rfrom_info.Variables(1).Dimensions.Length = length(lon_new);
@@ -50,7 +50,7 @@ rfrom_info.Dimensions(3).Length = Inf;
 ncwriteschema(filename_monthly_mean_temp,rfrom_info);
 
 % read and write rfrom salinity schema
-rfrom_info = ncinfo([fpaths.sal_path 'RFROM_SAL_v2.2/RFROMV22_SAL_STABLE_1993_01.nc']);
+rfrom_info = ncinfo([fpaths.sal_path 'RFROM_SAL_' ver '/RFROMV' ver(2) ver(4) '_SAL_STABLE_1993_01.nc']);
 % adjust variable-specific schema
 rfrom_info.Variables(1).Size = length(lon_new);
 rfrom_info.Variables(1).Dimensions.Length = length(lon_new);

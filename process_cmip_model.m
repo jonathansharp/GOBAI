@@ -512,7 +512,7 @@ if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
 if l ~= length(time)
     combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
         depth,dpth_bnds,time,time_strt,grid_label,'o2',idx_depth,'Dissolved Oxygen Content',...
-        'mL/L',ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2);
+        'mol/m3',ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2);
     o2 = ncread(nc_filepath,'o2');
     dens = ncread([fpath 'combined/regridded/dens' path2 ...
         'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'],'dens');
@@ -534,8 +534,98 @@ if l ~= length(time)
     clear o2
 end
 
+%% load, combine, and save no3
+% delete previous files
+nc_files_old = dir([fpath 'combined/regridded/no3' path2 ...
+    'combined_' rlz '_gr_*01-*.nc']); % define filepath
+for f = 1:length(nc_files_old)
+    date_end = extractBetween(string(nc_files_old(f).name),'01-','.nc');
+    % delete if old file ends before desired new file
+    if datenum(str2double(date_end{1}(1:4)),str2double(date_end{1}(5:6)),1) < ...
+            datenum(str2double(date_str(1:4)),str2double(date_str(5:6)),1)
+        delete([fpath 'combined/regridded/' nc_files_old(f).name]);
+    end
+end
+% define new file pathf
+nc_filepath = [fpath 'combined/regridded/no3' path2 ... % define filepath
+    'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
+nc_filepath_temp = [fpath 'combined/regridded/no3' path2 ... % define temporary filepath
+    'combined_' rlz '_gr-'];
+% check if file exists and is the proper size
+if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
+% load and combine cmip output fields
+if l ~= length(time)
+    combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
+        depth,dpth_bnds,time,time_strt,grid_label,'no3',idx_depth,'Dissolved Nitrate',...
+        'mol/m3',ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2);
+    no3 = ncread(nc_filepath,'no3');
+    dens = ncread([fpath 'combined/regridded/dens' path2 ...
+        'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'],'dens');
+    no3 = (no3./dens).*(10^6); % convert nitrate from mol/m^3 to umol/kg
+    ncsave_4d(nc_filepath,{'lon' lon 'longitude' 'degrees east'},...
+        {'lat' lat 'latitude' 'degrees north'},...
+        {'depth' depth 'depth' 'meters'},...
+        {'time' time 'time' 'days since 0000-01-01'},...
+        {'no3' no3 'Dissolved Nitrate Content','umol/kg'});
+    % write depth bounds
+    nccreate(nc_filepath,'dpth_bnds','Dimensions',{'dpth_bnds',length(dpth_bnds)});
+    ncwrite(nc_filepath,'dpth_bnds',dpth_bnds);
+    ncwriteatt(nc_filepath,'dpth_bnds','long_name','depth boundaries');
+    ncwriteatt(nc_filepath,'dpth_bnds','units','meters');
+    % plot global mean timeseries
+    no3 = ncread(nc_filepath,'no3');
+    plot_global_timeseries(lat,lon,depth,dpth_bnds,time,no3,'no3',...
+        'Nitrate Amount Content','umol/kg',model);
+    clear no3
+end
+
+%% load, combine, and save dissic
+% delete previous files
+nc_files_old = dir([fpath 'combined/regridded/dissic' path2 ...
+    'combined_' rlz '_gr_*01-*.nc']); % define filepath
+for f = 1:length(nc_files_old)
+    date_end = extractBetween(string(nc_files_old(f).name),'01-','.nc');
+    % delete if old file ends before desired new file
+    if datenum(str2double(date_end{1}(1:4)),str2double(date_end{1}(5:6)),1) < ...
+            datenum(str2double(date_str(1:4)),str2double(date_str(5:6)),1)
+        delete([fpath 'combined/regridded/' nc_files_old(f).name]);
+    end
+end
+% define new file pathf
+nc_filepath = [fpath 'combined/regridded/dissic' path2 ... % define filepath
+    'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
+nc_filepath_temp = [fpath 'combined/regridded/dissic' path2 ... % define temporary filepath
+    'combined_' rlz '_gr-'];
+% check if file exists and is the proper size
+if isfile(nc_filepath); l = nc_dim_length(nc_filepath,'time'); else; l = 0; end
+% load and combine cmip output fields
+if l ~= length(time)
+    combine_cmip_field(model,nc_filepath,nc_filepath_temp,path1_hist,path1_ssp,path2,path3,lon,lat,lon2d,lat2d,...
+        depth,dpth_bnds,time,time_strt,grid_label,'dissic',idx_depth,'Dissolved Oxygen Content',...
+        'mol/m3',ext_hist1,ext_hist2,ext_hist3,ext_ssp1,ext_ssp2);
+    dissic = ncread(nc_filepath,'dissic');
+    dens = ncread([fpath 'combined/regridded/dens' path2 ...
+        'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'],'dens');
+    dissic = (dissic./dens).*(10^6); % convert dic from mol/m^3 to umol/kg
+    ncsave_4d(nc_filepath,{'lon' lon 'longitude' 'degrees east'},...
+        {'lat' lat 'latitude' 'degrees north'},...
+        {'depth' depth 'depth' 'meters'},...
+        {'time' time 'time' 'days since 0000-01-01'},...
+        {'dissic' dissic 'Dissolved Inorganic Carbon Content','umol/kg'});
+    % write depth bounds
+    nccreate(nc_filepath,'dpth_bnds','Dimensions',{'dpth_bnds',length(dpth_bnds)});
+    ncwrite(nc_filepath,'dpth_bnds',dpth_bnds);
+    ncwriteatt(nc_filepath,'dpth_bnds','long_name','depth boundaries');
+    ncwriteatt(nc_filepath,'dpth_bnds','units','meters');
+    % plot global mean timeseries
+    dissic = ncread(nc_filepath,'dissic');
+    plot_global_timeseries(lat,lon,depth,dpth_bnds,time,dissic,'dissic',...
+        'DIC Amount Content','umol/kg',model);
+    clear dissic
+end
+
 %% add 3d pressure to NetCDFs
-vars = {'o2' 'thetao' 'so' 'abs_sal' 'cns_tmp' 'tmp' 'sigma' 'dens'};
+vars = {'o2' 'no3' 'dissic' 'thetao' 'so' 'abs_sal' 'cns_tmp' 'tmp' 'sigma' 'dens'};
 for v = 1:length(vars)
     if isfile([fpath 'combined/regridded/' vars{v} path2 'combined_' rlz '_regridded.nc'])
         if ~nc_var_exist([fpath 'combined/regridded/' vars{v} path2 'combined_' rlz '_regridded.nc'],'pres')
@@ -621,6 +711,56 @@ c.FontSize = 12;
 mlabel off; plabel off;
 if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
 export_fig(['Figures/' model '/oxy_20m.png'],'-transparent');
+close
+
+%% Plot NO3 at 20 m
+nc_filepath = [fpath 'combined/regridded/no3' path2 ... % define filepath
+    'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
+idx_depth = find(min(abs(depth-20))==abs(depth-20));
+no3 = ncread(nc_filepath,'no3',[1 1 idx_depth(1) 1],[Inf Inf 1 Inf]);
+mean_no3 = mean(no3,4,'omitnan');
+figure('visible','off');
+worldmap([-90 90],[20 380]);
+title(['Annual mean at ' num2str(depth(idx_depth(1))) ' m (' model ')'],'fontsize',16)
+set(gcf,'Position',[617, 599, 820, 420])
+setm(gca,'ffacecolor','w');
+setm(gca,'fontsize',12);
+pcolorm(double(lat),double([lon;lon(end)+1]),...
+    [mean_no3;mean_no3(end,:)]');
+land = shaperead('landareas', 'UseGeoCoords', true);
+geoshow(land,'FaceColor',rgb('grey'));
+c=colorbar; caxis([0 40]);
+colormap(flipud(cmocean('speed',16)));
+c.Label.String = '[NO_{3}] (\mumol kg^{-1})';
+c.FontSize = 12;
+mlabel off; plabel off;
+if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
+export_fig(['Figures/' model '/nit_20m.png'],'-transparent');
+close
+
+%% Plot DIC at 20 m
+nc_filepath = [fpath 'combined/regridded/dissic' path2 ... % define filepath
+    'combined_' rlz '_gr_' num2str(start_year) '01-' date_str '.nc'];
+idx_depth = find(min(abs(depth-20))==abs(depth-20));
+dissic = ncread(nc_filepath,'dissic',[1 1 idx_depth(1) 1],[Inf Inf 1 Inf]);
+mean_dissic = mean(dissic,4,'omitnan');
+figure('visible','off');
+worldmap([-90 90],[20 380]);
+title(['Annual mean at ' num2str(depth(idx_depth(1))) ' m (' model ')'],'fontsize',16)
+set(gcf,'Position',[617, 599, 820, 420])
+setm(gca,'ffacecolor','w');
+setm(gca,'fontsize',12);
+pcolorm(double(lat),double([lon;lon(end)+1]),...
+    [mean_dissic;mean_dissic(end,:)]');
+land = shaperead('landareas', 'UseGeoCoords', true);
+geoshow(land,'FaceColor',rgb('grey'));
+c=colorbar; caxis([1900 2200]);
+colormap(cmocean('matter',24));
+c.Label.String = 'DIC (\mumol kg^{-1})';
+c.FontSize = 12;
+mlabel off; plabel off;
+if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
+export_fig(['Figures/' model '/dic_20m.png'],'-transparent');
 close
 
 end

@@ -16,9 +16,8 @@ for i = 1:2:length(varargin)-1
 end
 
 %% check if processed file already exists
-% if ~isfile([param_props.dir_name '/Data/' model '_' float_ext ...
-%         glodap_ext ctd_ext '_' param_props.file_name '_data_' ...
-%         file_date float_file_ext '.mat'])
+if ~isfile([param_props.dir_name '/Data/' model '_' param_props.file_name '_data_' ...
+        float_ext glodap_ext ctd_ext '_' file_date float_file_ext '.mat'])
 
 %% load variables
 nc_filepath = [fpath 'combined/regridded/' param_props.file_name ...
@@ -49,7 +48,6 @@ depth_diff = diff(depth)./2;
 time_diff = diff(time)./2;
 [~,~,Tnum] = histcounts(data.time,[time(1)-time_diff(1); ...
     time(2:end)-time_diff; time(end)+time_diff(end)]);
-clear lat_diff time_diff
 
 %% accumulate 4D grid
 idx = Xnum > 0 & Ynum > 0 & Znum > 0 & Tnum > 0;
@@ -60,6 +58,22 @@ train_idx = accumarray(subs,data.(param_props.file_name)(idx),sz);
 % convert to train index
 train_idx_mod = train_idx > 0;
 clear train_idx
+% make every value between minimum and maximum depth true (because depth
+% levels are not perfectly aligned between data and models)
+fwd = cumsum(train_idx_mod,3) > 0;
+rev = flip(cumsum(flip(train_idx_mod,3),3),3) > 0;
+train_idx_mod = fwd & rev;
+% for x = 1:length(lon)
+%     for y = 1:length(lat)
+%         for t = 1:length(time)
+%             train_idx_array = train_idx_mod(x,y,:,t);
+%             idx = find(train_idx_array);
+%             if ~isempty(idx)
+%                 train_idx_mod(x,y,min(idx):max(idx),t) = true;
+%             end
+%         end
+%     end
+% end
 
 %% subsample model
 vars = fieldnames(data);
@@ -123,44 +137,47 @@ all_data.lon_cos_2 = cosd(all_data.longitude-110);
 % [lat_2d,lon_2d] = meshgrid(lat,lon);
 % z = single(bottom_depth(lat_2d,lon_2d));
 
-%% bin to lat/lon grid cells and plot gridded observations
-% determine bin number of each test data point on 1 degree grid
-lon_edges = -180:180; lon = -179.5:179.5;
-lat_edges = -90:90; lat = -89.5:89.5;
-pres_edges = ([0 5:10:175 190:20:450 475:50:1375 1450:100:1950 2000])';
-pres = ([2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
-[~,~,Xnum] = histcounts(all_data.longitude,lon_edges);
-[~,~,Ynum] = histcounts(all_data.latitude,lat_edges);
-[~,~,Znum] = histcounts(all_data.pressure,pres_edges);
+%% bin back to lat/lon grid cells to plot gridded observations
+% convert longitude back to 0 to 360
+lon = convert_lon(lon,'format','0-360');
+lon_diff = diff(lon)./2;
+lon_temp = convert_lon(all_data.longitude,'format','0-360');
+[~,~,Xnum] = histcounts(lon_temp,[lon(1)-lon_diff(1); ...
+    lon(2:end)-lon_diff; lon(end)+lon_diff(end)]);
+[~,~,Ynum] = histcounts(all_data.latitude,[lat(1)-lat_diff(1); ...
+    lat(2:end)-lat_diff; lat(end)+lat_diff(end)]);
+[~,~,Znum] = histcounts(all_data.depth,[depth(1)-depth_diff(1); ...
+    depth(2:end)-depth_diff; depth(end)+depth_diff(end)]);
 % accumulate 3D grid of test data point errors
 subs = [Xnum, Ynum, Znum];
 idx_subs = any(subs==0,2);
-sz = [length(lon),length(lat),length(pres)];
+sz = [length(lon),length(lat),length(depth)];
 all_data.(['gridded_' param_props.file_name]) = accumarray(subs(~idx_subs,:),...
     abs(all_data.(param_props.file_name)(~idx_subs)),sz,@mean,NaN);
 clear subs sz
-% make plot
-idx_depth = find(min(abs(all_data.depth-20))==abs(all_data.depth-20));
-figure('visible','on'); hold on
-worldmap([-90 90],[20 380]);
-title('model');
-title(['Annual mean at ' num2str(all_data.depth(idx_depth(1))) ' m (' model ')'],'fontsize',16)
-set(gcf,'Position',[617, 599, 820, 420])
-setm(gca,'ffacecolor','w');
-setm(gca,'fontsize',12);
-[lon_temp,z] = reformat_lon(lon,all_data.(['gridded_' param_props.file_name])(:,:,2),20);
-pcolorm(lat,[lon_temp lon_temp(end)+1],[z;z(end,:)]');
-land = shaperead('landareas', 'UseGeoCoords', true);
-geoshow(land,'FaceColor',rgb('grey'));
-c=colorbar; caxis([150 350]);
-cmap = cmocean('ice'); colormap(cmap)
-c.Label.String = ['Average Gridded ' param_props.fig_name];
-c.FontSize = 12;
-mlabel off; plabel off;
-if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
-export_fig(['Figures/' model '/subsampled_' param_props.fig_name '_' ...
-    float_ext glodap_ext ctd_ext coverage '_20m.png'],'-transparent');
-close
+% make plots of subsampled data
+for d = 1:length(depth)
+    figure('visible','off'); hold on
+    worldmap([-90 90],[20 380]);
+    title(['Annual mean at ' num2str(depth(d)) ' m (' model ')'],'fontsize',16)
+    set(gcf,'Position',[617, 599, 820, 420])
+    setm(gca,'ffacecolor','w');
+    setm(gca,'fontsize',12);
+    z = all_data.(['gridded_' param_props.file_name])(:,:,d);
+    pcolorm(lat,[lon(21:end);lon(1:21)],[z(21:end,:,:);z(1:21,:,:)]');
+    land = shaperead('landareas', 'UseGeoCoords', true);
+    geoshow(land,'FaceColor',rgb('grey'));
+    c=colorbar;
+    clim([min(param_props.edges) max(param_props.edges)]);
+    colormap(param_props.cmap);
+    c.Label.String = ['Average Gridded ' param_props.label ' ' param_props.units];
+    c.FontSize = 12;
+    mlabel off; plabel off;
+    if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
+    export_fig(['Figures/' model '/subsampled_' param_props.fig_name '_' ...
+        float_ext glodap_ext ctd_ext coverage '_' num2str(depth(d)) 'm.png'],'-transparent');
+    close
+end
 
 %% save data
 save([param_props.dir_name '/Data/' model '_' param_props.file_name ...
@@ -179,11 +196,11 @@ for v = 1:length(vars)
     end
 end
 
-% else
-% 
-% %% display information
-% disp([model ' already subsampled for ' date_str(5:6) '/' date_str(1:4)]);
-% 
-% end
+else
+
+%% display information
+disp([model ' already subsampled for ' date_str(5:6) '/' date_str(1:4)]);
+
+end
 
 end

@@ -379,8 +379,9 @@ for r = 1:length(regions)
         'RMSD = ' num2str(round(rmsd_all,3)) ' Pmol']);
     plot(datenum(1950,1,1)+time,cmip_inv_both.(regions{r}),...
         datenum(1950,1,1)+time,gobai_inv_both.(regions{r}),'LineWidth',2);
-    ylabel([param_props.label ' inventory (Pmol)']);
+    ylabel([param_props.fig_name ' inventory (Pmol)']);
     datetick('x');
+    legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']});
     export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
             '/total_comp_' regions{r} '_' float_ext glodap_ext ctd_ext '.png']); close;
     % for seasonal
@@ -392,7 +393,7 @@ for r = 1:length(regions)
     title([regions{r} ', corr. coeff. = ' num2str(round(corr_seas,3)) ', '...
         'RMSD = ' num2str(round(rmsd_seas,3)) ' Pmol']);
     plot(datenum(1950,1,1)+time,cmip_seas,datenum(1950,1,1)+time,gobai_seas,'LineWidth',2);
-    ylabel([param_props.label ' inventory (Pmol)']);
+    ylabel([param_props.fig_name ' inventory (Pmol)']);
     datetick('x');
     legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']});
     export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
@@ -406,7 +407,7 @@ for r = 1:length(regions)
     title([regions{r} ', corr. coeff. = ' num2str(round(corr_tr,3)) ', '...
         'RMSD = ' num2str(round(rmsd_tr,3)) ' Pmol']);
     plot(datenum(1950,1,1)+time,cmip_tr,datenum(1950,1,1)+time,gobai_tr,'LineWidth',2);
-    ylabel([param_props.label ' inventory (Pmol)']);
+    ylabel([param_props.fig_name ' inventory (Pmol)']);
     datetick('x');
     legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']});
     export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
@@ -420,7 +421,7 @@ for r = 1:length(regions)
     title([regions{r} ', corr. coeff. = ' num2str(round(corr_resid,3)) ', '...
         'RMSD = ' num2str(round(rmsd_resid,3)) ' Pmol']);
     plot(datenum(1950,1,1)+time,cmip_resid,datenum(1950,1,1)+time,gobai_resid,'LineWidth',2);
-    ylabel([param_props.label ' inventory (Pmol)']);
+    ylabel([param_props.fig_name ' inventory (Pmol)']);
     datetick('x');
     legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']});
     export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
@@ -523,7 +524,7 @@ plot(mean(cmip_depth_mean,'omitnan'),depth,...
     mean(gobai_depth_mean,'omitnan'),depth,'linewidth',2);
 set(gca,'YDir','reverse','XAxisLocation','top');
 ylim([0 max(depth)]);
-xlabel('[O_{2}] (\mumol kg^{-1})');
+xlabel([param_props.label ' ' param_props.units]);
 ylabel('Depth (m)');
 legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']},'Location','southeast');
 export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
@@ -536,8 +537,9 @@ plot(mean(cmip_depth_mean,'omitnan')-...
 plot([0 0],[min(depth) max(depth)],'k--');
 set(gca,'YDir','reverse','XAxisLocation','top');
 ylim([0 max(depth)]);
-xlim([-3 3]);
-xlabel('\Delta[O_{2}] (\mumol kg^{-1})');
+xlim([-(param_props.edges(end)-param_props.edges(1))./100 ...
+    (param_props.edges(end)-param_props.edges(1))./100]);
+xlabel(['\Delta' param_props.label ' ' param_props.units]);
 ylabel('Depth (m)');
 export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
         '/profile_delta_' float_ext glodap_ext ctd_ext '.png'],'-transparent'); close;

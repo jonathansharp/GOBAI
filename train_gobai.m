@@ -9,12 +9,13 @@
 
 function train_gobai(alg_type,param_props,base_grid,file_date,...
     float_file_ext,num_clusters,variables,thresh,numWorkers_train,...
-    snap_date,flt,gld,ctd,varargin)
+    snap_date,flt,gld,osd,ctd,varargin)
 
 %% define dataset extensions
 if flt == 1; float_ext = 'f'; else float_ext = ''; end
 if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
-if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
+if osd == 1; osd_ext = 'o'; else osd_ext = ''; end
+if ctd == 1; ctd_ext = 'c'; else ctd_ext = ''; end
 
 %% set defaults and process optional input arguments
 num_folds = 1;
@@ -91,11 +92,11 @@ end
 %% load data
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
     load([param_props.dir_name '/Data/processed_all_' ...
-        param_props.file_name '_data_' float_ext glodap_ext ctd_ext ...
+        param_props.file_name '_data_' float_ext glodap_ext osd_ext ctd_ext ...
         '_' file_date float_file_ext '.mat'],'all_data');
 else % for cmip models
     load([param_props.dir_name '/Data/' base_grid '_' ...
-        param_props.file_name '_data_' float_ext glodap_ext ctd_ext ...
+        param_props.file_name '_data_' float_ext glodap_ext osd_ext ctd_ext ...
         '_' file_date float_file_ext coverage '.mat'],'all_data');
 end
 
@@ -103,19 +104,19 @@ end
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
     load([param_props.dir_name '/Data/GMM/' ...
         'all_data_clusters_' num2str(num_clusters) '_' ...
-        float_ext glodap_ext ctd_ext '_' file_date float_file_ext ...
+        float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext ...
         '.mat'],'all_data_clusters');
 else
     load([param_props.dir_name '/Data/GMM_' base_grid '/' ...
         'all_data_clusters_' num2str(num_clusters) '_' ...
-        float_ext glodap_ext ctd_ext '_' ...
+        float_ext glodap_ext osd_ext ctd_ext '_' ...
         file_date float_file_ext coverage '.mat'],'all_data_clusters');
 end
 
 %% load data cluster indices (for k-fold testing)
 if num_folds > 1
     load([param_props.dir_name '/Data/k_fold_data_indices_' num2str(num_clusters) ...
-        '_' num2str(num_folds) '_' float_ext glodap_ext ctd_ext '_' ...
+        '_' num2str(num_folds) '_' float_ext glodap_ext osd_ext ctd_ext '_' ...
         file_date float_file_ext '.mat'],'num_folds','train_idx','test_idx');
 else
     % set NaNs so parloops run
@@ -142,10 +143,11 @@ for f = 1:num_folds
     for c = 1:num_clusters
         if num_folds > 1
             alg_fnames(f,c) = {[alg_type '_' param_props.file_name '_C' ...
-                num2str(c) '_F' num2str(f) '_test_' float_ext glodap_ext ctd_ext]};
+                num2str(c) '_F' num2str(f) '_test_' float_ext glodap_ext ...
+                osd_ext ctd_ext]};
         else
             alg_fnames(c) = {[alg_type '_' param_props.file_name '_C' ...
-                num2str(c) '_' float_ext glodap_ext ctd_ext]};
+                num2str(c) '_' float_ext glodap_ext osd_ext ctd_ext]};
         end
     end
 end
@@ -157,23 +159,23 @@ if num_folds > 1
     if strcmp(alg_type,'RFR')
         kfold_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
         fig_name_1 = ['k_fold_comparison_tr' num2str(numtrees) '_lf' ...
-            num2str(minLeafSize) '_' float_ext glodap_ext ctd_ext '.png'];
+            num2str(minLeafSize) '_' float_ext glodap_ext osd_ext ctd_ext '.png'];
         fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numtrees) ...
-            '_lf' num2str(minLeafSize) '_' float_ext glodap_ext ctd_ext '.png'];
+            '_lf' num2str(minLeafSize) '_' float_ext glodap_ext osd_ext ctd_ext '.png'];
     elseif strcmp(alg_type,'FFNN')
         kfold_name = ['FFNN_output_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio)];
         fig_name_1 = ['k_fold_comparison_train' num2str(100*train_ratio) ...
             '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) ...
-            '_' float_ext glodap_ext ctd_ext '.png'];
+            '_' float_ext glodap_ext osd_ext ctd_ext '.png'];
         fig_name_2 = ['k_fold_spatial_comparison_train' num2str(100*train_ratio) ...
             '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) ...
-            '_' float_ext glodap_ext ctd_ext '.png'];
+            '_' float_ext glodap_ext osd_ext ctd_ext '.png'];
     elseif strcmp(alg_type,'GBM')
         kfold_name = ['GBM_output_tr' num2str(numstumps) '_bin' num2str(numbins)];
         fig_name_1 = ['k_fold_comparison_tr' num2str(numstumps) '_bin' ...
-            num2str(numbins) '_' float_ext glodap_ext ctd_ext '.png'];
+            num2str(numbins) '_' float_ext glodap_ext osd_ext ctd_ext '.png'];
         fig_name_2 = ['k_fold_spatial_comparison_tr' num2str(numstumps) ...
-            '_bin' num2str(numbins) '_' float_ext glodap_ext ctd_ext '.png'];
+            '_bin' num2str(numbins) '_' float_ext glodap_ext osd_ext ctd_ext '.png'];
     end
 end
 
@@ -269,22 +271,28 @@ alg_mean_err = mean(alg_output.k_fold_delta,'omitnan');
 alg_med_err = median(alg_output.k_fold_delta,'omitnan');
 alg_rmse = sqrt(mean(alg_output.k_fold_delta.^2,'omitnan'));
 alg_med_abs_err = median(abs(alg_output.k_fold_delta),'omitnan');
+alg_r2 = corr(alg_output.(['k_fold_test_' param_props.file_name]),...
+    all_data.(param_props.file_name),'rows','complete');
 % calculate error stats for ESPER
 esper_mean_err = mean(esper_output.k_fold_delta,'omitnan');
 esper_med_err = median(esper_output.k_fold_delta,'omitnan');
 esper_rmse = sqrt(mean(esper_output.k_fold_delta.^2,'omitnan'));
 esper_med_abs_err = median(abs(esper_output.k_fold_delta),'omitnan');
+esper_r2 = corr(esper_output.(['k_fold_test_' param_props.file_name]),...
+    all_data.(param_props.file_name),'rows','complete');
 % print error stats for GOBAI algorithm
 fprintf([num2str(num_clusters) ' Clusters:\n']);
 fprintf(['Mean Error (GOBAI) = ' num2str(alg_mean_err) ' ' param_props.units '\n']);
 fprintf(['Median Error (GOBAI) = ' num2str(alg_med_err) ' ' param_props.units '\n']);
 fprintf(['RMSE (GOBAI) = ' num2str(alg_rmse) ' ' param_props.units '\n']);
 fprintf(['Median Abs. Error (GOBAI) = ' num2str(alg_med_abs_err) ' ' param_props.units '\n']);
+fprintf(['R2 (GOBAI) = ' num2str(alg_r2) '\n']);
 % print error stats for ESPER
 fprintf(['Mean Error (ESPER-NN) = ' num2str(esper_mean_err) ' ' param_props.units '\n']);
 fprintf(['Median Error (ESPER-NN) = ' num2str(esper_med_err) ' ' param_props.units '\n']);
 fprintf(['RMSE (ESPER-NN) = ' num2str(esper_rmse) ' ' param_props.units '\n']);
 fprintf(['Median Abs. Error (ESPER-NN) = ' num2str(esper_med_abs_err) ' ' param_props.units '\n']);
+fprintf(['R2 (ESPER-NN) = ' num2str(esper_r2) '\n']);
 % save predicted data
 if ~isfolder([pwd '/' kfold_dir]); mkdir(kfold_dir); end
 save([kfold_dir '/' kfold_name],'alg_output','alg_rmse',...
@@ -416,29 +424,29 @@ rng(f); numbers = randperm(num_obs);
 obs_index_train(numbers > (data_per.*num_obs)) = false;
 
 % exclude Mediterranean cluster data before 2000
-mean_lat = mean(all_data.latitude(all_data_clusters.(['c' num2str(c)]) > thresh));
-mean_lon = mean(all_data.longitude(all_data_clusters.(['c' num2str(c)]) > thresh));
-% if strcmp(base_grid,'RG')
-if mean_lat > 32 && mean_lat < 41 && mean_lon > 10 && mean_lon < 30 % check for Med cluster
-    in_med_new_idx = (all_data.longitude > -7 & all_data.longitude < 36) & ...
-        (all_data.latitude > 30 & all_data.latitude < 45) & all_data.year > 2000;
-    disp(['EXCLUDING YEAR FOR MED CLUSTER, #' num2str(c)])
-    obs_index_train(all_data_clusters.(['c' num2str(c)]) > thresh & ...
-        ~in_med_new_idx) = false;
-    variables(strcmp(variables,'year')) = [];
-    % elseif c == 5
-    % figure; scatter(all_data.year(all_data_clusters.clusters == 5 & in_med_new_idx),...
-    %      all_data.o2(all_data_clusters.clusters == 5 & in_med_new_idx));
-    % 
-    % figure; scatter(all_data.longitude(all_data_clusters.clusters == 9 & in_med_new_idx),...
-    %      all_data.latitude(all_data_clusters.clusters == 9 & in_med_new_idx)); plot_land('xy');
-    % 
-    % figure; scatter(all_data.longitude(all_data_clusters.clusters == 5),...
-    %      all_data.latitude(all_data_clusters.clusters == 5),5,...
-    %      all_data.o2(all_data_clusters.clusters == 5));
-    %     plot_land('xy'); colorbar;
-end
+% mean_lat = mean(all_data.latitude(all_data_clusters.(['c' num2str(c)]) > thresh));
+% mean_lon = mean(all_data.longitude(all_data_clusters.(['c' num2str(c)]) > thresh));
+% % if strcmp(base_grid,'RG')
+% if mean_lat > 32 && mean_lat < 41 && mean_lon > 10 && mean_lon < 30 % check for Med cluster
+%     in_med_new_idx = (all_data.longitude > -7 & all_data.longitude < 36) & ...
+%         (all_data.latitude > 30 & all_data.latitude < 45) & all_data.year > 2000;
+%     disp(['EXCLUDING YEAR FOR MED CLUSTER, #' num2str(c)])
+%     obs_index_train(all_data_clusters.(['c' num2str(c)]) > thresh & ...
+%         ~in_med_new_idx) = false;
+%     variables(strcmp(variables,'year')) = [];
+%     % elseif c == 5
+%     % figure; scatter(all_data.year(all_data_clusters.clusters == 5 & in_med_new_idx),...
+%     %      all_data.o2(all_data_clusters.clusters == 5 & in_med_new_idx));
+%     % 
+%     % figure; scatter(all_data.longitude(all_data_clusters.clusters == 9 & in_med_new_idx),...
+%     %      all_data.latitude(all_data_clusters.clusters == 9 & in_med_new_idx)); plot_land('xy');
+%     % 
+%     % figure; scatter(all_data.longitude(all_data_clusters.clusters == 5),...
+%     %      all_data.latitude(all_data_clusters.clusters == 5),5,...
+%     %      all_data.o2(all_data_clusters.clusters == 5));
+%     %     plot_land('xy'); colorbar;
 % end
+% % end
 
 %% define observations index for k-fold testing
 if num_folds > 1
@@ -578,13 +586,27 @@ end
 if ~isfolder([pwd '/' alg_dir]); mkdir(alg_dir); end
 if any(all_data_clusters.(['c' num2str(c)]) > thresh)
     if num_folds > 1
+        % save model as matlab object
         parsave([alg_dir '/' alg_fnames{f,c} '.mat'],alg,alg_type,output,'output',output_ESPER,'output_ESPER',obs_index_test,'obs_index_test');
     else
-        % genFunction(FFNN.n1,['functions/' 'FFNN1_o2_C13_rg.m'])
+        % generate a function from each FFNN
+        if strcmp(alg_type,'FFNN')
+            if ~isfolder([alg_dir '/functions/'])
+                mkdir([alg_dir '/functions/']);
+            end
+            genFunction(alg.n1,[alg_dir ...
+                '/functions/' alg_fnames{f,c} '_n1' coverage '.mat']);
+            genFunction(alg.n2,[alg_dir ...
+                '/functions/' alg_fnames{f,c} '_n2' coverage '.mat']);
+            genFunction(alg.n3,[alg_dir ...
+                '/functions/' alg_fnames{f,c} '_n3' coverage '.mat']);
+        end
+        % save model as matlab object
         parsave([alg_dir '/' alg_fnames{f,c} coverage '.mat'],alg,alg_type);
     end
 else
     if num_folds > 1
+        % save NaN outputs
         parsave([alg_dir '/' alg_fnames{f,c} '.mat'],output,'output',output_ESPER,'output_ESPER',obs_index_test,'obs_index_test');
     end
 end
