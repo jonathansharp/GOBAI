@@ -235,3 +235,21 @@ val_lims = [2000 2250];
 step_val = 10;
 plot_animation_lr_vs_hr(plot_year,plot_depth,param_to_plot,...
     reg,quant,lat_lims,lon_lims,val_lims,step_val,'off','left','no');
+
+%% plot temp vs. o2 across US
+plot_year = 2004:2020;
+plot_depth = 200;
+param_to_plot_phys = 'temp';
+param_to_plot_bgc = 'o2';
+type = 'hr';
+reg = 'us';
+quant = 'abs';
+lat_lims = [-10 60];
+lon_lims = [160 320];
+val_lims_1 = [-5 30];
+step_val_1 = 1;
+val_lims_2 = [0 250];
+step_val_2 = 5;
+plot_animation_phys_vs_bgc(plot_year,plot_depth,param_to_plot_phys,...
+    param_to_plot_bgc,type,reg,quant,lat_lims,lon_lims,val_lims_1,step_val_1,...
+    val_lims_2,step_val_2,'off','right','no','eez_on')

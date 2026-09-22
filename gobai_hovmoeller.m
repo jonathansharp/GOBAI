@@ -1,20 +1,20 @@
 %% Plot mean GOBAI variable with depth over time
 
 % file information
-ver = 'v1.1-HR'; % version
 var = 'O2'; % variable
-varname = 'o2';
+ver = 'HR-v1.3'; % product version
 path = ['/raid/Data/GOBAI-' var '/' ver '/']; % file path
+gobai_f = [path 'GOBAI-Monthly-Mean-1x1-' var '-HR-v202602.nc']; % file name
+varname = 'o2';
 % download dimensions
-GOBAI.lon = ncread([path 'GOBAI-' var '-' ver '.nc'],'lon');
-GOBAI.lat = ncread([path 'GOBAI-' var '-' ver '.nc'],'lat');
-GOBAI.pres = ncread([path 'GOBAI-' var '-' ver '.nc'],'pres');
-GOBAI.time = ncread([path 'GOBAI-' var '-' ver '.nc'],'time');
+gobai.lon = ncread(gobai_f,'longitude');
+gobai.lat = ncread(gobai_f,'latitude');
+gobai.pres = ncread(gobai_f,'mean_pressure');
+gobai.time = datenum(1950,1,1) + ncread(gobai_f,'time');
 % calculate weights
 GOBAI.vol = weights3d(GOBAI.lon,GOBAI.lat,GOBAI.pres);
-
 % process time axis
-if strcmp(ver,'v1.0') || strcmp(ver,'v2.0')
+if strcmp(ver,'v1.0') || strcmp(ver,'v2.0') || strcmp(ver,'HR-v1.1');
     time_axis = double(GOBAI.time);
 elseif strcmp(ver,'v2.1')
     time_axis = datenum(2004,0,0) + double(GOBAI.time);
@@ -31,12 +31,12 @@ end
 % end
 
 % define mask
-if strcmp(ver,'v1.0-HR') || strcmp(ver,'v1.1-HR')
+if strcmp(ver,'v1.0-HR') || strcmp(ver,'v1.1-HR') || strcmp(ver,'HR-v1.1')
     GOBAI.vol = weights3d(GOBAI.lon,GOBAI.lat,GOBAI.pres);
     if ~isfile([path 'mask-' ver '.mat'])
         mask = true(size(GOBAI.vol));
         for t = 1:length(GOBAI.time)
-            gobai_tmp = ncread([path 'GOBAI-' var '-' ver '.nc'],...
+            gobai_tmp = ncread(gobai_f,...
                 varname,[1 1 1 t],[Inf Inf Inf 1]);
             mask(isnan(gobai_tmp)) = false;
         end

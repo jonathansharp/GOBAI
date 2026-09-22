@@ -74,6 +74,28 @@ export_fig(gcf,['Figures/GLORYS_O2_' sprintf('%02d',m) '-' num2str(y) ...
     '-' num2str(depth) 'm.png'],'-transparent');
 close
 
+% apply esper to glorys
+doy = datenum(y,m,d) - datenum(y,0,0);
+oxy = algobai(20,'lat',glorys.lat(:,:,depth_idx),'lon',glorys.lon(:,:,depth_idx),...
+    'pres',glorys.pressure,'temp_cns',glorys.tmp_cns,'sal_abs',glorys.sal_abs,'doy',...
+    repmat(doy,length(glorys.longitude),length(glorys.latitude)),...
+    'year',repmat(y,length(glorys.longitude),length(glorys.latitude)));
+oxy = reshape(oxy,length(glorys.longitude),length(glorys.latitude));
+
+% plot esper o2 (130m)
+figure('Position',[100 100 1000 600]);
+worldmap(lat_lims,lon_lims);
+pcolorm(double(glorys.latitude),double(glorys.longitude),double(oxy)');
+title({'Empirical Oxygen from GLORYS (GOBAI alg.)';['(' ...
+    datestr(datenum(1950,1,1,double(glorys.time),0,0),'mmm-dd-yyyy') ...
+    ', ' num2str(depth) ' m, \mumol kg^{-1})']},'FontSize',16);
+shading flat; colorbar; caxis([0 300]);
+colormap(cmocean('ice'));
+plot_land('map'); mlabel off; plabel off;
+export_fig(gcf,['Figures/GLORYS_O2_' sprintf('%02d',m) '-' num2str(y) ...
+    '-' num2str(depth) 'm.png'],'-transparent');
+close
+
 % plot bgc hindcast o2 (133m)
 figure('Position',[100 100 1000 600]);
 worldmap(lat_lims,lon_lims);

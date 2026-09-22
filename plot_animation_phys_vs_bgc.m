@@ -2,7 +2,7 @@
 % comparing between physical and biogeochemical products
 function plot_animation_phys_vs_bgc(plot_year,plot_depth,param_to_plot_phys,...
     param_to_plot_bgc,type,reg,quant,lat_lims,lon_lims,val_lims_1,step_val_1,...
-    val_lims_2,step_val_2,show_fig,txt_align,stop_opt)
+    val_lims_2,step_val_2,show_fig,txt_align,stop_opt,eez)
 
 % define properties [T S O2 NO3 DIC]
 param1 = {'TEMP' 'SAL' 'O2' 'NO3' 'DIC'};
@@ -34,21 +34,21 @@ if strcmp(param_to_plot_bgc,'o2')
     if strcmp(type,'lr')
         vrs_bgc = 'v2.3';
     elseif strcmp(type,'hr')
-        vrs_bgc = 'v1.1-HR';
+        vrs_bgc = 'HR-v1.3';
     end
     param_idx_bgc = 3;
 elseif strcmp(param_to_plot_bgc,'no3')
     if strcmp(type,'lr')
         vrs_bgc = 'v1.0';
     elseif strcmp(type,'hr')
-        vrs_bgc = 'v1.1-HR';
+        vrs_bgc = 'HR-v1.3';
     end
     param_idx_bgc = 4;
 elseif strcmp(param_to_plot_bgc,'dic')
     if strcmp(type,'lr')
         vrs_bgc = 'v1.0';
     elseif strcmp(type,'hr')
-        vrs_bgc = 'v1.1-HR';
+        vrs_bgc = 'HR-v1.3';
     end
     param_idx_bgc = 5;
 else
@@ -67,10 +67,10 @@ end
 % define file names
 if strcmp(type,'lr')
     file_phys = ['RG_Climatology_' param2{param_idx_phys} '.nc'];
-    file_bgc = ['GOBAI-' param1{param_idx_bgc} '-' vrs_bgc '.nc'];
+    file_bgc = ['GOBAI-' param1{param_idx_bgc} '-HR-v202606.nc'];
 elseif strcmp(type,'hr')
     file_phys = ['RFROMV' vrs_phys(2) vrs_phys(4) '_' param1{param_idx_phys} '_STABLE_'];
-    file_bgc = ['GOBAI-' param1{param_idx_bgc} '-' vrs_bgc '.nc'];
+    file_bgc = ['GOBAI-' param1{param_idx_bgc} '-HR-v202606.nc'];
 end
 
 % define gif names
@@ -165,8 +165,13 @@ end
 for t = 1:length(time_idx_phys)
 
     % establish figure
-    h = figure('color','w','visible',show_fig,'Position',[616 474 1600 800]);
-    tiledlayout(1,2,'TileSpacing','compact','Padding','compact');
+    if strcmp(reg,'us')
+        h = figure('color','w','visible',show_fig,'Position',[616 474 800 1000]);
+        tiledlayout(2,1,'TileSpacing','compact','Padding','compact');
+    else
+        h = figure('color','w','visible',show_fig,'Position',[616 474 1600 800]);
+        tiledlayout(1,2,'TileSpacing','compact','Padding','compact');
+    end
 
     % load monthly gobai (old)
     nexttile;
@@ -188,7 +193,7 @@ for t = 1:length(time_idx_phys)
     % make plot for physical file
     make_plot(Latitude_phys,Longitude_phys,lat_lims,lon_lims,z_phys,time_phys,...
         val_lims_1,step_val_1,t,param1{param_idx_phys},reg,plot_depth,...
-        vrs_phys,'phys',quant,txt_align);
+        vrs_phys,'phys',quant,txt_align,eez);
 
     % load monthly gobai (old)
     nexttile;
@@ -221,7 +226,7 @@ for t = 1:length(time_idx_phys)
     % make plot for bgc file
     make_plot(Latitude_bgc,Longitude_bgc,lat_lims,lon_lims,z_bgc,...
         time_bgc,val_lims_2,step_val_2,t,param1{param_idx_bgc},reg,plot_depth,...
-        vrs_bgc,'bgc',quant,txt_align);
+        vrs_bgc,'bgc',quant,txt_align,eez);
 
     % capture frame and write video
     % open(v);
@@ -261,12 +266,12 @@ for t = 1:length(time_idx_phys)
 end
 
     function c = make_plot(lat,lon,lat_lims,lon_lims,z,time,val_lims,...
-    step_val,t,param,reg,depth,vrs,type,quant,txt_align)
+    step_val,t,param,reg,depth,vrs,type,quant,txt_align,eez)
 
     % make plot for 1x1 file
     if strcmp(reg,'so')
         m_proj('stereographic','lon',0,'lat',-90,'radius',60);
-    elseif strcmp(reg,'other')
+    elseif strcmp(reg,'other') | strcmp(reg,'us')
         m_proj('miller','lon',lon_lims,'lat',lat_lims);
     end
     % z = [gobai(~idx_20,:);gobai(idx_20,:)];
@@ -286,12 +291,25 @@ end
     if strcmp(reg,'so')
         m_grid('linestyle','-','ytick',-90:20:90,...
             'xtick',-180:30:180,'xaxislocation','top');
-    elseif strcmp(reg,'other')
+    elseif strcmp(reg,'other') | strcmp(reg,'us')
         m_grid('linestyle','none','ytick',-90:10:90,...
             'xtick',0:10:360);
     end
-    set(gca,'XAxisLocation','bottom')
-    m_coast('patch',[0.9 0.9 0.9]);
+    set(gca,'XAxisLocation','bottom');
+    % plot borders around EEZs if applicable
+    if strcmp(eez,'eez_on')
+        shape_filename = 'USMaritimeLimitsAndBoundariesSHP/USMaritimeLimitsNBoundaries.shp';
+        S = shaperead(shape_filename);
+        hold on;
+        for k = 1:length(S)
+            if isfield(S(k), 'X') && isfield(S(k), 'Y')
+                lons = S(k).X; lons(lons<0) = lons(lons<0)+360; lats = S(k).Y;
+                m_line(lons, lats, 'color', 'k', 'linewidth', 0.25);
+            end
+        end
+    end
+    % plot land
+    m_coast('patch',[0.9 0.9 0.9],'linewidth',1);
     % define display date
     if mean(diff(time)) < 10 % check for HR vs LR
         disp_date = datestr(time(t),'dd-mmm-yyyy');
@@ -301,10 +319,10 @@ end
     % define text for version
     if strcmp(type,'bgc')
         % disp_vrs = ['GOBAI-' vrs];
-        disp_vrs = 'GOBAI-HR-v1.1';
+        disp_vrs = 'GOBAI';
     elseif strcmp(type,'phys')
         % disp_vrs = ['RFROM-' vrs];
-        disp_vrs = 'RFROM-v2.3';
+        disp_vrs = 'RFROM';
     end
     % add text to plot
     if strcmp(txt_align,'left'); lon_pos = min(lon_lims);
@@ -313,6 +331,10 @@ end
     if strcmp(reg,'so')
         m_text(0,-87,disp_date,'HorizontalAlignment','center','FontSize',12);
         text(-0.8,.95,'FontSize',14,'HorizontalAlignment','right');
+    elseif strcmp(reg,'us')
+        m_text(lon_pos,min(lat_lims)+2,{disp_vrs;[num2str(depth) ' dbars'];disp_date},...
+            'HorizontalAlignment',txt_align,'VerticalAlignment','bottom',...
+            'BackgroundColor','w','FontWeight','Bold','FontSize',16);
     elseif strcmp(reg,'other')
         m_text(lon_pos,max(lat_lims),{disp_vrs;[num2str(depth) ' dbars'];disp_date},...
             'HorizontalAlignment',txt_align,'VerticalAlignment','top',...

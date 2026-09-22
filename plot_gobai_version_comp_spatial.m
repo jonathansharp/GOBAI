@@ -9,11 +9,11 @@ lat = ncread(fname1,'lat');
 pres = ncread(fname1,'pres');
 time1 = ncread(fname1,'time');
 time2 = ncread(fname2,'time');
-gobai1 = squeeze(ncread(fname1,'uncer',[1 1 11 1],[Inf Inf 1 Inf]));
-gobai2= squeeze(ncread(fname2,'uncer',[1 1 11 1],[Inf Inf 1 Inf]));
+gobai1 = squeeze(ncread(fname1,'oxy',[1 1 11 1],[Inf Inf 1 Inf]));
+gobai2= squeeze(ncread(fname2,'oxy',[1 1 11 1],[Inf Inf 1 Inf]));
 
-gobai1 = squeeze(mean(mean(gobai1,1,'omitnan'),2,'omitnan'));
-gobai2 = squeeze(mean(mean(gobai2,1,'omitnan'),2,'omitnan'));
+gobai1 = squeeze(mean(gobai1,3,'omitnan'));
+gobai2 = squeeze(mean(gobai2,3,'omitnan'));
 
 figure('position',[100 100 800 500]);
 worldmap([-90 90],[20 380]);

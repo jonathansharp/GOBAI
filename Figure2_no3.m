@@ -1,53 +1,25 @@
 % plot Figure 2 for Sharp et al. (in prep) GOBAI-O2 and GOBAI-NO3 Paper
 
 figure('Position',[100 100 800 850],'Visible','off');
-dot_size = 1;
-
-% define colors
-baseHex = {'#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3'};
-baseRGB = zeros(4, 3);
-for i = 1:4
-    baseRGB(i, :) = sscanf(baseHex{i}(2:end), '%2x', 3)' / 255;
-end
-numSteps = 5; clrs = zeros(20, 3);
-extendedHex = cell(20, 1); counter = 1;
-for i = 1:4
-    c = baseRGB(i, :);
-    % Step 1: Very light tint (75% White, 25% Color)
-    clrs(counter, :) = 0.75 * [1,1,1] + 0.25 * c;
-    % Step 2: Light tint (40% White, 60% Color)
-    clrs(counter+1, :) = 0.40 * [1,1,1] + 0.60 * c;
-    % Step 3: Original pastel color (100% Color)
-    clrs(counter+2, :) = c;
-    % Step 4: Medium shade (Softly deepened)
-    clrs(counter+3, :) = c * 0.85;
-    % Step 5: Dark shade (Provides high contrast for text/lines)
-    clrs(counter+4, :) = c * 0.60;
-    % extend counter
-    counter = counter + 5;
-end
+dot_size = 2;
+clrs = jet(20);
 
 %% load interpolated float and glodap data for o2
-load('O2/Data/GMM/all_data_clusters_20_fgoc_Jun-2026_D_A.mat');
+load('NO3/Data/GMM/all_data_clusters_20_fgo_Jun-2026_D_A.mat');
 clusts = fieldnames(all_data_clusters);
 for c = 1:length(clusts)-1
     all_data_clusters = rmfield(all_data_clusters,['c' num2str(c)]);
 end
-load('O2/Data/processed_all_o2_data_fgoc_Jun-2026_D_A.mat');
+load('NO3/Data/processed_all_no3_data_fgo_Jun-2026_D_A.mat');
 
 %% define pressures
 press = [10;200;400;1250];
-height = 0.24; width = 0.43;
-% pos = [0.01 0.68 width height;...
-%        0.51 0.68 width height;...
-%        0.01 0.42 width height;...
-%        0.51 0.42 width height;...
-%        0.08 0.08 0.9 0.35];
-pos = [0.01 0.74 width height;...
-    0.01 0.49 width height;...
-    0.01 0.24 width height;...
-    0.01 0.0 width height;...
-    0.46 0.05 0.44 0.8];
+height = 0.33; width = 0.48;
+pos = [0.01 0.68 width height;...
+       0.51 0.68 width height;...
+       0.01 0.42 width height;...
+       0.51 0.42 width height;...
+       0.08 0.08 0.9 0.35];
 
 for p = 1:length(press)
 
@@ -56,6 +28,7 @@ for p = 1:length(press)
     idx = all_data.pressure == press(p);
 
     %% Map for full period
+
     % plot map
     ax.(['ax' num2str(p)]) = axes('Position',pos(p,:));
     m_proj('robinson','lon',[20 380]);
@@ -101,21 +74,20 @@ end
 
 % plot percentages
 set(gca,'TickLength',[0 0]);
-b=barh(categorical(unique_pressure),cluster_per,'stacked');
+b=bar(categorical(unique_pressure),cluster_per,'stacked');
 bar_w = 0.9; 
 for k=1:numel(b)
     b(k).FaceColor = clrs(k,:);
     b(k).BarWidth = bar_w;
 end
-set(gca,'YDir','reverse','YAxisLocation','right');
-xlim([0 100]);
-xlabel('Cluster %','FontSize',12);
-ylabel('Pressure','FontSize',12);
-legend(string(clusters),'NumColumns',5,...
-    'Direction','normal','Position',[0.63 0.86 0.1 0.1]);
+ylim([0 100]);
+ylabel('Cluster %','FontSize',12);
+xlabel('Pressure','FontSize',12);
+legend(fliplr(string(clusters)),'Location','northoutside','NumColumns',10,...
+    'Direction','normal');
 
 % add text
-annotation('textbox', [0.2 0.53 1 0.9], ...
+annotation('textbox', [0 0 1 0.9], ...
     'String', 'Cluster Number', ...
     'EdgeColor', 'none', ...
     'HorizontalAlignment', 'center', ...
@@ -131,12 +103,12 @@ for i = 1:length(highlight_idx)
     x_left   = x_center - (bar_w / 2);
     % Draw a highlighted border around the entire stacked bar (0 to 100%)
     rectangle(ax.ax5, ...
-        'Position', [0, x_left, 100 bar_w], ...
+        'Position', [x_left, 0, bar_w, 100], ...
         'EdgeColor', 'k', ...         % Outline color (Black)
         'LineWidth', 3.0, ...         % Thickness of outline
         'LineStyle', '-');            % Use '--' if you want dashed highlights
 end
 hold(ax.ax5, 'off');
 
-export_fig(gcf,'Figures/Figure2_cluster_distribution.png','-transparent');
+export_fig(gcf,'Figures/Figure2_no3_cluster_distribution.png','-transparent');
 close
