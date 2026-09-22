@@ -17,7 +17,7 @@ if snap_download == 1
     
     % set search patterns for parsing of web page
     pattern = 'BGC Sprof data files (';
-    pat_month = 'BGC Sprof data files \(20\d{2}-\d{2}-\d{2} snapshot\)';
+    pat_month = 'BGC Sprof data files \(20\d{2}-\d{2}-\d{2} snapshot\)\(CHLA reprocessing\)';
     mth_idx = length(pattern) + 1; % first character of YYYY-MM
     
     % download the web page that contains the links to all snapshots
@@ -36,22 +36,47 @@ if snap_download == 1
     snap_url = {};
     count = 0;
     for i = 1:length(idx)
-        this_link = page(idx(i):idx(i)+400);
+        this_link = page(idx(i):min(idx(i)+1200, length(page)));
         match_month = regexp(this_link, pat_month, 'match', 'once');
-        pat_url = '"fileUrl":"http[\w/:.]+"';
-        match_url = regexp(this_link, pat_url, 'match', 'once');
-        pat_size = '"size":\d+';
+        % pat_url = '"fileUrl":"http[\w/:.]+"';
+        % match_url = regexp(this_link, pat_url, 'match', 'once');
+        pat_url = 'href\s*=\s*"([^"]+)"';
+        match_url_tokens = regexp(this_link, pat_url, 'tokens', 'once');
+        % pat_size = '"size":\d+';
+        % match_size = regexp(this_link, pat_size, 'match', 'once');
+        pat_size = '\d+(\.\d+)?\s*(Go|Mo|GB|MB|KB|Ko)';
         match_size = regexp(this_link, pat_size, 'match', 'once');
         % note that some snapshots are only available on demand, for those,
         % there is no fileUrl entry
-        if ~isempty(match_month) && ~isempty(match_url)
+        if ~isempty(match_month)
             count = count + 1;
             year = str2double(match_month(mth_idx:mth_idx+3));
             month = str2double(match_month(mth_idx+5:mth_idx+6));
             snap_month(count) = 100 * year + month;
-            snap_url{count} = match_url(12:end-1);
+            % Check if a URL href was found
+            if ~isempty(match_url_tokens)
+                snap_url{count} = match_url_tokens{1};
+                % fprintf('snapshot URL identified from SEANOE');
+            else
+                % Fallback for Argo GDAC / SEANOE standard snapshot naming scheme
+                % e.g., https://data-argo.ifremer.fr/snapshot/argo_bgc_flags_202608.zip
+                snap_url{count} = sprintf('https://data-argo.ifremer.fr/snapshot/argo_bgc_%04d%02d.zip', year, month);
+                % fprintf('snapshot URL identified from IFREMER');
+            end
+            % Parse human-readable size string
             if ~isempty(match_size)
-                snap_size(count) = uint64(str2double(match_size(8:end)));
+                parts = strsplit(strtrim(match_size));
+                num = str2double(parts{1});
+                unit = upper(parts{2});
+            
+                % Convert to approximate bytes
+                if contains(unit, {'GO', 'GB'})
+                    snap_size(count) = uint64(num * 1024^3);
+                elseif contains(unit, {'MO', 'MB'})
+                    snap_size(count) = uint64(num * 1024^2);
+                else
+                    snap_size(count) = uint64(num);
+                end
             else
                 snap_size(count) = -1;
             end
@@ -522,8 +547,16 @@ disp('Float data processed and saved.')
 
 else
 
-% display information
+%% display information
 disp('Float data already processed.')
+
+%% save processed float data
+load([param_props.dir_name '/Data/processed_float_' ...
+    param_props.file_name '_data_' file_date float_file_ext '.mat'],'float_data');
+
+%% display the number of matching floats and profiles
+disp(['# of matching Argo profiles (' param_props.argo_name '): ' num2str(length(unique(float_data.PROF_ID)))]);
+disp(['# of matching Argo floats (' param_props.argo_name '): ' num2str(length(unique(float_data.FLOAT)))]);
 
 end
 

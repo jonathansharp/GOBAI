@@ -6,10 +6,10 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 11/7/2024
+% DATE: 7/28/2026
 
 function calculate_uncertainty(param_props,base_grid,fpaths,...
-    model_types,num_clusters,numWorkers_predict,file_date,...
+    model_types,num_clusters,numWorkers_predict,file_date,snap_date,...
     float_file_ext,glodap_year,train_ratio,val_ratio,test_ratio,...
     flt,gld,osd,ctd)
 
@@ -24,8 +24,9 @@ gobai_alg_dir = ...
     [fpaths.param_path 'GOBAI/' base_grid '/FFNN/c' num2str(num_clusters) ...
     '_' file_date float_file_ext '/train' num2str(100*train_ratio) ...
     '_val' num2str(100*val_ratio) '_test' num2str(100*test_ratio) '/' ...
-    float_ext glodap_ext ctd_ext '/'];
-gobai_filepath = [gobai_alg_dir 'gobai-' param_props.file_name '.nc'];
+    float_ext glodap_ext osd_ext ctd_ext '/'];
+gobai_filepath = [gobai_alg_dir 'GOBAI-' param_props.dir_name '-HR-v' ...
+            num2str(snap_date) '.nc'];
 
 %% load gobai dimensions
 lon = ncread(gobai_filepath,'lon');
@@ -38,7 +39,7 @@ lon_0_360 = convert_lon(lon,'format','0-360');
 %% calculate gridding uncertainty
 % load data
 load([param_props.dir_name '/Data/processed_all_' ...
-    param_props.file_name '_data_' float_ext glodap_ext ctd_ext ...
+    param_props.file_name '_data_' float_ext glodap_ext osd_ext ctd_ext ...
     '_' file_date float_file_ext '.mat'],'all_data');
 % convert longitude
 all_data.longitude = convert_lon(all_data.longitude,'format','0-360');
@@ -56,65 +57,78 @@ pres_edges = [0 5:10:175 190:20:450 475:50:1375 1450:100:1950 2000];
 subs = [Xnum,Ynum,Znum];
 sz = [length(lon),length(lat),length(pres)];
 idx = ~any(subs==0,2);
-stdev_grid = accumarray(subs,all_data.(param_props.file_name),sz,@nanstd,nan);
-sigma_grid = accumarray(subs,all_data.sigma,sz,@nanmean,nan);
-% test plot
-% figure; set(gcf,'position',[100 100 800 400]);
-% pcolor(lon,lat,stdev_grid(:,:,11)'); shading flat; colorbar;
-% caxis([0 30]); colormap(cmocean('balance','pivot',0));
+stdev_grid = accumarray(subs,all_data.(param_props.file_name),sz,@nanstd);
+sigma_grid = accumarray(subs,all_data.sigma,sz,@nanmean);
+stdev_grid(stdev_grid==0) = NaN;
+sigma_grid(sigma_grid==0) = NaN;
 % calculate distance from coast
 dist_3d = dist2coast(lat_3d,lon_0_360_3d);
 % calculate bottom depth
 bot_3d = bottom_depth(lat_3d,lon_0_360_3d);
+% test plot
+% figure; set(gcf,'position',[100 100 800 400]);
+% pcolor(lon,lat,stdev_grid(:,:,11)'); shading flat; colorbar;
+% caxis([0 30]); colormap(cmocean('balance','pivot',0));
 % fit model of variability vs depth, sigma, and bottom depth
 idx = ~isnan(stdev_grid) & ~isnan(pres_3d) & ~isnan(sigma_grid) & ~isnan(bot_3d);
-[b,~,~,~,stats] = regress(stdev_grid(idx),[ones(size(stdev_grid(idx))) ...
-            pres_3d(idx) pres_3d(idx).^2 sigma_grid(idx) ...
-            sigma_grid(idx).^2 bot_3d(idx) bot_3d(idx).^2]);
+y = log10(stdev_grid(idx));
+X = [ones(size(y)) pres_3d(idx) dist_3d(idx) bot_3d(idx)];
+[b,~,~,~,stats] = regress(y,X);
+gobai_grid_uncer_main = 10.^(b(1) + b(2).*pres_3d + ...
+    b(3).*dist_3d + b(4).*bot_3d);
 
 %% calculate algorithm uncertainty
 % loop through each model
-for m = 1%:length(model_types)
-        % gobai filepath
-        osse_filepath{m} = ...
-            [fpaths.param_path 'GOBAI/' model_types{m} '/FFNN/c' ...
-            num2str(num_clusters) '_' file_date float_file_ext '/train' ...
-                num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' ...
-                num2str(100*test_ratio) '/' float_ext glodap_ext ctd_ext ...
-                '/gobai-' param_props.file_name '.nc'];
-        % delta filepath
-        delta_filepath{m} = ...
-            [fpaths.param_path 'GOBAI/' model_types{m} '/DELTA/c' ...
-            num2str(num_clusters) '_' file_date float_file_ext '/' ...
-            float_ext glodap_ext ctd_ext];
-        % load osse dimensions
-        osse_lat = ncread(osse_filepath{m},'lat');
-        osse_lon = ncread(osse_filepath{m},'lon');
-        osse_depth = ncread(osse_filepath{m},'depth');
-        osse_time = ncread(osse_filepath{m},'time');
-        % calculate pressure
-        [osse_lon_3d{m},osse_lat_3d{m},osse_depth_3d] = ...
-            ndgrid(osse_lon,osse_lat,osse_depth);
-        osse_pres_3d{m} = gsw_p_from_z(-abs(osse_depth_3d),osse_lat_3d{m});
-        clear osse_depth_3d
+for m = 1:length(model_types)
+        
+    % gobai filepath
+    osse_filepath{m} = ...
+        [fpaths.param_path 'GOBAI/' model_types{m} '/FFNN/c' ...
+        num2str(num_clusters) '_' file_date float_file_ext '/train' ...
+            num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' ...
+            num2str(100*test_ratio) '/' float_ext glodap_ext osd_ext ctd_ext ...
+            '/GOBAI-' param_props.dir_name '-HR-v' num2str(snap_date) '.nc'];
+    
+    % delta filepath
+    delta_filepath{m} = ...
+        [fpaths.param_path 'GOBAI/' model_types{m} '/DELTA/c' ...
+        num2str(num_clusters) '_' file_date float_file_ext '/' ...
+        float_ext glodap_ext osd_ext ctd_ext];
+    
+    % load osse dimensions
+    osse_lat = ncread(osse_filepath{m},'lat');
+    osse_lon = ncread(osse_filepath{m},'lon');
+    osse_depth = ncread(osse_filepath{m},'depth');
+    osse_time = ncread(osse_filepath{m},'time');
+    
+    % calculate pressure
+    [osse_lon_3d{m},osse_lat_3d{m},osse_depth_3d] = ...
+        ndgrid(osse_lon,osse_lat,osse_depth);
+    osse_pres_3d{m} = gsw_p_from_z(-abs(osse_depth_3d),osse_lat_3d{m});
+    clear osse_depth_3d
+
 end
 
 % set up parallel pool
-%tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 % loop through each timestep
-for t = 1%:length(time)
+parfor t = 1:length(time)
+    
     % read in gobai for timestep and pre-define delta
     gobai = ncread(gobai_filepath,param_props.file_name,...
             [1 1 1 t],[Inf Inf Inf 1]);
     idx_gobai = ~isnan(gobai);
     gobai_delta = nan([size(gobai),length(model_types)]);
+    
     % loop through each model
-    for m = 1%:length(model_types)
+    for m = 1:length(model_types)
+        
         % load difference between model and reconstruction
         delta_o2 = ncread([delta_filepath{m} '/delta_gobai-' ...
             param_props.file_name '.nc'],['delta_' param_props.file_name],...
             [1 1 1 t],[Inf Inf Inf 1]);
+        
         % interpolate to gobai
         idx_del = ~isnan(delta_o2); % index to valid points for interpolation
         interp_temp = scatteredInterpolant(osse_lon_3d{m}(idx_del),...
@@ -124,6 +138,7 @@ for t = 1%:length(time)
         gobai_delta_temp(idx_gobai) = interp_temp(lon_0_360_3d(idx_gobai),...
             lat_3d(idx_gobai),pres_3d(idx_gobai));
         gobai_delta(:,:,:,m) = gobai_delta_temp;
+
     end
 
     % calculate algorithm uncertainty as root mean squared differences
@@ -134,24 +149,14 @@ for t = 1%:length(time)
     gobai_meas_uncer = gobai.*0.03;
 
     % calculate gridding uncertainty
-    dates = datevec(time+datenum(1950,1,1));
-    week = ceil(dates(:,3)/7);
-    abs_sal = ncread([fpaths.temp_path 'RFROM_TEMP_v2.2_2025/RFROMV22_TEMP_STABLE_' ...
-                num2str(dates(t)) '_' sprintf('%02d',dates(t,3)) '.nc'],...
-                'ocean_temperature',[1 1 1 week(t)],[Inf Inf Inf 1]);
-    cns_tmp = ncread([fpaths.sal_path 'RFROM_SAL_v2.2_2025/RFROMV22_SAL_STABLE_' ...
-                num2str(dates(t)) '_' sprintf('%02d',dates(t,3)) '.nc'],...
-                'ocean_salinity',[1 1 1 week(t)],[Inf Inf Inf 1]);
-    sigma_3d = gsw_sigma0(abs_sal,cns_tmp);
-    gobai_grid_uncer = b(1) + b(2).*pres_3d + b(3).*pres_3d.^2 + ...
-        b(4).*sigma_3d + b(5).*sigma_3d.^2 + b(6).*bot_3d + b(7).*bot_3d.^2;
+    gobai_grid_uncer = gobai_grid_uncer_main;
     gobai_grid_uncer(~idx_gobai) = NaN;
     % figure; pcolor(lon,lat,gobai_grid_uncer(:,:,11)'); shading flat; colorbar; clim([0 15]);
 
     % save uncertainty for timestep in temporary files
     filename = [gobai_alg_dir 'gobai-' param_props.file_name '-uncer-' num2str(t) '.nc'];
     if exist(filename,'file')==2; delete(filename); end
-    % time
+    % save time for timestep in temporary files
     nccreate(filename,'time','Dimensions',{'time' 1});
     ncwrite(filename,'time',time(t));
     % % algorithm uncertainty
@@ -174,7 +179,7 @@ for t = 1%:length(time)
     ncwrite(filename,['u_tot_' param_props.file_name],gobai_tot_uncer);
 
     % display information
-    % fprintf(['Algorithm Uncertainty Obtained for']);
+    fprintf(['Algorithm Uncertainty Obtained for ' datestr(datenum(1950,1,1+time(t)))]);
 
 end
 
@@ -183,24 +188,23 @@ delete(gcp('nocreate'));
 
 %% concatenate gobai uncertainty in main file
 % create NetCDF that will be end result
-create_nc_file(gobai_alg_dir,param_props,lon,lat,pres);
-% 
+filename = create_nc_file(gobai_alg_dir,param_props,lon,lat,pres,snap_date);
+% loop through files
 files = dir([gobai_alg_dir 'gobai-' param_props.file_name '-uncer-*.nc']); % count uncertainty files in folder
-filename = [gobai_alg_dir 'gobai-' param_props.file_name '-uncer.nc'];
 for cnt = 1:length(files)
     % define file name
     filename_temp = [gobai_alg_dir 'gobai-' param_props.file_name '-uncer-' num2str(cnt) '.nc'];
     % read information from temporary file and write it to main file
     time = ncread(filename_temp,'time'); % read
     ncwrite(filename,'time',time,cnt); % write
-    gobai_3d = ncread(filename_temp,['u_alg_' param_props.file_name]); % read
-    ncwrite(filename,['u_alg_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
+    % gobai_3d = ncread(filename_temp,['u_alg_' param_props.file_name]); % read
+    % ncwrite(filename,['u_alg_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
     % gobai_3d = ncread(filename_temp,['u_meas_' param_props.file_name]); % read
     % ncwrite(filename,['u_meas_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
     % gobai_3d = ncread(filename_temp,['u_grid_' param_props.file_name]); % read
     % ncwrite(filename,['u_grid_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
-    % gobai_3d = ncread(filename_temp,['u_tot_' param_props.file_name]); % read
-    % ncwrite(filename,['u_tot_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
+    gobai_3d = ncread(filename_temp,['u_tot_' param_props.file_name]); % read
+    ncwrite(filename,['u_tot_' param_props.file_name],gobai_3d,[1 1 1 cnt]); % write
     % delete temporary file
     delete(filename_temp);
 end
@@ -208,30 +212,31 @@ end
 end
 
 %% for creating main netCDF file
-function create_nc_file(gobai_alg_dir,param_props,lon,lat,pres)
+function filename = create_nc_file(gobai_alg_dir,param_props,lon,lat,pres,snap_date)
 
 xdim = length(lon);
 ydim = length(lat);
 zdim = length(pres);
 
 % define file name
-filename = [gobai_alg_dir 'gobai-' param_props.file_name '-uncer.nc'];
+filename = [gobai_alg_dir 'GOBAI-' param_props.dir_name '-HR-v' ...
+    num2str(snap_date) '-Uncer.nc'];
 
 % create folder and file
 if ~isfolder(gobai_alg_dir); mkdir(gobai_alg_dir); end
 if isfile(filename); delete(filename); end % delete file if it exists
-% bgc parameter (alg)
-nccreate(filename,['u_alg_' param_props.file_name],'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
-    'DataType','single','FillValue',NaN);
-ncwriteatt(filename,['u_alg_' param_props.file_name],'units',param_props.units);
-% bgc parameter (meas)
-nccreate(filename,['u_meas_' param_props.file_name],'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
-    'DataType','single','FillValue',NaN);
-ncwriteatt(filename,['u_meas_' param_props.file_name],'units',param_props.units);
-% bgc parameter (grid)
-nccreate(filename,['u_grid_' param_props.file_name],'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
-    'DataType','single','FillValue',NaN);
-ncwriteatt(filename,['u_grid_' param_props.file_name],'units',param_props.units);
+% % bgc parameter (alg)
+% nccreate(filename,['u_alg_' param_props.file_name],'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
+%     'DataType','single','FillValue',NaN);
+% ncwriteatt(filename,['u_alg_' param_props.file_name],'units',param_props.units);
+% % bgc parameter (meas)
+% nccreate(filename,['u_meas_' param_props.file_name],'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
+%     'DataType','single','FillValue',NaN);
+% ncwriteatt(filename,['u_meas_' param_props.file_name],'units',param_props.units);
+% % bgc parameter (grid)
+% nccreate(filename,['u_grid_' param_props.file_name],'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
+%     'DataType','single','FillValue',NaN);
+% ncwriteatt(filename,['u_grid_' param_props.file_name],'units',param_props.units);
 % bgc parameter (tot)
 nccreate(filename,['u_tot_' param_props.file_name],'Dimensions',{'lon',xdim,'lat',ydim,'pres',zdim,'time',Inf},...
     'DataType','single','FillValue',NaN);

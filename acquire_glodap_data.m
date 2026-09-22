@@ -9,7 +9,7 @@
 %
 % DATE: 2/5/2025
 
-function acquire_glodap_data(param_props,glodap_year,start_year)
+function acquire_glodap_data(param_props,glodap_vrs,start_year)
 
 %% change temporary param name for DIC
 if strcmp(param_props.temp_name,'PH')
@@ -17,13 +17,12 @@ if strcmp(param_props.temp_name,'PH')
 end
 
 %% Only do all this if downloaded glodap matlab file does not exist
-if exist([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' num2str(glodap_year) '.mat'],'file') ~= 2
+if exist([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' glodap_vrs '.mat'],'file') ~= 2
 
 %% load GLODAP data
-year = num2str(glodap_year);
-glodap_data = load(['GLODAP/GLODAPv2.' year '/GLODAPv2.' year '_Merged_Master_File.mat']);
-glodap_data.time = datenum([glodap_data.G2year glodap_data.G2month ...
-                       glodap_data.G2day]);
+glodap_data = load(['GLODAP/GLODAP' glodap_vrs '/GLODAP' glodap_vrs '_Merged_Master_File.mat']);
+glodap_data.time = datenum([glodap_data.year glodap_data.month ...
+                       glodap_data.day]);
 glodap_data.date = datevec(glodap_data.time);
 glodap_data.date0 = glodap_data.date;
 glodap_data.date0(:,2:3) = 1;
@@ -35,56 +34,56 @@ set(gcf,'visible','on','position',[100 100 1600 800]);
 m_proj('robinson','lon',[20 380]);
 m_coast('patch',rgb('gray'));
 m_grid('linestyle','-','xticklabels',[],'yticklabels',[],'ytick',-90:30:90);
-lon_temp = convert_lon(glodap_data.G2longitude,'format','-180-180');
+lon_temp = convert_lon(glodap_data.longitude,'format','-180-180');
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
-m_scatter(lon_temp,glodap_data.G2latitude,'.k');
+m_scatter(lon_temp,glodap_data.latitude,'.k');
 hold off;
 clear lon_temp
 
 %% indices for glodap
-idx_nans = ~isnan(glodap_data.G2temperature) & ~isnan(glodap_data.G2pressure) & ...
-          ~isnan(glodap_data.G2salinity) & ~isnan(glodap_data.(param_props.glodap_name));
-idx_qc = glodap_data.G2salinityqc == 1 & ...
+idx_nans = ~isnan(glodap_data.temperature) & ~isnan(glodap_data.pressure) & ...
+          ~isnan(glodap_data.salinity) & ~isnan(glodap_data.(param_props.glodap_name));
+idx_qc = glodap_data.salinityqc == 1 & ...
     glodap_data.([param_props.glodap_name 'qc']) == 1;
 % check for good flags
-idx_flags = glodap_data.G2salinityf == 2 & glodap_data.([param_props.glodap_name 'f']) == 2;
+idx_flags = glodap_data.salinityf == 2 & glodap_data.([param_props.glodap_name 'f']) == 2;
 % check depth and/or time range
-idx_lims = glodap_data.G2pressure <= 2500 & glodap_data.G2year >= start_year;
-%idx_lims = glodap_data.G2pressure <= 2500 & glodap_data.time > datenum(2004,1,0);
+idx_lims = glodap_data.pressure <= 2500 & glodap_data.year >= start_year;
+%idx_lims = glodap_data.pressure <= 2500 & glodap_data.time > datenum(2004,1,0);
 % combine indices
 idx = idx_nans & idx_qc & idx_flags & idx_lims;
 clear idx_nans idx_qc idx_flags idx_lims
 
 %% remove extraneous data points
-if strcmp(param_props.glodap_name,'G2tco2')
-    glodap_data.G2phtsinsitutp = glodap_data.G2phtsinsitutp(idx);
-    glodap_data.G2talk = glodap_data.G2talk(idx);
-    glodap_data.G2oxygen = glodap_data.G2oxygen(idx);
-    glodap_data.G2nitrate = glodap_data.G2nitrate(idx);
-elseif strcmp(param_props.glodap_name,'G2nitrate')
-    glodap_data.G2oxygen = glodap_data.G2oxygen(idx);
+if strcmp(param_props.glodap_name,'tco2')
+    glodap_data.phtsinsitutp = glodap_data.phtsinsitutp(idx);
+    glodap_data.talk = glodap_data.talk(idx);
+    glodap_data.oxygen = glodap_data.oxygen(idx);
+    glodap_data.nitrate = glodap_data.nitrate(idx);
+elseif strcmp(param_props.glodap_name,'nitrate')
+    glodap_data.oxygen = glodap_data.oxygen(idx);
 end
 glodap_data.(param_props.glodap_name) = glodap_data.(param_props.glodap_name)(idx);
-glodap_data.G2latitude = glodap_data.G2latitude(idx);
-glodap_data.G2longitude = glodap_data.G2longitude(idx);
-glodap_data.G2pressure = glodap_data.G2pressure(idx);
-glodap_data.G2temperature = glodap_data.G2temperature(idx);
-glodap_data.G2salinity = glodap_data.G2salinity(idx);
+glodap_data.latitude = glodap_data.latitude(idx);
+glodap_data.longitude = glodap_data.longitude(idx);
+glodap_data.pressure = glodap_data.pressure(idx);
+glodap_data.temperature = glodap_data.temperature(idx);
+glodap_data.salinity = glodap_data.salinity(idx);
 glodap_data.time = glodap_data.time(idx);
-glodap_data.G2year = glodap_data.G2year(idx);
+glodap_data.year = glodap_data.year(idx);
 glodap_data.day = glodap_data.day(idx);
-glodap_data.G2cruise = double(glodap_data.G2cruise(idx));
-glodap_data.G2station = glodap_data.G2station(idx);
-glodap_data.G2id = glodap_data.G2cruise.*100000+glodap_data.G2station;
+glodap_data.cruise = double(glodap_data.cruise(idx));
+glodap_data.station = glodap_data.station(idx);
+glodap_data.id = glodap_data.cruise.*1000000+double(glodap_data.station); % increased cruise multiplier by an order of magnitude for GLODAPv3
 
 %% pre-allocate glodap data structure
-if strcmp(param_props.glodap_name,'G2tco2')
+if strcmp(param_props.glodap_name,'tco2')
     glodap_data.(param_props.temp_name) = [];
     glodap_data.PH = [];
     glodap_data.TA = [];
     glodap_data.OXY = [];
     glodap_data.NIT = [];
-elseif strcmp(param_props.glodap_name,'G2nitrate')
+elseif strcmp(param_props.glodap_name,'nitrate')
     glodap_data.(param_props.temp_name) = [];
     glodap_data.OXY = [];
 else
@@ -104,31 +103,31 @@ glodap_data.ID = [];
 %% construct depth axis on which to interpolate
 zi = ([2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
 % define variables to interpolate
-if strcmp(param_props.glodap_name,'G2tco2')
-    vars = {'G2salinity' 'G2temperature' param_props.glodap_name 'G2phtsinsitutp' 'G2talk' 'G2oxygen' 'G2nitrate'};
+if strcmp(param_props.glodap_name,'tco2')
+    vars = {'salinity' 'temperature' param_props.glodap_name 'phtsinsitutp' 'talk' 'oxygen' 'nitrate'};
     varsi = {'SAL' 'TEMP' param_props.temp_name 'PH' 'TA' 'OXY' 'NIT'};
-elseif strcmp(param_props.glodap_name,'G2nitrate')
-    vars = {'G2salinity' 'G2temperature' param_props.glodap_name 'G2oxygen'};
+elseif strcmp(param_props.glodap_name,'nitrate')
+    vars = {'salinity' 'temperature' param_props.glodap_name 'oxygen'};
     varsi = {'SAL' 'TEMP' param_props.temp_name 'OXY'};
 else
-    vars = {'G2salinity' 'G2temperature' param_props.glodap_name};
+    vars = {'salinity' 'temperature' param_props.glodap_name};
     varsi = {'SAL' 'TEMP' param_props.temp_name};
 end
 % define station ids
-stations = unique(glodap_data.G2id);
+stations = unique(glodap_data.id);
 
 %% process glodap data
 for f = 1:length(stations) % for each unique station id
 
     %% index according to station id
-    idx = glodap_data.G2id == stations(f);
+    idx = glodap_data.id == stations(f);
 
     %% interpolate
     % loop through station ids, interpolate profiles and log data
     for k = 1:numel(vars) % for each variable
 
         % get temporary pressure
-        temp_pres = glodap_data.G2pressure(idx);
+        temp_pres = glodap_data.pressure(idx);
         temp_var = glodap_data.(vars{k})(idx);
         [~,unique_idx_pres] = unique(temp_pres);
 
@@ -170,22 +169,22 @@ for f = 1:length(stations) % for each unique station id
 
     %% log extra data in interpolated data structure
     glodap_data.LAT = [glodap_data.LAT;...
-        repmat(mean(glodap_data.G2latitude(idx)),length(zi),1)];
+        repmat(mean(glodap_data.latitude(idx)),length(zi),1)];
     glodap_data.LON = [glodap_data.LON;...
-        repmat(mean(glodap_data.G2longitude(idx)),length(zi),1)];
+        repmat(mean(glodap_data.longitude(idx)),length(zi),1)];
     glodap_data.PRES = [glodap_data.PRES;zi];
     glodap_data.TIME = [glodap_data.TIME;...
         repmat(mean(glodap_data.time(idx)),length(zi),1)];
     glodap_data.YEAR = [glodap_data.YEAR;...
-        repmat(mean(glodap_data.G2year(idx)),length(zi),1)];
+        repmat(mean(glodap_data.year(idx)),length(zi),1)];
     glodap_data.DAY = [glodap_data.DAY;...
-        repmat(mean(glodap_data.G2day(idx)),length(zi),1)];
+        repmat(mean(glodap_data.day(idx)),length(zi),1)];
     glodap_data.CRU = [glodap_data.CRU;...
-        repmat(mean(glodap_data.G2cruise(idx)),length(zi),1)];
+        repmat(mean(glodap_data.cruise(idx)),length(zi),1)];
     glodap_data.ID = [glodap_data.ID;...
-        repmat(mean(glodap_data.G2id(idx)),length(zi),1)];
+        repmat(mean(glodap_data.id(idx)),length(zi),1)];
 
-    if rem(mean(glodap_data.G2cruise(idx)),1)~=0
+    if rem(mean(glodap_data.cruise(idx)),1)~=0
         keyboard
     end
 
@@ -210,22 +209,21 @@ lon_temp = convert_lon(convert_lon(glodap_data.LON));
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,glodap_data.LAT,'.g'); hold off;
 if ~exist([param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
-export_fig(gcf,[param_props.dir_name '/Figures/Data/processed_glodap_' year '.png'],'-transparent');
+export_fig(gcf,[param_props.dir_name '/Figures/Data/processed_glodap_' glodap_vrs '.png'],'-transparent');
 clear lon_temp
 
 %% clean up
 clear path idx default_names index
 
 %% remove unprocessed data
-vars = fieldnames(glodap_data);
-idx = startsWith(vars,'G2') | startsWith(vars,'expocode') | strcmp(vars,'time') | ...
-    strcmp(vars,'date') | strcmp(vars,'date0') | strcmp(vars,'day');
+vars = fieldnames(glodap_data); idx = false(length(vars),1);
+for v = 1:length(vars); idx(v) = ~strcmp(vars{v},upper(vars{v})); end
 glodap_data = rmfield(glodap_data,vars(idx));
-clear idx
+clear idx vars
 
 %% save glodap data
 if ~exist([param_props.dir_name '/Data'],'dir'); mkdir([param_props.dir_name '/Data']); end
-save([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' year '.mat'],'glodap_data');
+save([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' glodap_vrs '.mat'],'glodap_data');
 
 %% clean up
 clear glodap_data
@@ -238,6 +236,14 @@ else
 
 % display information
 disp('GLODAP data already processed.')
+
+%% load glodap data
+load([param_props.dir_name '/Data/processed_glodap_' ...
+    param_props.file_name '_data_' glodap_vrs '.mat'],'glodap_data');
+
+%% display the number of matching cruises and profiles
+disp(['# of matching GLODAP profiles (' param_props.temp_name '): ' num2str(length(unique(glodap_data.ID)))]);
+disp(['# of matching GLODAP cruises (' param_props.temp_name '): ' num2str(length(unique(glodap_data.CRU)))]);
 
 end
 

@@ -18,14 +18,14 @@ end
 % parameter path
 if strcmp(param,'o2')
     fpaths.param_path_temp = '/fast4/o2/';
-    fpaths.param_path = '/med2/o2/';
+    fpaths.param_path = '/fast4/o2/';
 elseif strcmp(param,'no3')
     fpaths.param_path_temp = '/fast5/no3/';
-    fpaths.param_path = '/med2/no3/';
-    fpaths.param_path_o2 = '/med2/o2/';
+    fpaths.param_path = '/fast5/no3/';
+    fpaths.param_path_o2 = '/fast4/o2/';
 elseif strcmp(param,'dic')
     fpaths.param_path_temp = '/fast6/dic/';
-    fpaths.param_path = '/med2/dic/';
-    fpaths.param_path_o2 = '/med2/o2/';
-    fpaths.param_path_no3 = '/med2/no3/';
+    fpaths.param_path = '/fast6/dic/';
+    fpaths.param_path_o2 = '/fast4/o2/';
+    fpaths.param_path_no3 = '/fast5/no3/';
 end

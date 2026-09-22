@@ -80,13 +80,13 @@ date_str = num2str(snap_date);
 %% directory base
 if strcmp(alg_type,'FFNN')
     dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
-        float_file_ext;train_ratio;val_ratio;test_ratio});
+        float_file_ext;train_ratio;val_ratio;test_ratio},data_per);
 elseif strcmp(alg_type,'RFR')
     dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
-        float_file_ext;numtrees;minLeafSize});
+        float_file_ext;numtrees;minLeafSize},data_per);
 elseif strcmp(alg_type,'GBM')
     dir_base = create_dir_base(alg_type,{num_clusters;file_date;...
-        float_file_ext;numstumps;numbins});
+        float_file_ext;numstumps;numbins},data_per);
 end
 
 %% load data
@@ -188,28 +188,16 @@ tStart = tic;
 folds = repelem(1:num_folds,1,num_clusters)';
 clusters = repmat(1:num_clusters,1,num_folds)';
 
+% set up parallel pool
+tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
 % fit models
-% if num_folds == 1 & strcmp(alg_type,'FFNN')
-    % set up parallel pool
-    tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
-    for cnt = 1:num_folds*num_clusters
-        train_models(param_props,num_folds,...
-            alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
-            train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
-            numtrees,minLeafSize,numstumps,numbins,thresh,'yes',...
-            folds(cnt),clusters(cnt),base_grid,coverage);
-    end
-% else
-%     % set up parallel pool
-%     tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
-%     parfor cnt = 1:num_folds*num_clusters
-%         train_models(param_props,num_folds,...
-%             alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
-%             train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
-%             numtrees,minLeafSize,numstumps,numbins,thresh,'no',...
-%             folds(cnt),clusters(cnt));
-%     end
-% end
+for cnt = 1:num_folds*num_clusters
+    train_models(param_props,num_folds,...
+        alg_dir,alg_fnames,variables,all_data,all_data_clusters,...
+        train_idx,test_idx,data_per,alg_type,train_ratio,test_ratio,val_ratio,...
+        numtrees,minLeafSize,numstumps,numbins,thresh,'yes',...
+        folds(cnt),clusters(cnt),base_grid,coverage);
+end
 
 % end parallel session
 delete(gcp('nocreate'));
@@ -296,8 +284,9 @@ fprintf(['R2 (ESPER-NN) = ' num2str(esper_r2) '\n']);
 % save predicted data
 if ~isfolder([pwd '/' kfold_dir]); mkdir(kfold_dir); end
 save([kfold_dir '/' kfold_name],'alg_output','alg_rmse',...
-    'alg_med_err','alg_mean_err','esper_output','esper_rmse',...
-    'esper_med_err','esper_mean_err','-v7.3');
+    'alg_med_err','alg_mean_err','alg_med_abs_err','alg_r2',...
+    'esper_output','esper_rmse','esper_med_err','esper_mean_err',...
+    'esper_med_abs_err','esper_r2','-v7.3');
 clear alg_output alg_rmse alg_med_err alg_mean_err
 clear esper_output esper_rmse esper_med_err esper_mean_err
 

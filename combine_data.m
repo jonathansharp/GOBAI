@@ -8,7 +8,7 @@
 %
 % DATE: 2/5/2025
 
-function combine_data(param_props,float_file_ext,glodap_year,snap_date,...
+function combine_data(param_props,float_file_ext,glodap_vrs,snap_date,...
     include_float,include_glodap,include_osd,include_ctd)
 
 %% change temporary param name for DIC
@@ -39,13 +39,13 @@ end
 if include_glodap == 1
     load([param_props.dir_name ...
         '/Data/processed_glodap_' param_props.file_name '_data_adjusted_' ...
-        num2str(glodap_year) '.mat'],'glodap_data');
+        glodap_vrs '.mat'],'glodap_data');
     glodap_vars = fieldnames(glodap_data);
 else
     glodap_data = [];
 end
 if include_ctd == 1 || include_osd == 1
-    load(['O2/Data/processed_wod_' ...
+    load([param_props.dir_name '/Data/processed_wod_' ...
         param_props.file_name '_data_adjusted_' num2str(end_year) '.mat'],...
         'wod_data');
     wod_vars = fieldnames(wod_data);
@@ -162,7 +162,7 @@ if include_glodap == 1
 end
 
 %% Add ctd to combined dataset
-if include_ctd == 1
+if include_ctd == 1 || include_osd == 1
     all_data.type = [all_data.type;wod_data.TYPE(wod_idx)+2];
     all_data.platform = [all_data.platform;wod_data.CRU(wod_idx)];
     all_data.id = [all_data.id;wod_data.ID(wod_idx)];

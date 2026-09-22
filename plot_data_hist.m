@@ -1,6 +1,9 @@
 % plot data histogram
-function plot_data_hist(param_props,file_date,start_year,end_year,float_file_ext,...
-    include_float,include_glodap,include_osd,include_ctd,y1,y2)
+function plot_data_hist(param_props,file_date,float_file_ext,...
+    include_float,include_glodap,include_osd,include_ctd,y1)
+
+% define end year
+y2 = year(datetime('now'));
 
 % define dataset extensions
 if include_float == 1; float_ext = 'f'; else float_ext = ''; end
@@ -40,8 +43,14 @@ if include_float; counts_flt = histc(y_flt,y1:y2); end
 
 % plot histogram
 if include_ctd && include_osd
-    bar(start_year:end_year,[counts_osd counts_ctd counts_gld counts_flt],'stacked');
+    bar(y1:y2,[counts_osd counts_ctd counts_gld counts_flt],'stacked');
     legend({'OSD' 'CTD' 'GLODAP' 'Argo Float'},'Location','northwest','FontSize',14);
+elseif include_ctd
+    bar(y1:y2,[counts_ctd counts_gld counts_flt],'stacked');
+    legend({'CTD' 'GLODAP' 'Argo Float'},'Location','northwest','FontSize',14);
+elseif include_osd
+    bar(y1:y2,[counts_osd counts_gld counts_flt],'stacked');
+    legend({'OSD' 'GLODAP' 'Argo Float'},'Location','northwest','FontSize',14);
 else
     bar(y1:y2,[counts_gld counts_flt],'stacked');
     legend({'GLODAP' 'Argo Float'},'Location','northwest','FontSize',14);

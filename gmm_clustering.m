@@ -87,11 +87,15 @@ end
     X_norm = X_norm(idx_rand,:);
     % fit GMM
     options = statset('MaxIter',1000); % increase max iterations to ensure convergence
+    rng(num_clusters); % for reproducibility
     gmm = fitgmdist(X_norm,num_clusters,...
         'Options',options,'CovarianceType','diagonal',...
         'SharedCovariance',true,'Replicates',20);
     % save GMM model
     save(gmm_model_name,'gmm','num_clusters','C','S','-v7.3');
+    % print information
+    disp(['GMM trained with ' num2str(num_clusters) ...
+        ' clusters for ' date_str(5:6) '/' date_str(1:4)]);
 
     % plot clusters by temperature and salinity
     % load(gmm_model_name,'gmm','num_clusters','C','S');

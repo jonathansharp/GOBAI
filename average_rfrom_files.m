@@ -1,9 +1,6 @@
 %% average RFROM files into 1x1 degree monthly files
 function average_rfrom_files(fpaths,ver,start_year,end_year)
-
-%% concatenate gobai in monthly files to match RFROM, and 1x1 degree files
-
-% define gobai monthly mean file name
+% define rfrom monthly mean file name
 filename_monthly_mean_temp = [fpaths.temp_path 'RFROM_TEMP_' ver '/' ...
     'RFROMV' ver(2) ver(4) '_TEMP_MONTHLY_MEAN_1x1.nc'];
 filename_monthly_mean_sal = [fpaths.sal_path 'RFROM_SAL_' ver '/' ...

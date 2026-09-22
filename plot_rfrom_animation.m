@@ -1,7 +1,7 @@
 
 %% Plot RFROM over time
 
-function plot_rfrom_animation(fpath,param,ver,base_grid,start_year,...
+function plot_rfrom_animation(fpaths,param,ver,base_grid,start_year,...
     end_year,min_val,max_val,step_val,varargin)
 
 %% process optional input arguments
@@ -28,10 +28,10 @@ else
 end
 
 %% set up parallel pool
-% tic; parpool(length(pressures)); fprintf('Pool initiation: '); toc;
+tic; parpool(length(pressures)); fprintf('Pool initiation: '); toc;
 
 %% plot frames
-for d = 4%1:length(pressures)
+for d = 1:length(pressures)
     % create folder for figures
     dname = ['Figures/RFROM/' ver];
     % load dimensions

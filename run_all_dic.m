@@ -3,18 +3,18 @@ t_whole_script=tic; % time entire script
 
 %% Set configuration parameters
 start_year = 1993;
-end_year = 2025;
-% end_year = year(datetime('today'));
+% end_year = 2025;
+end_year = year(datetime('today'));
 % system-specific worker configuration
-numWorkers_train = 24;
-numWorkers_predict = 24;
-numWorkers_cluster = 24;
+numWorkers_train = 60;
+numWorkers_predict = 60;
+numWorkers_cluster = 60;
 % float snapshot configuration
 snap_download = 1;
-snap_date = 202604;
+snap_date = 202606;
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
-glodap_year = 2023;
+glodap_vrs = 'v3';
 data_modes = {'D'};
 float_file_ext = '_D';
 % cluster configuration
@@ -32,9 +32,9 @@ train_ratio = 0.8;
 val_ratio = 0.1;
 test_ratio = 0.1;
 % data and parameter configuration
-data_per_kfold = 0.2; % set data reduction to 20% for k-fold
-data_per = 1; % set data reduction to 100%
-data_per_osse = 1; % set data reduction to 20% for osse
+data_per_kfold = 0.1; % set data reduction to 10% for k-fold
+data_per = 1; % set data reduction to 100% for model training
+data_per_osse = 0.2; % set data reduction to 20% for osse
 param = 'dic';
 param_props = param_config(param);
 % base grid
@@ -52,26 +52,22 @@ gld = 1;
 osd = 0;
 ctd = 0;
 
-%% plot rfrom animation
-% plot_rfrom_temp_animation(fpaths,'v2.2','RFROM',start_year,end_year)
-% plot_rfrom_sal_animation(fpaths,'v2.2','RFROM',start_year,end_year)
-
 %% load and process data
 % acquire data
 acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,0);
-acquire_glodap_data(param_props,glodap_year,start_year);
+acquire_glodap_data(param_props,glodap_vrs,start_year);
 % adjust data
-adjust_dic_float_data(float_file_ext,glodap_year,snap_date);
+adjust_dic_data(float_file_ext,glodap_vrs,snap_date,flt,gld,osd,ctd);
 % display data
-display_data(param_props,float_file_ext,glodap_year,...
+display_data(param_props,float_file_ext,glodap_vrs,...
     start_year,snap_date,flt,gld,osd,ctd);
 % combine data
 combine_data(param_props,float_file_ext,...
-    glodap_year,snap_date,flt,gld,osd,ctd);
+    glodap_vrs,snap_date,flt,gld,osd,ctd);
 
 %% plot histogram of data
-plot_data_hist(param_props,file_date,start_year,end_year,float_file_ext,...
-    flt,gld,osd,ctd,start_year,end_year);
+plot_data_hist(param_props,file_date,float_file_ext,...
+    flt,gld,osd,ctd,start_year);
 
 %% determine ideal number of clusters
 % num_clusters = [20 22 25 27 30];
@@ -133,12 +129,12 @@ plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,'FFNN',...
 %     float_file_ext,train_ratio,val_ratio,test_ratio,flt,gld,ctd,start_year,end_year)
 
 %% run OSSEs
-% run_osse(fpaths,model_types,model_folders,realizations,grid_labels,...
-%     grid_types,param_props,base_grid,...
-%     file_date,snap_date,glodap_year,float_file_ext,start_year,end_year,...
-%     num_clusters(clust_n),variables,clust_vars,train_ratio,val_ratio,test_ratio,...
-%     numtrees,minLeafSize,numstumps,numbins,thresh,data_per_osse,...
-%     numWorkers_train,numWorkers_predict,flt,gld,ctd);
+run_osse(fpaths,model_types,model_folders,realizations,grid_labels,...
+    grid_types,param_props,base_grid,...
+    file_date,snap_date,glodap_vrs,float_file_ext,start_year,end_year,...
+    num_clusters(clust_n),variables,clust_vars,train_ratio,val_ratio,test_ratio,...
+    numtrees,minLeafSize,numstumps,numbins,thresh,data_per_osse,...
+    numWorkers_train,numWorkers_predict,flt,gld,ctd);
 
 %% determine uncertainty
 % calculate_gridding_uncertainty;

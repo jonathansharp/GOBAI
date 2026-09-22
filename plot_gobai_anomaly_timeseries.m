@@ -1,6 +1,4 @@
 %% file information
-ver = 'v2.3'; % version
-var = 'O2'; % variable
 path = ['/raid/Data/GOBAI-' var '/' ver '/']; % file path
 
 %% figure information

@@ -1,6 +1,6 @@
 function subsample_cmip_model(param_props,data,model,fpath,file_date,...
-    snap_date,float_file_ext,start_year,rlz,float_ext,glodap_ext,ctd_ext,...
-    varargin)
+    snap_date,float_file_ext,start_year,rlz,float_ext,glodap_ext,...
+    osd_ext,ctd_ext,varargin)
 
 %% process date
 date_str = num2str(snap_date);
@@ -17,7 +17,7 @@ end
 
 %% check if processed file already exists
 if ~isfile([param_props.dir_name '/Data/' model '_' param_props.file_name '_data_' ...
-        float_ext glodap_ext ctd_ext '_' file_date float_file_ext '.mat'])
+        float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext '.mat'])
 
 %% load variables
 nc_filepath = [fpath 'combined/regridded/' param_props.file_name ...
@@ -175,18 +175,18 @@ for d = 1:length(depth)
     mlabel off; plabel off;
     if ~isfolder(['Figures/' model]); mkdir(['Figures/' model]); end
     export_fig(['Figures/' model '/subsampled_' param_props.fig_name '_' ...
-        float_ext glodap_ext ctd_ext coverage '_' num2str(depth(d)) 'm.png'],'-transparent');
+        float_ext glodap_ext osd_ext ctd_ext coverage '_' num2str(depth(d)) 'm.png'],'-transparent');
     close
 end
 
 %% save data
 save([param_props.dir_name '/Data/' model '_' param_props.file_name ...
-    '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext coverage '.mat'],...
+    '_data_' float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext coverage '.mat'],...
     'all_data','file_date','-v7.3');
 
 %% save data as NetCDF
 nc_fname = [param_props.dir_name '/Data/' model '_' param_props.file_name ...
-        '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext coverage '.nc'];
+        '_data_' float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext coverage '.nc'];
 if isfile(nc_fname); delete(nc_fname); end
 vars = fieldnames(all_data);
 for v = 1:length(vars)

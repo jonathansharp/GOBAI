@@ -1,4 +1,4 @@
-function acquire_wod_data(param_props,glodap_year,start_year,...
+function acquire_wod_data(param_props,glodap_vrs,start_year,...
     osd_opt,ctd_opt,numWorkers_predict)
 
 %% process parameter name
@@ -9,7 +9,7 @@ elseif strcmp(param_props.file_name,'no3')
 end
 
 %% load glodap data
-load([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' num2str(glodap_year) '.mat'],...
+load([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' glodap_vrs '.mat'],...
     'glodap_data');
 
 %% define year
@@ -196,6 +196,9 @@ parfor y = start_year:end_year
         %% pre-allocate data structure
         wod_data = struct();
         wod_data.(param_props.temp_name) = [];
+        if strcmp(param_props.file_name,'no3')
+            wod_data.OXY = [];
+        end
         wod_data.LAT = [];
         wod_data.LON = [];
         wod_data.PRES = [];
@@ -211,8 +214,14 @@ parfor y = start_year:end_year
         %% construct depth axis on which to interpolate
         zi = ([2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975])';
         % define variables to interpolate
-        vars = {var_name 'Salinity' 'Temperature'};
-        varsi = {param_props.temp_name 'SAL' 'TEMP'};
+        if strcmp(param_props.file_name,'o2')
+            vars = {var_name 'Salinity' 'Temperature'};
+            varsi = {param_props.temp_name 'SAL' 'TEMP'};
+        elseif strcmp(param_props.file_name,'no3')
+            vars = {var_name 'Salinity' 'Temperature' 'Oxygen'};
+            varsi = {param_props.temp_name 'SAL' 'TEMP' 'OXY'};
+        end
+        
         % define station ids
         stations = unique(wod.wod_unique_cast);
 
@@ -318,6 +327,7 @@ parfor y = start_year:end_year
     end
 
   end
+  
 end
 
 % end parallel session
@@ -327,6 +337,9 @@ delete(gcp('nocreate'));
 % pre-allocate data structure
 wod_data = struct();
 wod_data.(param_props.temp_name) = [];
+if strcmp(param_props.file_name,'no3')
+    wod_data.OXY = [];
+end
 wod_data.LAT = [];
 wod_data.LON = [];
 wod_data.PRES = [];
@@ -399,8 +412,18 @@ save([param_props.dir_name '/Data/processed_wod_' param_props.file_name ...
 
 else
 
-% display information
+%% display information
 disp('WOD data already processed.')
+
+%% load processed osd data
+load([param_props.dir_name '/Data/processed_wod_' param_props.file_name ...
+    '_data_' year '.mat'],'wod_data');
+
+%% display the number of casts and profiles
+disp(['# of matching OSD Casts (' param_props.temp_name '): ' num2str(length(unique(wod_data.ID(wod_data.TYPE==1))))]);
+disp(['# of matching OSD Cruises (' param_props.temp_name '): ' num2str(length(unique(wod_data.CRU(wod_data.TYPE==2))))]);
+disp(['# of matching CTD Casts (' param_props.temp_name '): ' num2str(length(unique(wod_data.ID(wod_data.TYPE==2))))]);
+disp(['# of matching CTD Cruises (' param_props.temp_name '): ' num2str(length(unique(wod_data.CRU(wod_data.TYPE==2))))]);
 
 end
 
