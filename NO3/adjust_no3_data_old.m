@@ -1,4 +1,4 @@
-% adjust_o2_float_data
+% adjust_no3_data
 %
 % DESCRIPTION:
 % This function bins float and glodap data, co-locates corresponding bins,
@@ -7,9 +7,9 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 07/24/2026
+% DATE: 07/15/2026
 
-function adjust_o2_data(float_file_ext,glodap_vrs,snap_date,...
+function adjust_no3_data(float_file_ext,glodap_vrs,snap_date,...
     include_float,include_glodap,include_osd,include_ctd)
 
 %% define dataset extensions
@@ -24,96 +24,83 @@ end_year = todays_date(1);
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-if include_float; load(['O2/Data/processed_float_o2_data_' ...
+if include_float; load(['NO3/Data/processed_float_no3_data_' ...
         file_date float_file_ext '.mat'],'float_data','file_date'); end
-if include_glodap; load(['O2/Data/processed_glodap_o2_data_' ...
+if include_glodap; load(['NO3/Data/processed_glodap_no3_data_' ...
         glodap_vrs '.mat'],'glodap_data'); end
-if include_osd || include_ctd; load(['O2/Data/processed_wod_o2_data_' ...
+if include_osd || include_ctd; load(['NO3/Data/processed_wod_no3_data_' ...
         num2str(end_year) '.mat'],'wod_data'); end
 
 %% only do if file doesn't exist
-% if exist(['O2/Data/crossover_data_' file_date float_file_ext '.mat'],'file') ~= 2
+% if exist(['NO3/Data/crossover_data_' file_date float_file_ext '.mat'],'file') ~= 2
 
 %% remove data points based on global range test
-% 480 umol/kg used as max for WOD range checks
-if include_float
-    idx_rem = float_data.OXY < 0 | float_data.OXY > 480;
-    disp([num2str(sum(idx_rem)) ' float data points removed by global range test (' ...
-        num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
-    vars = fieldnames(float_data);
-    for v = 1:length(vars)
-        float_data.(vars{v})(idx_rem) = [];
-    end
-end
-
-if include_glodap
-    idx_rem = glodap_data.OXY < 0 | glodap_data.OXY > 480;
-    disp([num2str(sum(idx_rem)) ' glodap data points removed by global range test (' ...
-        num2str(100*(sum(idx_rem)/length(glodap_data.ID))) ' % of data)']);
-    vars = fieldnames(glodap_data);
-    for v = 1:length(vars)
-        glodap_data.(vars{v})(idx_rem) = [];
-    end
-end
-
-if include_osd || include_ctd
-    idx_rem = wod_data.OXY < 0 | wod_data.OXY > 480;
-    disp([num2str(sum(idx_rem)) ' wod data points removed by global range test (' ...
-        num2str(100*(sum(idx_rem)/length(wod_data.ID))) ' % of data)']);
-    vars = fieldnames(wod_data);
-    for v = 1:length(vars)
-        wod_data.(vars{v})(idx_rem) = [];
-    end
-end
-
-% idx_f = (float_data.LON > 0 & float_data.LON < 35) & ...
-%     (float_data.LAT > 18 & float_data.LAT < 43) & ...
-%     float_data.YEAR < 2009;
-% idx_g = (glodap_data.LON > 0 & glodap_data.LON < 35) & ...
-%     (glodap_data.LAT > 18 & glodap_data.LAT < 43) & ...
-%     glodap_data.YEAR < 2009;
-% figure; scatter(float_data.OXY(idx_f),float_data.PRES(idx_f));
-% figure; scatter(glodap_data.OXY(idx_g),glodap_data.PRES(idx_g));
+% % 480 umol/kg used as max for WOD range checks
+% if include_float
+%     idx_rem = float_data.OXY < 0 | float_data.OXY > 480;
+%     disp([num2str(sum(idx_rem)) ' float data points removed by global range test (' ...
+%         num2str(100*(sum(idx_rem)/length(float_data.PROF_ID))) ' % of data)']);
+%     vars = fieldnames(float_data);
+%     for v = 1:length(vars)
+%         float_data.(vars{v})(idx_rem) = [];
+%     end
+% end
 % 
-% prof_ids = unique(float_data.PROF_ID(idx_f));
-% figure; hold on;
-% set(gca,'ydir','reverse');
-% for p = 1:length(prof_ids)
-%     idx = prof_ids(p) == float_data.PROF_ID;
-%     plot(float_data.OXY(idx_f),float_data.PRES(idx_f)); 
+% if include_glodap
+%     idx_rem = glodap_data.OXY < 0 | glodap_data.OXY > 480;
+%     disp([num2str(sum(idx_rem)) ' glodap data points removed by global range test (' ...
+%         num2str(100*(sum(idx_rem)/length(glodap_data.ID))) ' % of data)']);
+%     vars = fieldnames(glodap_data);
+%     for v = 1:length(vars)
+%         glodap_data.(vars{v})(idx_rem) = [];
+%     end
+% end
+% 
+% if include_osd || include_ctd
+%     idx_rem = wod_data.OXY < 0 | wod_data.OXY > 480;
+%     disp([num2str(sum(idx_rem)) ' wod data points removed by global range test (' ...
+%         num2str(100*(sum(idx_rem)/length(wod_data.ID))) ' % of data)']);
+%     vars = fieldnames(wod_data);
+%     for v = 1:length(vars)
+%         wod_data.(vars{v})(idx_rem) = [];
+%     end
 % end
 
 %% import WOA climatologies
 temp_path = [pwd '/Data/WOA/TEMPERATURE/'];
 sal_path = [pwd '/Data/WOA/SALINITY/'];
 oxy_path = [pwd '/Data/WOA/OXYGEN/'];
+nit_path = [pwd '/Data/WOA/NITRATE/'];
 for m = 1:12
     WOA.TMP(:,:,:,m) = ncread([temp_path 'woa18_decav_t' sprintf('%02d',m) '_01.nc'],'t_an');
     WOA.SAL(:,:,:,m) = ncread([sal_path 'woa18_decav_s' sprintf('%02d',m) '_01.nc'],'s_an');
     WOA.OXY(:,:,:,m) = ncread([oxy_path 'woa18_all_o',sprintf('%02d',m),'_01.nc'],'o_an');
+    WOA.NIT(:,:,:,m) = ncread([nit_path 'woa18_all_n',sprintf('%02d',m),'_01.nc'],'n_an');
 end
 % Import and format WOA latitude and longitude
-WOA.LAT   = ncread([oxy_path 'woa18_all_o01_01.nc'],'lat');
-WOA.LON   = ncread([oxy_path 'woa18_all_o01_01.nc'],'lon');
-WOA.DEPTH = ncread([oxy_path 'woa18_all_o01_01.nc'],'depth');
+WOA.LAT   = ncread([nit_path 'woa18_all_n01_01.nc'],'lat');
+WOA.LON   = ncread([nit_path 'woa18_all_n01_01.nc'],'lon');
+WOA.DEPTH = ncread([nit_path 'woa18_all_n01_01.nc'],'depth');
 [~,lat_3d,depth_3d] = ndgrid(WOA.LON,WOA.LAT,WOA.DEPTH);
 WOA.PRES = -gsw_p_from_z(depth_3d,lat_3d);
 % clean up
-clear m temp_path sal_path oxy_path
+clear m temp_path sal_path nit_path
 
-%% compare float data to WOA
+% 
 if include_float
 
+    %% compare float data to WOA
     % index to valid data points
-    idx = find(~isnan(float_data.OXY) & ~isnan(float_data.LAT) & ...
-        ~isnan(float_data.LON) & ~isnan(float_data.PRES) & ...
-        ~isnan(float_data.TIME));
+    idx = find(~isnan(float_data.OXY) & ~isnan(float_data.NIT) & ...
+        ~isnan(float_data.LAT) & ~isnan(float_data.LON) & ...
+        ~isnan(float_data.PRES) & ~isnan(float_data.TIME));
     % obtain month from date
     date = datevec(datenum(float_data.YEAR,0,float_data.DAY));
     float_data.MONTH = date(:,2);
     clear date
     % pre-allocate matches
-    WOA_match = nan(size(float_data.OXY));
+    WOA_NIT_match = nan(size(float_data.NIT));
+    WOA_OXY_match = nan(size(float_data.OXY));
     % match float data with WOA
     for i=1:length(idx)
         idx_lon = find(min(abs(WOA.LON - float_data.LON(idx(i)))) == ...
@@ -124,48 +111,65 @@ if include_float
             abs(squeeze(WOA.PRES(idx_lon,idx_lat,:)) - float_data.PRES(idx(i))));
         idx_mnth = find(min(abs((1:12)' - float_data.MONTH(idx(i)))) == ...
             abs((1:12)' - float_data.MONTH(idx(i))));
-        WOA_match(idx(i)) = WOA.OXY(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
+        WOA_OXY_match(idx(i)) = WOA.OXY(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
+        WOA_NIT_match(idx(i)) = WOA.NIT(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
     end
-    % calculate differences
-    WOA_delta = float_data.OXY-WOA_match;
-    WOA_delta_per = WOA_delta./float_data.OXY;
-    WOA_delta_per(isinf(WOA_delta_per))=NaN;
-    st_dev_delta = std(WOA_delta,[],'omitnan');
-    mean_delta = mean(WOA_delta,'omitnan');
+    % calculate differences for oxygen
+    WOA_oxy_delta = float_data.OXY-WOA_OXY_match;
+    WOA_oxy_delta_per = WOA_oxy_delta./float_data.OXY;
+    WOA_oxy_delta_per(isinf(WOA_oxy_delta_per))=NaN;
+    st_dev_oxy_delta = std(WOA_oxy_delta,[],'omitnan');
+    mean_oxy_delta = mean(WOA_oxy_delta,'omitnan');
+    % calculate differences for nitrate
+    WOA_nit_delta = float_data.NIT-WOA_NIT_match;
+    WOA_nit_delta_per = WOA_nit_delta./float_data.NIT;
+    WOA_nit_delta_per(isinf(WOA_nit_delta_per))=NaN;
+    st_dev_nit_delta = std(WOA_nit_delta,[],'omitnan');
+    mean_nit_delta = mean(WOA_nit_delta,'omitnan');
+    % remove data below 800dbar
+    idx_woa_pres = float_data.PRES <= 800;
+    WOA_OXY_match(idx_woa_pres) = [];
+    WOA_oxy_delta(idx_woa_pres) = [];
+    WOA_oxy_delta_per(idx_woa_pres) = [];
+    WOA_NIT_match(idx_woa_pres) = [];
+    WOA_nit_delta(idx_woa_pres) = [];
+    WOA_nit_delta_per(idx_woa_pres) = [];
     % clean up
     clear idx idx_lon idx_lat idx_pres idx_mnth i
     
     %% plot differences between float data and WOA
     % histogram of differences
     figure; hold on
-    histogram(WOA_delta);
+    histogram(WOA_nit_delta);
     set(gca,'fontsize',16);
     ax = gca;
-    plot([mean_delta+3*st_dev_delta mean_delta+3*st_dev_delta],ax.YLim,'r','linewidth',2);
-    plot([mean_delta-3*st_dev_delta mean_delta-3*st_dev_delta],ax.YLim,'r','linewidth',2);
-    xlabel('Float [O_{2}] - WOA [O_{2}]');
-    exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
+    plot([mean_nit_delta+3*st_dev_nit_delta mean_nit_delta+3*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
+    plot([mean_nit_delta-3*st_dev_nit_delta mean_nit_delta-3*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
+    xlabel('Float [NO_{3}] - WOA [NO_{3}]');
+    if ~exist([pwd '/NO3/Figures/Data'],'dir'); mkdir('NO3/Figures/Data'); end
+    exportgraphics(gcf,[pwd '/NO3/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
     close
     % scatter of delta values
     figure; hold on
     set(gca,'fontsize',16);
-    xlabel('WOA [O_{2}]');
-    ylabel('Float [O_{2}] - WOA [O_{2}]');
+    xlabel('WOA [NO_{3}]');
+    ylabel('Float [NO_{3}] - WOA [NO_{3}]');
     [counts,bin_centers] = ...
-        hist3([WOA_match,WOA_delta],'Edges',{0:10:460 -345:15:345});
+        hist3([WOA_NIT_match,WOA_nit_delta],'Edges',{0:1:46 -34.5:1.5:34.5});
     h=pcolor(bin_centers{1}-mean(diff(bin_centers{1}))/2,...
         bin_centers{2}-mean(diff(bin_centers{2}))/2,counts');
-    plot([0 450],[0 0],'k--');
+    plot([0 45],[0 0],'k--');
     set(h,'EdgeColor','none');
-    xlim([-0.5 460]); ylim([-345.5 345]);
+    xlim([-0.5 46]); ylim([-34.5 34]);
     myColorMap = flipud(hot(256.*32));
     myColorMap(1,:) = 1;
     colormap(myColorMap);
     set(gca,'ColorScale','log')
-    clim([1e0 1e5]);
+    caxis([1e0 1e5]);
     c=colorbar;
     c.Label.String = 'log10(Bin Counts)';
-    exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_Float_comp_scatter_' file_date float_file_ext '.png']);
+    if ~exist([pwd '/NO3/Figures/Data'],'dir'); mkdir('NO3/Figures/Data'); end
+    exportgraphics(gcf,[pwd '/NO3/Figures/Data/WOA_comp_scatter_' file_date float_file_ext '.png']);
     close
     % clean up
     clear counts bin_centers c h myColorMap
@@ -539,7 +543,7 @@ load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx')
 % crossover.oxy_float_corr = crossover.oxy_float - corr_fac;
 
 %% depth-dependent correction (using two depths)
-pressures = unique(crossover.pres);
+pressures = unique(crossover.pres(idx));
 avg_delta_by_p = nan(size(pressures));
 avg_by_p = nan(size(pressures));
 for p = 1:length(pressures)
@@ -547,24 +551,17 @@ for p = 1:length(pressures)
     avg_delta_by_p(p) = mean(crossover.oxy_delta(idx_p),'omitnan');
     avg_by_p(p) = mean(crossover.oxy_ship(idx_p),'omitnan');
 end
-[~,idx_max_delta] = max(abs(avg_delta_by_p)); % find maximum crossover offset
-max_delta_pressure = pressures(idx_max_delta);
-disp(['Maximum crossover offset at ' num2str(max_delta_pressure) ' dbar.'])
-% deep adjustment equation
-mdl = fitlm(pressures(idx_max_delta:end),...
-    avg_delta_by_p(idx_max_delta:end),'Intercept',true);
+mdl = fitlm(pressures,avg_delta_by_p,'Intercept',true);
 slp_deep = mdl.Coefficients.Estimate(2);
 int_deep = mdl.Coefficients.Estimate(1);
-% shallow adjustment equation
-mdl = fitlm(pressures(1:idx_max_delta-1),...
-    avg_delta_by_p(1:idx_max_delta-1),'Intercept',true);
+mdl = fitlm([0 pressures(1)],[0 pressures(1)*slp_deep+int_deep],'Intercept',true);
 slp_shal = mdl.Coefficients.Estimate(2);
 int_shal = mdl.Coefficients.Estimate(1);
 % apply linear correction to float O2 (with pressure)
 corr_fac = nan(size(crossover.oxy_float));
-idx_deep = crossover.pres >= pressures(idx_max_delta);
+idx_deep = crossover.pres >= 300;
 corr_fac(idx_deep) = slp_deep .* crossover.pres(idx_deep) + int_deep;
-idx_shal = crossover.pres < pressures(idx_max_delta);
+idx_shal = crossover.pres < 300;
 corr_fac(idx_shal) = slp_shal .* crossover.pres(idx_shal) + int_shal;
 crossover.oxy_float_corr = crossover.oxy_float - corr_fac;
 
@@ -587,7 +584,7 @@ if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
 % save(['O2/Data/float_corr_' file_date float_file_ext],'slp','int');
 % clear slp int
 save(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx','-v7.3')
-save(['O2/Data/float_corr_' file_date float_file_ext],'slp_deep','int_deep','slp_shal','int_shal','max_delta_pressure');
+save(['O2/Data/float_corr_' file_date float_file_ext],'slp_deep','int_deep','slp_shal','int_shal');
 clear slp_deep int_deep slp_shal int_shal
 
 %% plot uncorrected float vs. ship residuals
@@ -832,9 +829,9 @@ for v = 1:length(vars)
 
         % apply linear correction to float O2 (with pressure)
         corr_fac = nan(size(float_data.OXY));
-        idx_deep = float_data.PRES >= max_delta_pressure;
+        idx_deep = float_data.PRES >= 300;
         corr_fac(idx_deep) = float_data.PRES(idx_deep).*slp_deep + int_deep;
-        idx_shal = float_data.PRES < max_delta_pressure;
+        idx_shal = float_data.PRES < 300;
         corr_fac(idx_shal) = float_data.PRES(idx_shal).*slp_shal + int_shal;
         float_data_adjusted.OXY = float_data.OXY - corr_fac;
 

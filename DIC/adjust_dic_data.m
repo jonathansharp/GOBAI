@@ -7,19 +7,20 @@
 %
 % AUTHOR: J. Sharp, UW CICOES / NOAA PMEL
 %
-% DATE: 07/02/2025
+% DATE: 07/23/2026
 
-function adjust_dic_float_data(float_file_ext,glodap_year,snap_date)
+function adjust_dic_data(float_file_ext,glodap_vrs,snap_date,...
+    include_float,include_glodap,include_osd,include_ctd)
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
 load(['DIC/Data/processed_float_dic_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date');
-load(['DIC/Data/processed_glodap_dic_data_' num2str(glodap_year) '.mat'],...
+load(['DIC/Data/processed_glodap_dic_data_' glodap_vrs '.mat'],...
     'glodap_data');
 
 %% pH range test
-idx = float_data.PH < 7.4 | float_data.PH > 8.3;
+idx = float_data.PH < 7.3 | float_data.PH > 8.5;
 vars = fieldnames(float_data);
 for v = 1:length(vars)
     float_data.(vars{v})(idx) = [];
@@ -38,102 +39,157 @@ float_data.pH_est = esper_preds.pH;
 float_data.PHOS_est = esper_preds.phosphate;
 float_data.SIL_est = esper_preds.silicate;
 idx = ~isnan(float_data.PH) & ~isnan(float_data.pH_est);
-% plot measured vs. estimated pH
-figure; scatter(float_data.PH,float_data.pH_est,'.k');
-hold on; plot([7.4 8.6],[7.4 8.6]);
-text(7.5,8.5,['Average Diff. = ' ...
+
+%% plot measured vs. estimated pH
+figure('visible','off','position',[100 100 1000 400]);
+set(gca,'fontsize',15,'Box','on','LineWidth',2); hold on;
+histogram2(gca,float_data.PH,float_data.pH_est,'DisplayStyle', 'tile');
+plot([7.4 8.3],[7.4 8.3],'b');
+xlim([7.4 8.3]); ylim([7.4 8.3]);
+myColorMap = flipud(hot(256.*32));
+myColorMap(1,:) = 1;
+colormap(myColorMap);
+set(gca,'ColorScale','log');
+clim([1e0 1e4]);
+c=colorbar;
+c.Label.String = 'log_{10}(Bin Counts)';
+text(7.5,8.2,['Average Diff. = ' ...
     num2str(round(mean(float_data.PH(idx)-float_data.pH_est(idx)),4)) ...
-    ' +/- ' num2str(round(std(float_data.PH(idx)-float_data.pH_est(idx)),4))]);
+    ' +/- ' num2str(round(std(float_data.PH(idx)-float_data.pH_est(idx)),4))],...
+    'FontSize',12);
 xlabel('Float measured pH'); ylabel('Estimated pH (ESPER w/ T/S/O2)');
 export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_uncorr_' ...
-    file_date float_file_ext '.png']); close;
-% adjust float pH via compariaon with ESPER estimates (profile by profile)
+    file_date float_file_ext '.png'],'-transparent'); close;
+
+%% adjust float pH via compariaon with ESPER estimates (profile by profile)
 unique_profs = unique(float_data.PROF_ID);
 float_data.PH_ESPER_ADJUSTED = nan(size(float_data.PH));
+adjustment = nan(size(unique_profs));
+latitude = nan(size(unique_profs));
+time = nan(size(unique_profs));
+% % adjustment by full-column pH v. delta_pH fit
+% for p = 1:length(unique_profs)
+%     idx_p = find(float_data.PROF_ID == unique_profs(p) & ~isnan(float_data.PH) & ~isnan(float_data.pH_est));
+%     fit_params = polyfit(float_data.PH(idx_p),float_data.PH(idx_p)-float_data.pH_est(idx_p),1);
+%     float_data.PH_ESPER_ADJUSTED(idx_p) = float_data.PH(idx_p) - (float_data.PH(idx_p).*fit_params(1) + fit_params(2));
+%     adjustment(p) = mean((float_data.PH(idx_p).*fit_params(1) + fit_params(2)));
+%     latitude(p) = mean(float_data.LAT(idx_p));
+%     time(p) = mean(float_data.TIME(idx_p));
+% end
+% adjustment by deep mean offset (w/ temp ratio)
 for p = 1:length(unique_profs)
     idx_p = find(float_data.PROF_ID == unique_profs(p) & ~isnan(float_data.PH) & ~isnan(float_data.pH_est));
-    fit_params = polyfit(float_data.PH(idx_p),float_data.PH(idx_p)-float_data.pH_est(idx_p),1);
-    float_data.PH_ESPER_ADJUSTED(idx_p) = float_data.PH(idx_p) - (float_data.PH(idx_p).*fit_params(1) + fit_params(2));
-    adjustment(p) = mean((float_data.PH(idx_p).*fit_params(1) + fit_params(2)));
+    idx_p_adj = find(float_data.PROF_ID == unique_profs(p) & ~isnan(float_data.PH) & ~isnan(float_data.pH_est) & float_data.PRES > 1000);
+    adjustment(p) = mean(float_data.PH(idx_p_adj)-float_data.pH_est(idx_p_adj));
+    % figure; plot(float_data.PH(idx_p),float_data.PRES(idx_p),float_data.pH_est(idx_p),float_data.PRES(idx_p));
+    t_cor = (mean(float_data.TEMP(idx_p_adj))+273.15)./(float_data.TEMP(idx_p)+273.15);
+    float_data.PH_ESPER_ADJUSTED(idx_p) = float_data.PH(idx_p) - adjustment(p).*t_cor;
+    % figure; plot(float_data.PH_ESPER_ADJUSTED(idx_p),float_data.PRES(idx_p),float_data.pH_est(idx_p),float_data.PRES(idx_p));
+    latitude(p) = mean(float_data.LAT(idx_p));
+    time(p) = mean(float_data.TIME(idx_p));
 end
-% plot measured (adjusted) vs. estimated pH
-figure; scatter(float_data.PH_ESPER_ADJUSTED,float_data.pH_est,'.k');
-hold on; plot([7.4 8.6],[7.4 8.6]);
-text(7.5,8.5,['Average Diff. = ' ...
-    num2str(round(mean(float_data.PH_ESPER_ADJUSTED(idx)-float_data.pH_est(idx)),4)) ...
-    ' +/- ' num2str(round(std(float_data.PH_ESPER_ADJUSTED(idx)-float_data.pH_est(idx)),4))]);
-xlabel('Float measured pH (Adjusted to ESPER)'); ylabel('Estimated pH (ESPER w/ T/S/O2)');
-export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_corr_' ...
+
+%% plot adjustments over time and latitude
+% set bins
+xEdges = datenum(2012:2026',0,0);
+yEdges = (-90:10:90)';
+numXBins = length(xEdges) - 1;
+numYBins = length(yEdges) - 1;
+% get the bin index for each data point
+[~, ~, ~, binX, binY] = histcounts2(time,latitude,xEdges,yEdges);
+% filter out any points that fell outside the specified edges (where index is 0)
+validMask = (binX > 0) & (binY > 0);
+% accumulate Z values directly into a 2D grid using their mean
+% Note: y-indices match rows (1st dim) and x-indices match columns (2nd dim)
+avgMatrix = accumarray([binY(validMask), binX(validMask)], adjustment(validMask), ...
+    [numYBins, numXBins], @mean, NaN);
+% plot the results using pcolor
+figure('color','w','visible','on');
+pcolor(xEdges, yEdges, [avgMatrix, nan(numYBins, 1); nan(1, numXBins + 1)]);
+shading flat; clim([-0.015 0.015]);
+colormap(cmocean('balance','pivot',0));
+datetick('x','keeplimits');
+colorbar;
+ylabel('Latitude');
+title('Average ESPER-based pH Adjustment');
+text(xEdges(2),yEdges(end-1),['Avg. pH adj. = ' num2str(round(mean(adjustment,'omitnan'),3))]);
+export_fig(gcf,['DIC/Figures/Data/adjustment_histogram_' ...
     file_date float_file_ext '.png']); close;
-% carbonate system calculations for DIC
+
+%% determine average profiles
+pres = unique(float_data.PRES);
+pH_by_depth = nan(length(pres),2);
+pH_est_by_depth = nan(length(pres),2);
+pH_adj_by_depth = nan(length(pres),2);
+for p = 1:length(pres)
+    idx_z = float_data.PRES == pres(p);
+    pH_by_depth(p,1) = mean(float_data.PH(idx_z),'omitnan');
+    pH_by_depth(p,2) = std(float_data.PH(idx_z),[],'omitnan');
+    pH_est_by_depth(p,1) = mean(float_data.pH_est(idx_z),'omitnan');
+    pH_est_by_depth(p,2) = std(float_data.pH_est(idx_z),[],'omitnan');
+    pH_adj_by_depth(p,1) = mean(float_data.PH_ESPER_ADJUSTED(idx_z),'omitnan');
+    pH_adj_by_depth(p,2) = std(float_data.PH_ESPER_ADJUSTED(idx_z),[],'omitnan');
+end
+
+%% plot average float pH profile vs. ESPER Estimate
+clrs = orderedcolors('gem'); fntsz = 14;
+figure('visible','on','position',[100 100 1000 1000]);
+ax1 = axes('position',[0.05 0.05 0.4 0.9],'Box','on','LineWidth',2);
+set(ax1,'YDir','reverse','fontsize',fntsz,'XAxisLocation','top'); hold on;
+% fill(ax1,[pH_by_depth(:,1)-pH_by_depth(:,2);flipud(sum(pH_by_depth,2))],...
+%     [pres;flipud(pres)],clrs(1,:),'FaceAlpha',0.25,'LineStyle','none');
+% fill(ax1,[pH_est_by_depth(:,1)-pH_est_by_depth(:,2);flipud(sum(pH_est_by_depth,2))],...
+%     [pres;flipud(pres)],clrs(2,:),'FaceAlpha',0.25,'LineStyle','none');
+% fill(ax1,[pH_adj_by_depth(:,1)-pH_adj_by_depth(:,2);flipud(sum(pH_adj_by_depth,2))],...
+%     [pres;flipud(pres)],clrs(3,:),'FaceAlpha',0.25,'LineStyle','none');
+%     plot(pH_by_depth(:,1),pres,pH_est_by_depth(:,1),pres,pH_adj_by_depth(:,1),pres,'linewidth',2);
+plot(pH_by_depth(:,1),pres,pH_est_by_depth(:,1),pres,pH_adj_by_depth(:,1),pres,'linewidth',2);
+legend({'Measured pH' 'ESPER pH' 'Adjusted pH'},'location','southeast');
+ylabel(ax1,'Depth (dbar)'); xlabel('pH'); xlim([7.75 8.05]);
+ax2 = axes('position',[0.55 0.05 0.4 0.9],'Box','on','LineWidth',2);
+set(ax2,'YDir','reverse','fontsize',fntsz,'XAxisLocation','top'); hold on;
+% fill(ax2,[pH_by_depth(:,1)-pH_by_depth(:,2);flipud(sum(pH_by_depth,2))],...
+%     [pres;flipud(pres)],clrs(1,:),'FaceAlpha',0.25,'LineStyle','none');
+% fill(ax2,[pH_est_by_depth(:,1)-pH_est_by_depth(:,2);flipud(sum(pH_est_by_depth,2))],...
+%     [pres;flipud(pres)],clrs(2,:),'FaceAlpha',0.25,'LineStyle','none');
+plot(pH_by_depth(:,1)-pH_est_by_depth(:,1),pres,...
+    pH_adj_by_depth(:,1)-pH_est_by_depth(:,1),pres,'linewidth',2);
+plot([0 0],[0 2000],'--k');
+xlim([-0.015 0.015]);
+legend({'Measured pH - ESPER pH' 'Adjusted pH - ESPER pH' ''},'location','southwest');
+ylabel(ax1,'Depth (dbar)'); xlabel('\DeltapH');
+export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_profile_' ...
+    file_date float_file_ext '.png'],'-transparent'); close;
+
+%%  calculate DIC from ADJUSTED float data
 float_data.PH(float_data.PH_ESPER_ADJUSTED > 8.5) = NaN; % eliminate obviously bad pH values
 carb = CO2SYS(float_data.TA_est,float_data.PH_ESPER_ADJUSTED,1,3,float_data.SAL,...
     float_data.TEMP,NaN,float_data.PRES,NaN,float_data.SIL_est,float_data.PHOS_est,...
     0,0,1,10,1,2,2);
 float_data.DIC = carb(:,2);
 float_data.DIC(float_data.DIC==-999) = NaN;
+idx = ~isnan(float_data.PH_ESPER_ADJUSTED) & ~isnan(float_data.pH_est);
 
-%% determine histogram counts and indices
-% % establish edges of bins
-% x_edges = -180:180;
-% x_bins = -179.5:179.5;
-% y_edges = -85:85;
-% y_bins = -84.5:84.5;
-% z_edges = [0 5:10:175 190:20:450 475:50:1375 1450:100:1950 2000];
-% z_bins = [2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975];
-% mn_edges = 1:12;
-% yr_edges = 2004:glodap_year;
-% t_edges = datenum([[repelem(yr_edges,1,length(mn_edges)) yr_edges(end)+1]', ...
-%                   [repmat(mn_edges,1,length(yr_edges)) 1]', ...
-%                   [zeros(1,length(mn_edges)*length(yr_edges)+1)]']);
-% t_bins = datenum([[repelem(yr_edges,1,length(mn_edges))]', ...
-%                   [repmat(mn_edges,1,length(yr_edges))]', ...
-%                   [repmat(15,1,length(mn_edges)*length(yr_edges))]']);
-% % get histogram counts in each bin
-% [~,~,Xnum_float] = histcounts(float_data.LON,x_edges);
-% [~,~,Ynum_float] = histcounts(float_data.LAT,y_edges);
-% [~,~,Znum_float] = histcounts(float_data.PRES,z_edges);
-% [~,~,Tnum_float] = histcounts(float_data.TIME,t_edges);
-% [~,~,Xnum_glodap] = histcounts(glodap_data.LON,x_edges);
-% [~,~,Ynum_glodap] = histcounts(glodap_data.LAT,y_edges);
-% [~,~,Znum_glodap] = histcounts(glodap_data.PRES,z_edges);
-% [~,~,Tnum_glodap] = histcounts(glodap_data.TIME,t_edges);
-% % accumulate index of counts
-% subs_float = [Xnum_float,Ynum_float,Znum_float,Tnum_float];
-% idx_float = ~any(subs_float==0,2);
-% subs_glodap = [Xnum_glodap,Ynum_glodap,Znum_glodap,Tnum_glodap];
-% idx_glodap = ~any(subs_glodap==0,2);
-% clear Xnum_float Ynum_float Znum_float Tnum_float
-% clear Xnum_glodap Ynum_glodap Znum_glodap Tnum_glodap
-% % determine size of 4D grid
-% sz = [length(x_bins),length(y_bins),length(z_bins),length(t_bins)];
-% % clean up
-% clear x_edges y_edges z_edges mn_edges yr_edges t_edges
-% 
-% %% Bin float and glodap data
-% binned_data.dic_float = single(nan(sz));
-% binned_data.dic_glodap = single(nan(sz));
-% for m = 1:length(t_bins)
-%     % month-specific float index
-%     idx_float_tmp = idx_float;
-%     idx_float_tmp(subs_float(:,4)~=m) = false;
-%     % month-specific glodap index
-%     idx_glodap_tmp = idx_glodap;
-%     idx_glodap_tmp(subs_glodap(:,4)~=m) = false;
-%     % bin dic data
-%     binned_data.dic_float(:,:,:,m) = single(accumarray(subs_float(idx_float_tmp,1:3),float_data.DIC(idx_float_tmp),sz(1:3),@nanmean,nan));
-%     binned_data.dic_glodap(:,:,:,m) = single(accumarray(subs_glodap(idx_glodap_tmp,1:3),glodap_data.DIC(idx_glodap_tmp),sz(1:3),@nanmean,nan));
-% end
-% % add pressure bins
-% binned_data.pres = repmat(permute(single(z_bins),[3 1 2]),length(x_bins),length(y_bins),1,length(t_bins));
-% % save binned data
-% if ~exist([pwd '/DIC/Data'],'dir'); mkdir('DIC/Data'); end
-% save(['DIC/Data/binned_data_' file_date float_file_ext],'binned_data','-v7.3')
-% 
-% % clean up
-% clear binned_data idx_float idx_glodap
-% clear idx_float_tmp idx_glodap_tmp m sz subs_float subs_glodap
-% clear x_edges x_bins y_bins z_edges z_bins t_bins
+%% plot measured (adjusted) vs. estimated pH
+figure('visible','on','position',[100 100 1000 400]);
+set(gca,'fontsize',15,'Box','on','LineWidth',2); hold on;
+histogram2(gca,float_data.PH_ESPER_ADJUSTED,float_data.pH_est,'DisplayStyle', 'tile');
+plot([7.4 8.3],[7.4 8.3],'b');
+xlim([7.4 8.3]); ylim([7.4 8.3]);
+myColorMap = flipud(hot(256.*32));
+myColorMap(1,:) = 1;
+colormap(myColorMap);
+set(gca,'ColorScale','log');
+clim([1e0 1e4]);
+c=colorbar;
+c.Label.String = 'log_{10}(Bin Counts)';
+text(7.5,8.2,['Average Diff. = ' ...
+    num2str(round(mean(float_data.PH_ESPER_ADJUSTED(idx)-float_data.pH_est(idx)),4)) ...
+    ' +/- ' num2str(round(std(float_data.PH_ESPER_ADJUSTED(idx)-float_data.pH_est(idx)),4))],...
+    'FontSize',12);
+xlabel('Float measured pH (Adjusted to ESPER)'); ylabel('Estimated pH (ESPER w/ T/S/O2)');
+export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_corr_' ...
+    file_date float_file_ext '.png'],'-transparent'); close;
 
 %% Co-locate and compare float and glodap data (via profile crossovers)
 pres_levels = [2.5 10:10:170 182.5 200:20:440 462.5 500:50:1350 1412.5 1500:100:1900 1975]';
@@ -162,7 +218,8 @@ for p = 1:length(float_profile_IDs)
     % match index
     idx_lon = abs(glodap_data.LON - lon) <= 0.5;
     idx_lat = abs(glodap_data.LAT - lat) <= 0.5;
-    idx_time = abs(glodap_data.TIME - time) <= 30;
+    idx_time = abs(glodap_data.TIME - time) <= 365/2;
+    % idx_time = true(size(glodap_data.TIME));
     idx_all = idx_lon & idx_lat & idx_time;
     % if there is a matching glodap profile
     if sum(idx_all) > 0
@@ -241,6 +298,7 @@ idx = crossover.pres > 300 & ~isnan(crossover.dic_float) & ~isnan(crossover.dic_
 % clean up
 clear pres_levels float_profile_IDs lon lat time dic_float pres_float
 clear idx_lon idx_lat idx_time dic_temp pres_temp idx_pres dic_glodap
+
 % fit delta against DIC
 mdl = fitlm(crossover.dic_float(idx),crossover.dic_delta(idx),'Intercept',true);
 slp = mdl.Coefficients.Estimate(2);
@@ -433,8 +491,19 @@ for v = 1:length(vars)
     float_data_adjusted.(vars{v}) = float_data.(vars{v});
 end
 
-% save
-if ~exist('/DIC/Data','dir'); mkdir('DIC/Data'); end
-save(['DIC/Data/processed_float_dic_data_adjusted_' file_date float_file_ext '.mat'],...
-    'float_data_adjusted','file_date','-v7.3');
-clear slp int float_data float_data_adjusted v vars
+if include_float
+    % save adjusted float data
+    if ~exist([pwd '/DIC/Data'],'dir'); mkdir('DIC/Data'); end
+    save(['DIC/Data/processed_float_dic_data_adjusted_' ...
+        file_date float_file_ext '.mat'],...
+        'float_data_adjusted','file_date','-v7.3');
+    clear slp int float_data float_data_adjusted v vars
+end
+
+if include_glodap
+    % save adjusted GLODAP data
+    if ~exist([pwd '/DIC/Data'],'dir'); mkdir('DIC/Data'); end
+    save(['DIC/Data/processed_glodap_dic_data_adjusted_' ...
+        glodap_vrs '.mat'],...
+        'glodap_data','file_date','-v7.3');
+end
