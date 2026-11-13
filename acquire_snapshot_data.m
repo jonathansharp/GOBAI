@@ -17,7 +17,7 @@ if snap_download == 1
     
     % set search patterns for parsing of web page
     pattern = 'BGC Sprof data files (';
-    pat_month = 'BGC Sprof data files \(20\d{2}-\d{2}-\d{2} snapshot\)\(CHLA reprocessing\)';
+    pat_month = 'BGC Sprof data files \(20\d{2}-\d{2}-\d{2} snapshot\)';
     mth_idx = length(pattern) + 1; % first character of YYYY-MM
     
     % download the web page that contains the links to all snapshots

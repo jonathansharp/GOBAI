@@ -33,13 +33,15 @@ load([dirs{l} '/Data/processed_wod_' flns{l} '_data_adjusted_2026.mat'],'wod_dat
 % osd
 id_temp = wod_data.ID;
 id_temp(wod_data.TYPE==2) = NaN;
-[~,o_idx] = unique(id_temp,'TreatMissingAsDistinct',false);
-o_idx(end) = [];
+[o_c,o_idx] = unique(id_temp);
+o_nanidx = isnan(o_c);
+o_idx(o_nanidx) = [];
 % ctd
 id_temp = wod_data.ID;
 id_temp(wod_data.TYPE==1) = NaN;
-[~,c_idx] = unique(id_temp,'TreatMissingAsDistinct',false);
-c_idx(end) = [];
+[c_c,c_idx] = unique(id_temp);
+c_nanidx = isnan(c_c);
+c_idx(c_nanidx) = [];
 
 %% Map for full period
 % set map projection

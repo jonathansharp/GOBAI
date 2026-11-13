@@ -3,7 +3,6 @@ t_whole_script=tic; % time entire script
 
 %% Set configuration parameters
 start_year = 1993;
-% end_year = 2025;
 end_year = year(datetime('today'));
 % system-specific worker configuration
 numWorkers_train = 60;
@@ -11,7 +10,7 @@ numWorkers_predict = 60;
 numWorkers_cluster = 60;
 % float snapshot configuration
 snap_download = 1;
-snap_date = 202606;
+snap_date = 202610;
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_vrs = 'v3';
@@ -39,6 +38,7 @@ param = 'dic';
 param_props = param_config(param);
 % base grid
 base_grid = 'RFROM';
+rfrom_ver = 'v2.2_2025';
 fpaths = path_config(base_grid,param);
 % osse parameters
 model_types = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
@@ -54,10 +54,12 @@ ctd = 0;
 
 %% load and process data
 % acquire data
-acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,0);
+acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
 acquire_glodap_data(param_props,glodap_vrs,start_year);
 % adjust data
-adjust_dic_data(float_file_ext,glodap_vrs,snap_date,flt,gld,osd,ctd);
+if flt ==1 | ctd == 1
+    adjust_dic_data(float_file_ext,glodap_vrs,snap_date,flt,gld,osd,ctd);
+end
 % display data
 display_data(param_props,float_file_ext,glodap_vrs,...
     start_year,snap_date,flt,gld,osd,ctd);
@@ -66,8 +68,8 @@ combine_data(param_props,float_file_ext,...
     glodap_vrs,snap_date,flt,gld,osd,ctd);
 
 %% plot histogram of data
-plot_data_hist(param_props,file_date,float_file_ext,...
-    flt,gld,osd,ctd,start_year);
+% plot_data_hist(param_props,file_date,float_file_ext,...
+%     flt,gld,osd,ctd,start_year);
 
 %% determine ideal number of clusters
 % num_clusters = [20 22 25 27 30];
@@ -112,7 +114,7 @@ train_gobai('FFNN',param_props,base_grid,file_date,float_file_ext,...
 
 %% estimate parameter on grid to create GOBAI product
 % feed-forward neural networks
-predict_gobai('FFNN',param_props,fpaths,base_grid,file_date,float_file_ext,...
+predict_gobai('FFNN',param_props,fpaths,base_grid,rfrom_ver,file_date,float_file_ext,...
     num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
     end_year,snap_date,flt,gld,osd,ctd,'train_ratio',train_ratio,'val_ratio',val_ratio,...
     'test_ratio',test_ratio);

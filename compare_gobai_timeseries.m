@@ -317,21 +317,34 @@ exportgraphics(gcf,'/raid/Data/GOBAI-O2/global_gobai_comparison.png');
 close
 clear
 
+%% Nitrate
+figure; hold on;
+
 %% v 1.0
 % file information
-ver = 'v1.0'; % version
+ver = 'HR-v202606'; % version
 var = 'NO3'; % variable
-path = ['/raid/Data/GOBAI-' var '/' ver '/']; % file path
+% path = ['/raid/Data/GOBAI-' var '/' ver '/']; % file path
+modifier = 'fgo';
+path = ['/fast5/no3/GOBAI/RFROM/FFNN/c20_Jun-2026_D_A/train80_val10_test10/' modifier '/'];
 % download dimensions
-GOBAI.lon = ncread([path 'GOBAI-' var '-' ver '.nc'],'lon');
-GOBAI.lat = ncread([path 'GOBAI-' var '-' ver '.nc'],'lat');
-GOBAI.pres = ncread([path 'GOBAI-' var '-' ver '.nc'],'pres');
-GOBAI.time = ncread([path 'GOBAI-' var '-' ver '.nc'],'time');
+GOBAI.lon = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'longitude');
+GOBAI.lat = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'latitude');
+GOBAI.pres = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'mean_pressure');
+GOBAI.time = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'time');
 % download nitrate
-GOBAI.nit = ncread([path 'GOBAI-' var '-' ver '.nc'],'no3');
+GOBAI.nit = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'no3');
 % calculate weights
 GOBAI.vol = weights3d(GOBAI.lon,GOBAI.lat,GOBAI.pres);
 GOBAI.vol(isnan(mean(GOBAI.nit,4,'omitnan'))) = NaN;
+% determine mask (time varying coverage) and blank out
+mask = true(size(GOBAI.vol));
+for t = 1:length(GOBAI.time); mask(isnan(GOBAI.nit(:,:,:,t))) = false; end
+for t = 1:length(GOBAI.time)
+    gobai_tmp = GOBAI.nit(:,:,:,t);
+    gobai_tmp(~mask) = NaN;
+    GOBAI.nit(:,:,:,t) = gobai_tmp;
+end
 % calculate global mean
 global_mean = sum(reshape(GOBAI.nit,[length(GOBAI.lon)*...
     length(GOBAI.lat)*length(GOBAI.pres) length(GOBAI.time)]).*...
@@ -340,16 +353,18 @@ plot(double(GOBAI.time),global_mean,'LineWidth',2);
 
 %% v1.1-HR
 % file information
-ver = 'v1.1-HR'; % version
+ver = 'HR-v202608'; % version
 var = 'NO3'; % variable
-path = ['/raid/Data/GOBAI-' var '/' ver '/']; % file path
+% path = ['/raid/Data/GOBAI-' var '/' ver '/']; % file path
+modifier = 'fgo';
+path = ['/fast5/no3/GOBAI/RFROM/FFNN/c20_Aug-2026_D_A/train80_val10_test10/' modifier '/'];
 % download dimensions
-GOBAI.lon = ncread([path 'GOBAI-' var '-' ver '-Monthly-Mean-1x1.nc'],'longitude');
-GOBAI.lat = ncread([path 'GOBAI-' var '-' ver '-Monthly-Mean-1x1.nc'],'latitude');
-GOBAI.pres = ncread([path 'GOBAI-' var '-' ver '-Monthly-Mean-1x1.nc'],'mean_pressure');
-GOBAI.time = ncread([path 'GOBAI-' var '-' ver '-Monthly-Mean-1x1.nc'],'time');
+GOBAI.lon = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'longitude');
+GOBAI.lat = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'latitude');
+GOBAI.pres = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'mean_pressure');
+GOBAI.time = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'time');
 % download nitrate
-GOBAI.nit = ncread([path 'GOBAI-' var '-' ver '-Monthly-Mean-1x1.nc'],'no3');
+GOBAI.nit = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'no3');
 % calculate weights
 GOBAI.vol = weights3d(GOBAI.lon,GOBAI.lat,GOBAI.pres);
 GOBAI.vol(isnan(mean(GOBAI.nit,4,'omitnan'))) = NaN;
@@ -373,7 +388,7 @@ f.Position(3) = f.Position(3)*2;
 datetick('x','yyyy');
 title('Global Mean GOBAI-NO_{3} Versions');
 ylabel('Weighted Average [NO_{3}^{2-}]');
-legend({'v1.0'},'Location','northeast');
+legend({'HR-v202606' 'HR-v202608'},'Location','northwest');
 
 %% export figure
 exportgraphics(gcf,'/raid/Data/GOBAI-NO3/global_gobai_comparison.png');
@@ -382,16 +397,18 @@ clear
 
 %% v1.1-HR
 % file information
-ver = 'HR-v1.1'; % version
+ver = 'HR-v202608'; % version
 var = 'DIC'; % variable
-path = ['/raid/Data/GOBAI-' var '/' ver '/']; % file path
+% path = ['/raid/Data/GOBAI-' var '/' ver '/']; % file path
+modifier = 'fg_pH_corr_by_deep_offset_with_dic_adj';
+path = ['/fast6/dic/GOBAI/RFROM/FFNN/c20_Aug-2026_D/train80_val10_test10/' modifier '/'];
 % download dimensions
-GOBAI.lon = ncread([path 'GOBAI-' var '-' ver '-Monthly-Mean-1x1.nc'],'longitude');
-GOBAI.lat = ncread([path 'GOBAI-' var '-' ver '-Monthly-Mean-1x1.nc'],'latitude');
-GOBAI.pres = ncread([path 'GOBAI-' var '-' ver '-Monthly-Mean-1x1.nc'],'mean_pressure');
-GOBAI.time = ncread([path 'GOBAI-' var '-' ver '-Monthly-Mean-1x1.nc'],'time');
+GOBAI.lon = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'longitude');
+GOBAI.lat = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'latitude');
+GOBAI.pres = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'mean_pressure');
+GOBAI.time = datenum(1950,1,1)+ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'time');
 % download nitrate
-GOBAI.dic = ncread([path 'GOBAI-' var '-' ver '-Monthly-Mean-1x1.nc'],'dic');
+GOBAI.dic = ncread([path 'GOBAI-Monthly-Mean-1x1-' var '-' ver '.nc'],'dic');
 % calculate weights
 GOBAI.vol = weights3d(GOBAI.lon,GOBAI.lat,GOBAI.pres);
 GOBAI.vol(isnan(mean(GOBAI.dic,4,'omitnan'))) = NaN;
@@ -407,17 +424,20 @@ end
 global_mean = sum(reshape(GOBAI.dic,[length(GOBAI.lon)*...
     length(GOBAI.lat)*length(GOBAI.pres) length(GOBAI.time)]).*...
     GOBAI.vol(:),'omitnan')./(sum(GOBAI.vol(:),'omitnan'));
-plot(double(GOBAI.time),global_mean,'LineWidth',2);
 
 %% figure information
+figure;
+plot(double(GOBAI.time),global_mean,'LineWidth',2);
 f = gcf;
 f.Position(3) = f.Position(3)*2;
 datetick('x','yyyy');
 title('Global Mean GOBAI-DIC Versions');
-ylabel('Weighted Average [NO_{3}^{2-}]');
+ylabel('Weighted Average [DIC]');
 legend({'v1.0'},'Location','northeast');
+yyaxis right
+plot(time_ann,canth_inv_ann-canth_inv_ann(1)+gcb_inv(35),'linewidth',3,'color',clrs(3,:));
 
 %% export figure
-exportgraphics(gcf,'/raid/Data/GOBAI-NO3/global_gobai_comparison.png');
+exportgraphics(gcf,['/raid/Data/GOBAI-NO3/global_gobai_comparison_' modifier '_' ver '.png']);
 close
 clear

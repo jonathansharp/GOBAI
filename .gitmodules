@@ -1,0 +1,3 @@
+[submodule "TRACEv1"]
+	path = TRACEv1
+	url = https://github.com/BRCScienceProducts/TRACEv1.git

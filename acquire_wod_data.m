@@ -48,8 +48,10 @@ for y = start_year:end_year
                 websave(file,['https://www.ncei.noaa.gov/data/oceans/ncei/wod/' ...
                     num2str(y) '/wod_' types{x} '_' num2str(y) '.nc']);
             catch
-                disp(['No wod ' types{x} ' file for ' num2str(y)])
+                disp(['No wod ' types{x} ' file found for ' num2str(y) '.'])
             end
+        else
+            disp(['WOD ' types{x} ' file for ' num2str(y) ' already exists.'])
         end
     end
 end
@@ -160,7 +162,7 @@ parfor y = start_year:end_year
                 end
                 for d = 1:length(dims)
                     wod.(dims{d}) = [wod.(dims{d});...
-                        wod_temp.([dims{d} '_common'])(idx)];
+                        wod_temp.([dims{d} '_common'])(idx,:)];
                 end
                 % add type (1 = osd and 2 = ctd)
                 if strcmp(types{x},'osd')
@@ -297,7 +299,7 @@ parfor y = start_year:end_year
                     wod_data.DAY = [wod_data.DAY;...
                         repmat(mean(wod.day(idx)),length(zi),1)];
                     wod_data.CRU = [wod_data.CRU;...
-                        repmat(mean(wod.WOD_cruise_identifier(idx)),length(zi),1)];
+                        repmat(wod.WOD_cruise_identifier(find(idx,1),:),length(zi),1)];
                     wod_data.ID = [wod_data.ID;...
                         repmat(mean(wod.wod_unique_cast(idx)),length(zi),1)];
                     wod_data.TYPE = [wod_data.TYPE;...
@@ -316,7 +318,7 @@ parfor y = start_year:end_year
         end
         vars = fieldnames(wod_data);
         for v = 1:length(vars)
-            wod_data.(vars{v}) = wod_data.(vars{v})(idx);
+            wod_data.(vars{v}) = wod_data.(vars{v})(idx,:);
         end
 
         % save year of interpolated data
@@ -401,9 +403,9 @@ wod_data.SPICE = gsw_spiciness0(wod_data.ABSSAL,wod_data.CNSTEMP);
 
 %% display the number of casts and profiles
 disp(['# of matching OSD Casts (' param_props.temp_name '): ' num2str(length(unique(wod_data.ID(wod_data.TYPE==1))))]);
-disp(['# of matching OSD Cruises (' param_props.temp_name '): ' num2str(length(unique(wod_data.CRU(wod_data.TYPE==2))))]);
+disp(['# of matching OSD Cruises (' param_props.temp_name '): ' num2str(length(unique(wod_data.CRU(wod_data.TYPE==1,:),'rows')))]);
 disp(['# of matching CTD Casts (' param_props.temp_name '): ' num2str(length(unique(wod_data.ID(wod_data.TYPE==2))))]);
-disp(['# of matching CTD Cruises (' param_props.temp_name '): ' num2str(length(unique(wod_data.CRU(wod_data.TYPE==2))))]);
+disp(['# of matching CTD Cruises (' param_props.temp_name '): ' num2str(length(unique(wod_data.CRU(wod_data.TYPE==2,:),'rows')))]);
 
 %% save processed osd data
 if ~exist([pwd '/' param_props.dir_name '/Data'],'dir'); mkdir([param_props.dir_name '/Data']); end
@@ -421,9 +423,9 @@ load([param_props.dir_name '/Data/processed_wod_' param_props.file_name ...
 
 %% display the number of casts and profiles
 disp(['# of matching OSD Casts (' param_props.temp_name '): ' num2str(length(unique(wod_data.ID(wod_data.TYPE==1))))]);
-disp(['# of matching OSD Cruises (' param_props.temp_name '): ' num2str(length(unique(wod_data.CRU(wod_data.TYPE==2))))]);
+disp(['# of matching OSD Cruises (' param_props.temp_name '): ' num2str(length(unique(wod_data.CRU(wod_data.TYPE==1,:),'rows')))]);
 disp(['# of matching CTD Casts (' param_props.temp_name '): ' num2str(length(unique(wod_data.ID(wod_data.TYPE==2))))]);
-disp(['# of matching CTD Cruises (' param_props.temp_name '): ' num2str(length(unique(wod_data.CRU(wod_data.TYPE==2))))]);
+disp(['# of matching CTD Cruises (' param_props.temp_name '): ' num2str(length(unique(wod_data.CRU(wod_data.TYPE==2,:),'rows')))]);
 
 end
 

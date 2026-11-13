@@ -19,31 +19,154 @@ load(['DIC/Data/processed_float_dic_data_' file_date float_file_ext '.mat'],...
 load(['DIC/Data/processed_glodap_dic_data_' glodap_vrs '.mat'],...
     'glodap_data');
 
-%% pH range test
+%% adjust float oxygen based on previously developed crossover correction
+load(['O2/Data/float_corr_' file_date '_D_A']);
+% apply linear correction to float O2 (with pressure)
+corr_fac = nan(size(float_data.OXY));
+idx_deep = float_data.PRES >= max_delta_pressure;
+corr_fac(idx_deep) = float_data.PRES(idx_deep).*slp_deep + int_deep;
+idx_shal = float_data.PRES < max_delta_pressure;
+corr_fac(idx_shal) = float_data.PRES(idx_shal).*slp_shal + int_shal;
+float_data.OXY_ADJUSTED = float_data.OXY - corr_fac;
+
+%% float pH range test
 idx = float_data.PH < 7.3 | float_data.PH > 8.5;
 vars = fieldnames(float_data);
 for v = 1:length(vars)
     float_data.(vars{v})(idx) = [];
 end
 
-%% calculate DIC from float data
+%% calculate estimates from glodap data
+% convert pressure to depth
+glodap_data.DEPTH = -gsw_z_from_p(glodap_data.PRES,glodap_data.LAT);
+% make ESPER estimates
+esper_preds = ESPER_Mixed([1 2 3 4 6],[glodap_data.LON glodap_data.LAT glodap_data.DEPTH],...
+    [glodap_data.TEMP glodap_data.SAL glodap_data.OXY],[2 1 6],...
+        'Equations',7,... % sets the ESPER equation to use (7 = S/T/O2)
+        'EstDates',glodap_data.YEAR + (glodap_data.DAY/365.25),... % sets the date for the ESPER estimates
+        'pHCalcTF',true); % sets whether to calculate pH similar to the TA/DIC calculated value (true) or the measured value (false)
+glodap_data.TA_est = esper_preds.TA;
+glodap_data.DIC_est = esper_preds.DIC;
+glodap_data.pH_est = esper_preds.pH;
+glodap_data.PHOS_est = esper_preds.phosphate;
+glodap_data.SIL_est = esper_preds.silicate;
+clear esper_preds
+
+%% calculate pH from glodap TA and DIC
+% use co2sys to calculate pH
+idx_co2sys = ~isnan(glodap_data.TA) & ~isnan(glodap_data.DIC) & ~isnan(glodap_data.SAL) & ~isnan(glodap_data.TEMP);
+C = CO2SYS(glodap_data.TA(idx_co2sys),glodap_data.DIC(idx_co2sys),1,2,glodap_data.SAL(idx_co2sys),glodap_data.TEMP(idx_co2sys),NaN,...
+    glodap_data.PRES(idx_co2sys),NaN,glodap_data.SIL_est(idx_co2sys),glodap_data.PHOS_est(idx_co2sys),0,0,1,10,1,2,2);
+glodap_data.pH_calc = nan(size(glodap_data.PH));
+glodap_data.pH_calc(idx_co2sys) = C(:,3); clear C;
+% determine bad cruises
+idx_ph_compare = isfinite(glodap_data.CRU) & isfinite(glodap_data.PH) & ...
+    isfinite(glodap_data.pH_calc);
+cruise_ids = unique(glodap_data.CRU(idx_ph_compare));
+[~,cruise_group] = ismember(glodap_data.CRU(idx_ph_compare),cruise_ids);
+ph_difference = abs(glodap_data.PH(idx_ph_compare) - ...
+    glodap_data.pH_calc(idx_ph_compare));
+num_compared = accumarray(cruise_group,1);
+num_over_threshold = accumarray(cruise_group,ph_difference > 0.1);
+percent_over_threshold = 100 .* num_over_threshold ./ num_compared;
+cruises_to_exclude = cruise_ids(percent_over_threshold > 50);
+% [1156,1160,1169:1173]; % as ov 9/25/26, these appear to have bad pH data
+% the issue is that GLODAP assumed pH was reported at 15C, but it was actually at 25C (see email from Nico on 9/27/26)
+% cruise_ph_summary = table(cruise_ids,num_compared,num_over_threshold,...
+%     percent_over_threshold,'VariableNames',{'CRU','NCompared','NOverThreshold',...
+%     'PercentOverThreshold'});
+% disp(cruise_ph_summary(cruise_ph_summary.PercentOverThreshold > 50,:));
+idx = ~isnan(glodap_data.PH) & ~isnan(glodap_data.pH_est) & ...
+~ismember(glodap_data.CRU,cruises_to_exclude);
+
+%% plot measured vs. calculated glodap pH
+idx_temp = idx & ~isnan(glodap_data.pH_calc);
+figure('visible','on','position',[100 100 1000 400]);
+set(gca,'fontsize',15,'Box','on','LineWidth',2); hold on;
+histogram2(gca,glodap_data.PH(idx_temp),glodap_data.pH_calc(idx_temp),'DisplayStyle', 'tile');
+plot([7.4 8.3],[7.4 8.3],'b');
+xlim([7.4 8.3]); ylim([7.4 8.3]);
+myColorMap = flipud(hot(256.*32));
+myColorMap(1,:) = 1;
+colormap(myColorMap);
+set(gca,'ColorScale','log');
+clim([1e0 1e4]);
+c=colorbar;
+c.Label.String = 'log_{10}(Bin Counts)';
+text(7.5,8.2,['Average Diff. = ' ...
+    num2str(round(mean(glodap_data.PH(idx_temp)-glodap_data.pH_calc(idx_temp)),4)) ...
+        ' +/- ' num2str(round(std(glodap_data.PH(idx_temp)-glodap_data.pH_calc(idx_temp)),4))],...
+    'FontSize',12);
+xlabel('GLODAP measured pH'); ylabel('Calculated pH (w/ TA/DIC)');
+export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_calc_glodap_' glodap_vrs '.png'],'-transparent'); close;
+
+%% plot measured vs. estimated glodap pH
+figure('visible','on','position',[100 100 1000 400]);
+set(gca,'fontsize',15,'Box','on','LineWidth',2); hold on;
+histogram2(gca,glodap_data.PH(idx),glodap_data.pH_est(idx),'DisplayStyle', 'tile');
+plot([7.4 8.3],[7.4 8.3],'b');
+xlim([7.4 8.3]); ylim([7.4 8.3]);
+myColorMap = flipud(hot(256.*32));
+myColorMap(1,:) = 1;
+colormap(myColorMap);
+set(gca,'ColorScale','log');
+clim([1e0 1e4]);
+c=colorbar;
+c.Label.String = 'log_{10}(Bin Counts)';
+text(7.5,8.2,['Average Diff. = ' ...
+    num2str(round(mean(glodap_data.PH(idx)-glodap_data.pH_est(idx)),4)) ...
+        ' +/- ' num2str(round(std(glodap_data.PH(idx)-glodap_data.pH_est(idx)),4))],...
+    'FontSize',12);
+xlabel('GLODAP measured pH'); ylabel('Estimated pH (ESPER w/ T/S/O2)');
+export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_glodap_' glodap_vrs '.png'],'-transparent'); close;
+
+%% adjust glodap pH via comparison with ESPER estimates (profile by profile) (as a test)
+% unique_profs = unique(glodap_data.ID);
+% % rng(1); prof_idx = randperm(length(unique_profs))';
+% % test_idx = prof_idx >= length(unique_profs)*.4; % 60 percent of data to use for adjustment
+% % val_idx = prof_idx < length(unique_profs)*.4; % 40 percent of data to use for test
+% % test_profs = unique_profs(test_idx);
+% % val_profs = unique_profs(val_idx);
+% glodap_data.DIC_est
+% glodap_data.PH_ESPER_ADJUSTED = nan(size(glodap_data.PH));
+% adjustment = nan(size(test_profs));
+% latitude = nan(size(unique_profs));
+% time = nan(size(unique_profs));
+% % adjustment by deep mean dic offset
+% for p = 1:length(unique_profs)
+%     idx_p = find(glodap_data.ID == unique_profs(p) & ~isnan(glodap_data.DIC) & ~isnan(glodap_data.DIC_est));
+%     idx_p_adj = find(glodap_data.ID == unique_profs(p) & ~isnan(glodap_data.DIC) & ~isnan(glodap_data.DIC_est) & ...
+%         glodap_data.DEPTH >= 1000);
+%     adjustment(p) = mean(glodap_data.DIC_est(idx_p_adj)-glodap_data.DIC(idx_p_adj));
+%     % figure; plot(float_data.PH(idx_p),float_data.PRES(idx_p),float_data.pH_est(idx_p),float_data.PRES(idx_p));
+%     t_cor = (mean(float_data.TEMP(idx_p_adj))+273.15)./(float_data.TEMP(idx_p)+273.15);
+%     float_data.PH_ESPER_ADJUSTED(idx_p) = float_data.PH(idx_p) - adjustment(p).*t_cor;
+%     % figure; plot(float_data.PH_ESPER_ADJUSTED(idx_p),float_data.PRES(idx_p),float_data.pH_est(idx_p),float_data.PRES(idx_p));
+%     latitude(p) = mean(float_data.LAT(idx_p));
+%     time(p) = mean(float_data.TIME(idx_p));
+% end
+
+%% calculate estimates from float data
 % convert pressure to depth
 float_data.DEPTH = -gsw_z_from_p(float_data.PRES,float_data.LAT);
 % make ESPER estimates
 esper_preds = ESPER_Mixed([1 2 3 4 6],[float_data.LON float_data.LAT float_data.DEPTH],...
-    [float_data.TEMP float_data.SAL float_data.OXY],[2 1 6],'Equations',7,...
-    'EstDates',float_data.YEAR + (float_data.DAY/365.25));
+    [float_data.TEMP float_data.SAL float_data.OXY_ADJUSTED],[2 1 6],...
+    'Equations',7,... % sets the ESPER equation to use (7 = S/T/O2)
+    'EstDates',float_data.YEAR + (float_data.DAY/365.25),... % sets the date for the ESPER estimates
+    'pHCalcTF',true); % sets whether to calculate pH similar to the TA/DIC calculated value (true) or the measured value (false)
 float_data.TA_est = esper_preds.TA;
 float_data.DIC_est = esper_preds.DIC;
 float_data.pH_est = esper_preds.pH;
 float_data.PHOS_est = esper_preds.phosphate;
 float_data.SIL_est = esper_preds.silicate;
+clear esper_preds
 idx = ~isnan(float_data.PH) & ~isnan(float_data.pH_est);
 
-%% plot measured vs. estimated pH
-figure('visible','off','position',[100 100 1000 400]);
+%% plot measured vs. estimated float pH
+figure('visible','on','position',[100 100 1000 400]);
 set(gca,'fontsize',15,'Box','on','LineWidth',2); hold on;
-histogram2(gca,float_data.PH,float_data.pH_est,'DisplayStyle', 'tile');
+histogram2(gca,float_data.PH(idx),float_data.pH_est(idx),'DisplayStyle', 'tile');
 plot([7.4 8.3],[7.4 8.3],'b');
 xlim([7.4 8.3]); ylim([7.4 8.3]);
 myColorMap = flipud(hot(256.*32));
@@ -61,33 +184,45 @@ xlabel('Float measured pH'); ylabel('Estimated pH (ESPER w/ T/S/O2)');
 export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_uncorr_' ...
     file_date float_file_ext '.png'],'-transparent'); close;
 
-%% adjust float pH via compariaon with ESPER estimates (profile by profile)
+%% adjust float pH via comparison with ESPER estimates (profile by profile)
 unique_profs = unique(float_data.PROF_ID);
 float_data.PH_ESPER_ADJUSTED = nan(size(float_data.PH));
 adjustment = nan(size(unique_profs));
 latitude = nan(size(unique_profs));
 time = nan(size(unique_profs));
-% % adjustment by full-column pH v. delta_pH fit
-% for p = 1:length(unique_profs)
-%     idx_p = find(float_data.PROF_ID == unique_profs(p) & ~isnan(float_data.PH) & ~isnan(float_data.pH_est));
-%     fit_params = polyfit(float_data.PH(idx_p),float_data.PH(idx_p)-float_data.pH_est(idx_p),1);
-%     float_data.PH_ESPER_ADJUSTED(idx_p) = float_data.PH(idx_p) - (float_data.PH(idx_p).*fit_params(1) + fit_params(2));
-%     adjustment(p) = mean((float_data.PH(idx_p).*fit_params(1) + fit_params(2)));
-%     latitude(p) = mean(float_data.LAT(idx_p));
-%     time(p) = mean(float_data.TIME(idx_p));
-% end
-% adjustment by deep mean offset (w/ temp ratio)
+% adjustment by full-column pH v. delta_pH fit, profile by profile
 for p = 1:length(unique_profs)
     idx_p = find(float_data.PROF_ID == unique_profs(p) & ~isnan(float_data.PH) & ~isnan(float_data.pH_est));
-    idx_p_adj = find(float_data.PROF_ID == unique_profs(p) & ~isnan(float_data.PH) & ~isnan(float_data.pH_est) & float_data.PRES > 1000);
-    adjustment(p) = mean(float_data.PH(idx_p_adj)-float_data.pH_est(idx_p_adj));
-    % figure; plot(float_data.PH(idx_p),float_data.PRES(idx_p),float_data.pH_est(idx_p),float_data.PRES(idx_p));
-    t_cor = (mean(float_data.TEMP(idx_p_adj))+273.15)./(float_data.TEMP(idx_p)+273.15);
-    float_data.PH_ESPER_ADJUSTED(idx_p) = float_data.PH(idx_p) - adjustment(p).*t_cor;
-    % figure; plot(float_data.PH_ESPER_ADJUSTED(idx_p),float_data.PRES(idx_p),float_data.pH_est(idx_p),float_data.PRES(idx_p));
+    fit_params = polyfit(float_data.PH(idx_p),float_data.PH(idx_p)-float_data.pH_est(idx_p),1);
+    float_data.PH_ESPER_ADJUSTED(idx_p) = float_data.PH(idx_p) - (float_data.PH(idx_p).*fit_params(1) + fit_params(2));
+    adjustment(p) = mean((float_data.PH(idx_p).*fit_params(1) + fit_params(2)));
     latitude(p) = mean(float_data.LAT(idx_p));
     time(p) = mean(float_data.TIME(idx_p));
 end
+% % adjustment by deep mean offset (w/ temp ratio), profile by profile
+% for p = 1:length(unique_profs)
+%     idx_p = find(float_data.PROF_ID == unique_profs(p) & ~isnan(float_data.PH) & ~isnan(float_data.pH_est));
+%     idx_p_adj = find(float_data.PROF_ID == unique_profs(p) & ~isnan(float_data.PH) & ~isnan(float_data.pH_est) & float_data.PRES > 1000);
+%     adjustment(p) = mean(float_data.PH(idx_p_adj)-float_data.pH_est(idx_p_adj));
+%     % figure; plot(float_data.PH(idx_p),float_data.PRES(idx_p),float_data.pH_est(idx_p),float_data.PRES(idx_p));
+%     t_cor = (mean(float_data.TEMP(idx_p_adj))+273.15)./(float_data.TEMP(idx_p)+273.15);
+%     float_data.PH_ESPER_ADJUSTED(idx_p) = float_data.PH(idx_p) - adjustment(p).*t_cor;
+%     % figure; plot(float_data.PH_ESPER_ADJUSTED(idx_p),float_data.PRES(idx_p),float_data.pH_est(idx_p),float_data.PRES(idx_p));
+%     latitude(p) = mean(float_data.LAT(idx_p));
+%     time(p) = mean(float_data.TIME(idx_p));
+% end
+% % adjustment by deep mean offset (w/ temp ratio), full float
+% for p = 1:length(unique_profs)
+%     idx_p = find(float_data.PROF_ID == unique_profs(p) & ~isnan(float_data.PH) & ~isnan(float_data.pH_est));
+%     idx_p_adj = find(float_data.PROF_ID == unique_profs(p) & ~isnan(float_data.PH) & ~isnan(float_data.pH_est) & float_data.PRES > 1000);
+%     adjustment(p) = mean(float_data.PH(idx_p_adj)-float_data.pH_est(idx_p_adj));
+%     % figure; plot(float_data.PH(idx_p),float_data.PRES(idx_p),float_data.pH_est(idx_p),float_data.PRES(idx_p));
+%     t_cor = (mean(float_data.TEMP(idx_p_adj))+273.15)./(float_data.TEMP(idx_p)+273.15);
+%     float_data.PH_ESPER_ADJUSTED(idx_p) = float_data.PH(idx_p) - adjustment(p).*t_cor;
+%     % figure; plot(float_data.PH_ESPER_ADJUSTED(idx_p),float_data.PRES(idx_p),float_data.pH_est(idx_p),float_data.PRES(idx_p));
+%     latitude(p) = mean(float_data.LAT(idx_p));
+%     time(p) = mean(float_data.TIME(idx_p));
+% end
 
 %% plot adjustments over time and latitude
 % set bins
@@ -293,13 +428,44 @@ for p = 1:length(float_profile_IDs)
     end
 end
 
-% index to below 300 dbars
-idx = crossover.pres > 300 & ~isnan(crossover.dic_float) & ~isnan(crossover.dic_glodap);
 % clean up
 clear pres_levels float_profile_IDs lon lat time dic_float pres_float
 clear idx_lon idx_lat idx_time dic_temp pres_temp idx_pres dic_glodap
 
+
+%% depth-dependent correction (using two depths)
+% pressures = unique(crossover.pres);
+% avg_delta_by_p = nan(size(pressures));
+% avg_by_p = nan(size(pressures));
+% for p = 1:length(pressures)
+%     idx_p = crossover.pres == pressures(p);
+%     avg_delta_by_p(p) = mean(crossover.dic_delta(idx_p),'omitnan');
+%     avg_by_p(p) = mean(crossover.dic_glodap(idx_p),'omitnan');
+% end
+% [~,idx_min_delta] = min(abs(avg_delta_by_p)); % find maximum crossover offset
+% min_delta_pressure = pressures(idx_min_delta);
+% disp(['Minimum crossover offset at ' num2str(min_delta_pressure) ' dbar.'])
+% % deep adjustment equation
+% mdl = fitlm(pressures(idx_min_delta:end),...
+%     avg_delta_by_p(idx_min_delta:end),'Intercept',true);
+% slp_deep = mdl.Coefficients.Estimate(2);
+% int_deep = mdl.Coefficients.Estimate(1);
+% % shallow adjustment equation
+% mdl = fitlm(pressures(1:idx_min_delta-1),...
+%     avg_delta_by_p(1:idx_min_delta-1),'Intercept',true);
+% slp_shal = mdl.Coefficients.Estimate(2);
+% int_shal = mdl.Coefficients.Estimate(1);
+% % apply linear correction to float DIC (with pressure)
+% corr_fac = nan(size(crossover.dic_float));
+% idx_deep = crossover.pres >= pressures(idx_min_delta);
+% corr_fac(idx_deep) = slp_deep .* crossover.pres(idx_deep) + int_deep;
+% idx_shal = crossover.pres < pressures(idx_min_delta);
+% corr_fac(idx_shal) = slp_shal .* crossover.pres(idx_shal) + int_shal;
+% crossover.dic_float_corr = crossover.dic_float - corr_fac;
+
+%% deep delta correction
 % fit delta against DIC
+idx = crossover.pres > 300 & ~isnan(crossover.dic_float) & ~isnan(crossover.dic_glodap);
 mdl = fitlm(crossover.dic_float(idx),crossover.dic_delta(idx),'Intercept',true);
 slp = mdl.Coefficients.Estimate(2);
 int = mdl.Coefficients.Estimate(1);
@@ -317,57 +483,32 @@ if ~exist([pwd '/DIC/Data'],'dir'); mkdir('DIC/Data'); end
 save(['DIC/Data/float_corr_' file_date float_file_ext],'slp','int');
 clear slp int
 
-%% Co-locate and compare float and glodap data (via bins)
-% % load binned data
-% load(['DIC/Data/binned_data_' file_date float_file_ext],'binned_data')
-% % index where binned float and glodap data overlap under 300 dbars
-% idx = ~isnan(binned_data.dic_float) & ~isnan(binned_data.dic_glodap) & ...
-%     binned_data.pres > 300;
-% % add matched data to structure
-% matched_data.dic_float = binned_data.dic_float(idx);
-% matched_data.dic_glodap = binned_data.dic_glodap(idx);
-% matched_data.dic_delta = matched_data.dic_glodap-matched_data.dic_float;
-% matched_data.dic_delta_per = (matched_data.dic_glodap-matched_data.dic_float)./matched_data.dic_glodap;
-% matched_data.pres = binned_data.pres(idx);
-% % fit delta against DIC
-% mdl = fitlm(matched_data.dic_float,matched_data.dic_delta_per,'Intercept',true);
-% slp = mdl.Coefficients.Estimate(2);
-% int = mdl.Coefficients.Estimate(1);
-% % apply linear correction to float dic
-% matched_data.dic_float_corr = matched_data.dic_float + ...
-%     (slp.*matched_data.dic_float + int).*matched_data.dic_float;
-% % re-calculate delta
-% matched_data.dic_delta_corr = matched_data.dic_glodap-matched_data.dic_float_corr;
-% matched_data.dic_delta_per_corr = matched_data.dic_glodap-matched_data.dic_float_corr;
-% % clean up
-% clear idx mdl binned_data
-% 
-% % save matched float and glodap data
-% if ~exist([pwd '/DIC/Data'],'dir'); mkdir('DIC/Data'); end
-% save(['DIC/Data/matched_data_' file_date float_file_ext],'matched_data','-v7.3');
-% clear matched_data
-% % save correction factors
-% if ~exist([pwd '/DIC/Data'],'dir'); mkdir('DIC/Data'); end
-% save(['DIC/Data/float_corr_' file_date float_file_ext],'slp','int');
-% clear slp int
-
 %% plot uncorrected float vs. glodap residuals
 load(['DIC/Data/crossover_data_' file_date float_file_ext],'crossover','idx');
 % scatter
-figure; hold on;
-scatter(crossover.dic_glodap(idx),crossover.dic_float(idx),20,'.');
-plot([2000,2400],[2000 2400],'k--');
+figure('visible','on','position',[100 100 800 800]);
+set(gca,'fontsize',15,'Box','on','LineWidth',2); hold on;
+histogram2(gca,crossover.dic_glodap(idx),crossover.dic_float(idx),...
+    'DisplayStyle', 'tile','BinWidth',5,'EdgeColor','none');
+plot([1900,2400],[1900,2400],'k--');
 ylabel('Binned BGC Argo DIC Data (\mumol kg^{-1})');
 xlabel('Binned GLODAP DIC Data (\mumol kg^{-1})');
+myColorMap = flipud(hot(256.*32));
+myColorMap(1,:) = 1;
+colormap(myColorMap);
+set(gca,'ColorScale','log');
+clim([1e0 1e4]); xlim([1900 2400]); ylim([1900 2400]);
+c=colorbar;
+c.Label.String = 'log_{10}(Bin Counts)';
 crossover.err_md = median(crossover.dic_delta(idx));
 crossover.std = std(crossover.dic_delta(idx));
 crossover.rmse = sqrt(mean((crossover.dic_delta(idx)).^2));
 crossover.r2 = corr(crossover.dic_glodap(idx),crossover.dic_float(idx));
 crossover.slope = polyfit(crossover.dic_glodap(idx),crossover.dic_float(idx),1);
 crossover.slope = crossover.slope(1);
-text(2050,2350,['Med. Err. = ' num2str(round(crossover.err_md,2))],'fontsize',12);
-text(2050,2325,['RMSE = ' num2str(round(crossover.rmse,1))],'fontsize',12);
-text(2050,2300,['R^{2} = ' num2str(round(crossover.r2,2))],'fontsize',12);
+text(1950,2350,['Med. Err. = ' num2str(round(crossover.err_md,2))],'fontsize',12);
+text(1950,2325,['RMSE = ' num2str(round(crossover.rmse,1))],'fontsize',12);
+text(1950,2300,['R^{2} = ' num2str(round(crossover.r2,2))],'fontsize',12);
 exportgraphics(gcf,['DIC/Figures/Data/delta_vs_float_300_uncorr_' file_date float_file_ext '.png']);
 close
 % histogram
@@ -396,12 +537,20 @@ clear crossover
 %% plot corrected float vs. glodap residuals
 load(['DIC/Data/crossover_data_' file_date float_file_ext],'crossover','idx');
 % scatter
-figure; hold on;
-scatter(crossover.dic_glodap(idx),crossover.dic_float_corr(idx),20,'.');
-plot([2000,2400],[2000 2400],'k--');
+figure('visible','on','position',[100 100 800 800]);
+set(gca,'fontsize',15,'Box','on','LineWidth',2); hold on;
+histogram2(gca,crossover.dic_glodap(idx),crossover.dic_float_corr(idx),...
+    'DisplayStyle', 'tile','BinWidth',5,'EdgeColor','none');
+plot([1900,2400],[1900,2400],'k--');
 ylabel('Corrected, Binned BGC Argo DIC Data (\mumol kg^{-1})');
 xlabel('Binned GLODAP DIC Data (\mumol kg^{-1})');
-crossover.err_md_corr = median(crossover.dic_delta_corr(idx));
+myColorMap = flipud(hot(256.*32));
+myColorMap(1,:) = 1;
+colormap(myColorMap);
+set(gca,'ColorScale','log');
+clim([1e0 1e4]); xlim([1900 2400]); ylim([1900 2400]);
+c=colorbar;
+c.Label.String = 'log_{10}(Bin Counts)';crossover.err_md_corr = median(crossover.dic_delta_corr(idx));
 crossover.std_corr = std(crossover.dic_delta_corr(idx));
 crossover.rmse_corr = sqrt(mean((crossover.dic_delta_corr(idx)).^2));
 crossover.r2_corr = corr(crossover.dic_glodap(idx),crossover.dic_float_corr(idx));
@@ -488,7 +637,31 @@ clear crossover lon_temp
 load(['DIC/Data/float_corr_' file_date float_file_ext],'slp','int');
 vars = fieldnames(float_data);
 for v = 1:length(vars)      
-    float_data_adjusted.(vars{v}) = float_data.(vars{v});
+    if strcmp(vars{v},'DIC')
+        % % don't apply correction to DIC
+        % float_data_adjusted.DIC = float_data.DIC;
+        % apply linear correction to float DIC (with pressure)
+        corr_fac = slp .* float_data.DIC + int;
+        float_data_adjusted.DIC = float_data.DIC - corr_fac;
+        disp(['Average adjustment = ' ...
+            num2str(round(mean(corr_fac,'omitnan'),2)) ' umol/kg']);
+    elseif strcmp(vars{v},'OXY')
+        float_data_adjusted.OXY = float_data.OXY_ADJUSTED;
+    elseif strcmp(vars{v},'NIT')
+        % load correction factors for nitrate
+        load(['NO3/Data/float_corr_' file_date '_D_A']);
+        % apply linear correction to float nitrate (with pressure)
+        corr_fac = nan(size(float_data.NIT));
+        idx_deep = float_data.PRES >= min_delta_pressure;
+        corr_fac(idx_deep) = float_data.PRES(idx_deep).*slp_deep + int_deep;
+        idx_shal = float_data.PRES < min_delta_pressure;
+        corr_fac(idx_shal) = float_data.PRES(idx_shal).*slp_shal + int_shal;
+        float_data_adjusted.NIT = float_data.NIT - corr_fac;
+        disp(['Average NO3 adjustment = ' ...
+            num2str(round(mean(corr_fac,'omitnan'),2)) ' umol/kg']);
+    else
+        float_data_adjusted.(vars{v}) = float_data.(vars{v});
+    end
 end
 
 if include_float

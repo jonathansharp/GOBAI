@@ -2,7 +2,7 @@
 %% Plot GOBAI over time
 
 function plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,...
-    alg_type,file_date,float_file_ext,numWorkers_predict,flt,gld,osd,ctd,varargin)
+    alg_type,file_date,float_file_ext,numWorkers_predict,flt,gld,osd,ctd,snap_date,varargin)
 
 %% define dataset extensions
 if flt == 1; float_ext = 'f'; else float_ext = ''; end
@@ -76,10 +76,10 @@ else
 end
 
 %% set up parallel pool
-tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
+% tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
 %% plot frames
-parfor d = 1:length(pressures)
+for d = 1:length(pressures)
     % create folder for figures
     dname = [param_props.dir_name '/Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
@@ -106,19 +106,19 @@ parfor d = 1:length(pressures)
             float_ext glodap_ext osd_ext ctd_ext '_' num2str(pressures(d)) 'dbar.gif'];
         v_fname = ['gobai_' param_props.file_name '_animation_' num2str(pressures(d)) 'dbar.avi'];
         gobai_fname = [dir_base '/' float_ext glodap_ext osd_ext ctd_ext ...
-            '/gobai-' param_props.file_name '.nc'];
+            '/GOBAI-' param_props.dir_name '-HR-v' num2str(snap_date) '.nc'];
     elseif uncer == 1
         fname = ['gobai_' param_props.file_name '_uncer_animation_' ...
             float_ext glodap_ext osd_ext ctd_ext '_' num2str(pressures(d)) 'dbar.gif'];
         v_fname = ['gobai_' param_props.file_name '_uncer_animation_' num2str(pressures(d)) 'dbar.avi'];
         gobai_fname = [dir_base '/' float_ext glodap_ext osd_ext ctd_ext ...
-            '/gobai-' param_props.file_name '-uncer.nc'];
+            '/GOBAI-' param_props.dir_name '-HR-v' num2str(snap_date) '-uncer.nc'];
     elseif anom == 1
         fname = ['gobai_' param_props.file_name '_anom_animation_' ...
             float_ext glodap_ext osd_ext ctd_ext '_' num2str(pressures(d)) 'dbar.gif'];
         v_fname = ['gobai_' param_props.file_name '_anom_animation_' num2str(pressures(d)) 'dbar.avi'];
         gobai_fname = [dir_base '/' float_ext glodap_ext osd_ext ctd_ext ...
-            '/gobai-' param_props.file_name '.nc'];
+            '/GOBAI-' param_props.dir_name '-HR-v' num2str(snap_date) '.nc'];
     end
     % determine number of timesteps
     gobai_inf = ncinfo(gobai_fname);

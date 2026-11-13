@@ -32,7 +32,7 @@ if include_osd || include_ctd; load(['O2/Data/processed_wod_o2_data_' ...
         num2str(end_year) '.mat'],'wod_data'); end
 
 %% only do if file doesn't exist
-% if exist(['O2/Data/crossover_data_' file_date float_file_ext '.mat'],'file') ~= 2
+if exist(['O2/Data/crossover_data_' file_date float_file_ext '.mat'],'file') ~= 2
 
 %% remove data points based on global range test
 % 480 umol/kg used as max for WOD range checks
@@ -474,9 +474,6 @@ crossover.oxy_sat_float = exp(a0 + Ts.*(a1 + Ts.*(a2 + Ts.*(a3 + Ts.*(a4 + a5*Ts
 crossover.oxy_float_sat_per = 100*(crossover.oxy_float./crossover.oxy_sat_float);
 crossover.oxy_delta_sat_per = 100*(crossover.oxy_delta./crossover.oxy_sat_float);
 
-% index to below 300 dbars
-idx = crossover.pres >= 300 & ~isnan(crossover.oxy_float) & ~isnan(crossover.oxy_ship);
-
 % clean up
 clear pres_levels float_profile_IDs lon lat time oxy_float pres_float
 clear idx_lon idx_lat idx_time oxy_temp pres_temp idx_pres oxy_ship
@@ -486,11 +483,11 @@ if ~exist([pwd '/O2/Data'],'dir'); mkdir('Data'); end
 save(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx','-v7.3')
 
 
-% else
-% 
-% disp(['Float data crossovers (' erase(float_file_ext,'_') ') for ' file_date ' already determined.']);
-% 
-% end
+else
+
+disp(['Float data crossovers (' erase(float_file_ext,'_') ') for ' file_date ' already determined.']);
+
+end
 
 %% develop O2 correction
 % load crossover data
@@ -538,12 +535,85 @@ load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx')
 % corr_fac = slp .* crossover.oxy_float + int; % modelled saturation delta
 % crossover.oxy_float_corr = crossover.oxy_float - corr_fac;
 
-%% depth-dependent correction (using two depths)
-pressures = unique(crossover.pres);
+%% inspect the distriibution of the oxygen deltas
+% Keep finite float/ship pairs with a finite pressure and offset
+valid = isfinite(crossover.oxy_float) & ...
+    isfinite(crossover.oxy_ship) & ...
+    isfinite(crossover.pres) & ...
+    isfinite(crossover.oxy_delta);
+
+delta = double(crossover.oxy_delta(valid));
+pressure = double(crossover.pres(valid));
+
+if isempty(delta)
+    error('No valid crossover offsets are available.');
+end
+
+% Robust summary
+q = prctile(delta, [1 5 25 50 75 95 99]);
+fprintf('N = %d\n', numel(delta));
+fprintf('Mean = %.2f, SD = %.2f umol/kg\n', mean(delta), std(delta));
+fprintf('Median = %.2f, IQR = %.2f umol/kg\n', q(4), q(5)-q(3));
+fprintf('Percentiles [1 5 25 50 75 95 99]:\n');
+disp(q);
+
+% Summaries by pressure level
+levels = unique(pressure);
+n = zeros(size(levels));
+med = nan(size(levels));
+lo = nan(size(levels));
+hi = nan(size(levels));
+
+for k = 1:numel(levels)
+    d = delta(pressure == levels(k));
+    n(k) = numel(d);
+    med(k) = median(d);
+    pct = prctile(d, [25 75]);
+    lo(k) = pct(1);
+    hi(k) = pct(2);
+end
+
+% Plot global distribution and pressure dependence
+figure;
+tiledlayout(2,2);
+
+nexttile;
+histogram(delta, 60);
+xline(q(4), 'r-', 'Median');
+xlabel('Float - ship O_2 (\mumol kg^{-1})');
+ylabel('Count');
+title('All valid crossovers');
+
+nexttile;
+histogram(delta, 60);
+xlim(q([1 7]));  % zoom to the 1st–99th percentile range
+xline(q(4), 'r-', 'Median');
+xlabel('Float - ship O_2 (\mumol kg^{-1})');
+ylabel('Count');
+title('Central 98% of offsets');
+
+nexttile;
+errorbar(levels, med, med-lo, hi-med, 'o-');
+yline(0, 'k:');
+xlabel('Pressure (dbar)');
+ylabel('Median offset and IQR (\mumol kg^{-1})');
+title('Offset by pressure level');
+
+nexttile;
+semilogy(levels, n, 'o-');
+xlabel('Pressure (dbar)');
+ylabel('Number of crossovers');
+title('Sample count by pressure');
+
+%% develop a depth-dependent correction (using two depths)
+% index
+idx = ~isnan(crossover.oxy_float) & ~isnan(crossover.oxy_ship);
+% determine average delta by pressure level
+pressures = unique(crossover.pres(idx));
 avg_delta_by_p = nan(size(pressures));
 avg_by_p = nan(size(pressures));
 for p = 1:length(pressures)
-    idx_p = crossover.pres == pressures(p);
+    idx_p = crossover.pres == pressures(p) & idx;
     avg_delta_by_p(p) = mean(crossover.oxy_delta(idx_p),'omitnan');
     avg_by_p(p) = mean(crossover.oxy_ship(idx_p),'omitnan');
 end
@@ -567,6 +637,18 @@ corr_fac(idx_deep) = slp_deep .* crossover.pres(idx_deep) + int_deep;
 idx_shal = crossover.pres < pressures(idx_max_delta);
 corr_fac(idx_shal) = slp_shal .* crossover.pres(idx_shal) + int_shal;
 crossover.oxy_float_corr = crossover.oxy_float - corr_fac;
+% plot offset as a function of pressure
+figure; hold on;
+plot(avg_delta_by_p,pressures,'k','linewidth',2);
+plot(slp_deep.*pressures(idx_max_delta:end)+int_deep,pressures(idx_max_delta:end),'r--','linewidth',2);
+plot(slp_shal.*pressures(1:idx_max_delta-1)+int_shal,pressures(1:idx_max_delta-1),'b--','linewidth',2);
+set(gca,'ydir','reverse');
+xlabel('Float [O_{2}] - Ship [O_{2}]');
+ylabel('Pressure (dbar)');
+legend('Average \Delta[O_{2}]','Deep Adjustment','Shallow Adjustment');
+exportgraphics(gcf,['O2/Figures/Data/delta_vs_pressure_' file_date float_file_ext '.png']);
+close
+
 
 %% fit delta against [O2] solubility
 % mdl = fitlm(crossover.oxy_sat_float(idx),crossover.oxy_delta_sat_per(idx),'Intercept',true);

@@ -28,7 +28,7 @@ else
 end
 
 %% set up parallel pool
-tic; parpool(length(pressures)); fprintf('Pool initiation: '); toc;
+% tic; parpool(length(pressures)); fprintf('Pool initiation: '); toc;
 
 %% plot frames
 for d = 1:length(pressures)
@@ -36,27 +36,28 @@ for d = 1:length(pressures)
     dname = ['Figures/RFROM/' ver];
     % load dimensions
     TS = load_RFROM_dim(fpaths.([param '_path']),ver,start_year,end_year);
-    if isnumeric(plot_year)
-        time_lim = TS.years == plot_year;
-        TS.years = TS.years(time_lim);
-        TS.months = TS.months(time_lim);
-        TS.cnt = TS.cnt(time_lim);
-        year_tag = ['_' num2str(plot_year)];
-    else
-        year_tag = '';
-    end
+    time_lim = find(ismember(TS.years,plot_year));
+    TS.years = TS.years(time_lim);
+    TS.months = TS.months(time_lim);
+    TS.cnt = TS.cnt(time_lim);
+    year_tag = ['_' num2str(plot_year)];
     % depth index
     depth_idx = find(TS.Pressure == pressures(d));
     % establish fiugre
     h = figure('color','w','visible','off','Position',[616 474 1200 800]);
     axis tight manual
     % plot clusters each month/week
-    for m = 1:length(TS.months)
+    for m = 1:length(time_lim)
         % establish file name
         fname = ['rfrom_' param '_animation_' num2str(pressures(d)) 'dbar' ...
             '_' proj year_tag '.gif'];
         % load dimensions
         TS = load_RFROM_dim(fpaths.([param '_path']),ver,start_year,end_year);
+        time_lim = find(ismember(TS.years,plot_year));
+        TS.years = TS.years(time_lim);
+        TS.months = TS.months(time_lim);
+        TS.cnt = TS.cnt(time_lim);
+        year_tag = ['_' num2str(plot_year)];
         % process longitude
         if strcmp(proj,'polar'); else
             idx_20 = TS.Longitude<20;
@@ -68,11 +69,11 @@ for d = 1:length(pressures)
         if strcmp(param,'temp')
             nc_atts = ncinfo([fpaths.([param '_path']) 'RFROM_TEMP_' ver '/RFROMV' ...
                 ver(2) ver(4) '_TEMP_STABLE_' ...
-                num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
+                    num2str(TS.years(time_lim(m))) '_' sprintf('%02d',TS.months(time_lim(m))) '.nc']);
         elseif strcmp(param,'sal')
             nc_atts = ncinfo([fpaths.([param '_sal']) 'RFROM_SAL_' ver '/RFROMV' ...
                 ver(2) ver(4) '_SAL_STABLE_' ...
-                num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
+                    num2str(TS.years(time_lim(m))) '_' sprintf('%02d',TS.months(time_lim(m))) '.nc']);
         end
         for w = 1:nc_atts.Dimensions(3).Length
             % clear frame
@@ -83,12 +84,12 @@ for d = 1:length(pressures)
             if strcmp(param,'temp')
                 rfrom = ncread([fpaths.([param '_path']) 'RFROM_TEMP_' ver '/RFROMV' ...
                     ver(2) ver(4) '_TEMP_STABLE_' ...
-                    num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
+                        num2str(TS.years(time_lim(m))) '_' sprintf('%02d',TS.months(time_lim(m))) '.nc'],...
                         'ocean_temperature',[1 1 depth_idx w],[Inf Inf 1 1]);
             elseif strcmp(param,'sal')
                 rfrom = ncread([fpaths.([param '_path']) 'RFROM_SAL_' ver '/RFROMV' ...
                     ver(2) ver(4) '_SAL_STABLE_' ...
-                    num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
+                        num2str(TS.years(time_lim(m))) '_' sprintf('%02d',TS.months(time_lim(m))) '.nc'],...
                         'ocean_salinity',[1 1 depth_idx w],[Inf Inf 1 1]);
             end
             time = datenum(1950,1,1) + TS.Time(cnt);

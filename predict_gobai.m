@@ -8,9 +8,12 @@
 %
 % DATE: 7/31/2025
 
-function predict_gobai(alg_type,param_props,fpaths,base_grid,file_date,...
+function predict_gobai(alg_type,param_props,fpaths,base_grid,rfrom_ver,file_date,...
     float_file_ext,num_clusters,variables,thresh,numWorkers_predict,...
     clust_vars,start_year,end_year,snap_date,flt,gld,osd,ctd,varargin)
+    
+%% start timing predictions
+tStart = tic;
 
 %% define dataset extensions
 if flt == 1; float_ext = 'f'; else float_ext = ''; end
@@ -145,9 +148,6 @@ end
 %% set up parallel pool
 tic; parpool(numWorkers_predict); fprintf('Pool initiation: '); toc;
 
-%% start timing predictions
-tStart = tic;
-
 %% compute and save estimates for each month
 parfor m = 1:length(TS.months)
     if strcmp(base_grid,'RG')
@@ -197,20 +197,23 @@ parfor m = 1:length(TS.months)
             file_date,float_file_ext);
     elseif strcmp(base_grid,'RFROM')
         % load dimensions
-        TS = load_RFROM_dim(fpaths.temp_path,'v2.2',start_year,end_year);
+        TS = load_RFROM_dim(fpaths.temp_path,rfrom_ver,start_year,end_year);
         TS = replicate_dims(base_grid,TS,1);
         % determine number of weeks in file
-        nc_atts = ncinfo([fpaths.temp_path 'RFROM_TEMP_v2.2_2025/RFROMV22_TEMP_STABLE_' ...
+        nc_atts = ncinfo([fpaths.temp_path 'RFROM_TEMP_' rfrom_ver...
+            '/RFROMV' rfrom_ver(2) rfrom_ver(4) '_TEMP_STABLE_' ...
             num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
         for w = 1:nc_atts.Dimensions(3).Length
             % counter
             cnt = TS.cnt{m}(w);
             % get RFROM T and S
-            TS.temperature_cns = ncread([fpaths.temp_path 'RFROM_TEMP_v2.2_2025/RFROMV22_TEMP_STABLE_' ...
+            TS.temperature_cns = ncread([fpaths.temp_path 'RFROM_TEMP_' rfrom_ver...
+                '/RFROMV' rfrom_ver(2) rfrom_ver(4) '_TEMP_STABLE_' ...
                 num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                     'ocean_temperature',[1 1 1 w],[Inf Inf Inf 1]);
-            TS.salinity_abs = ncread([fpaths.sal_path 'RFROM_SAL_v2.2_2025/RFROMV22_SAL_STABLE_' ...
-                num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
+                    TS.salinity_abs = ncread([fpaths.sal_path 'RFROM_SAL_' rfrom_ver...
+                        '/RFROMV' rfrom_ver(2) rfrom_ver(4) '_SAL_STABLE_' ...
+                        num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc'],...
                     'ocean_salinity',[1 1 1 w],[Inf Inf Inf 1]);
             % load bgc variables if applicable
             if any(strcmp(variables,'o2'))
@@ -298,7 +301,7 @@ if strcmp(base_grid,'RG')
    % create file
    create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props,date_str);
 elseif strcmp(base_grid,'RFROM')
-    TS = load_RFROM_dim(fpaths.temp_path,'v2.2',start_year,end_year);
+    TS = load_RFROM_dim(fpaths.temp_path,rfrom_ver,start_year,end_year);
     % create file
     create_nc_file(TS,base_grid,TS.xdim,TS.ydim,TS.zdim,gobai_alg_dir,param_props,date_str);
 else
@@ -328,8 +331,8 @@ if strcmp(base_grid,'RFROM')
     prs_bnds = ncread([gobai_alg_dir 'GOBAI-' param_props.dir_name '-HR-v' ...
         num2str(snap_date) '.nc'],'prs_bnds');
     % read rfrom schema
-    rfrom_info = ncinfo([fpaths.temp_path ...
-        'RFROM_TEMP_v2.2_2025/RFROMV22_TEMP_STABLE_1993_01.nc']);
+    rfrom_info = ncinfo([fpaths.temp_path 'RFROM_TEMP_' rfrom_ver...
+        '/RFROMV' rfrom_ver(2) rfrom_ver(4) '_TEMP_STABLE_1993_01.nc']);
     % adjust variable-specific schema
     rfrom_info.Variables(1).Size = length(lon_new);
     rfrom_info.Variables(1).Dimensions.Length = length(lon_new);
@@ -380,9 +383,9 @@ if strcmp(base_grid,'RFROM')
             date_str '-' num2str(TS.years(m)) '-' sprintf('%02d',TS.months(m)) '.nc'];
         if isfile(filename); delete(filename); end
         % read rfrom schema
-        rfrom_info = ncinfo([fpaths.temp_path ...
-            'RFROM_TEMP_v2.2_2025/RFROMV22_TEMP_STABLE_' ...
-            num2str(TS.years(m)) '_' sprintf('%02d',TS.months(m)) '.nc']);
+        rfrom_info = ncinfo([fpaths.temp_path 'RFROM_TEMP_' rfrom_ver...
+            '/RFROMV' rfrom_ver(2) rfrom_ver(4) '_TEMP_STABLE_' num2str(TS.years(m)) ...
+            '_' sprintf('%02d',TS.months(m)) '.nc']);
         % adjust variable-specific schema
         for v = 1:length(rfrom_info.Variables)
             if strcmp(rfrom_info.Variables(v).Name,'ocean_temperature')
@@ -481,6 +484,11 @@ end
 
 %% stop timing predictions
 fprintf([alg_type ' Prediction (' num2str(start_year) ' to ' date_str(1:4) '): ']);
+
+%% move all files to final directory
+keyboard
+% if ~isfolder(gobai_alg_dir); mkdir(gobai_alg_dir); end
+% movefile([gobai_alg_dir_temp '*'],gobai_alg_dir);
 
 tElapsed = toc(tStart);
 disp(['Elapsed time is ' num2str(tElapsed/60) ' minutes.'])

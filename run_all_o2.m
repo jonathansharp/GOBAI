@@ -6,12 +6,12 @@ start_year = 1993;
 end_year = 2025;
 % end_year = year(datetime('today'));
 % system-specific worker configuration
-numWorkers_train = 60;
-numWorkers_predict = 60;
-numWorkers_cluster = 60;
+numWorkers_train = 20;
+numWorkers_predict = 20;
+numWorkers_cluster = 20;
 % float snapshot configuration
 snap_download = 1;
-snap_date = 202608;
+snap_date = 202610;
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_vrs = 'v3';
@@ -32,9 +32,9 @@ train_ratio = 0.8;
 val_ratio = 0.1;
 test_ratio = 0.1;
 % data and parameter configuration
-data_per_kfold = 0.1; % set data reduction to 10% for k-fold
+data_per_kfold = 0.2; % set data reduction to 20% for k-fold
 data_per = 1; % set data reduction to 100% for model training
-data_per_osse = 1; % set data reduction to 20% for osse
+data_per_osse = 0.5; % set data reduction to 50% for osse
 param = 'o2';
 param_props = param_config(param);
 % base grid
@@ -59,10 +59,10 @@ RFROM_climatology_sal(rfrom_ver,start_year,end_year);
 % average_rfrom_files(fpaths,rfrom_ver,start_year,end_year); % this doesn;t work because I don't have write permission (I think)
 
 %% plot rfrom animation
-plot_rfrom_animation(fpaths,'temp',rfrom_ver,'RFROM',...
-    start_year,end_year,-1,20,1,'projection','polar','plot_year',2020);
-plot_rfrom_animation(fpaths,'sal',rfrom_ver,'RFROM',...
-    start_year,end_year,-1,20,1,'projection','polar','plot_year',2020);
+% plot_rfrom_animation(fpaths,'temp',rfrom_ver,'RFROM',...
+%     start_year,end_year,-1,20,1,'projection','polar','plot_year',2018:2020);
+% plot_rfrom_animation(fpaths,'sal',rfrom_ver,'RFROM',...
+%     start_year,end_year,-1,20,1,'projection','polar','plot_year',2020);
 
 %% load and process data
 % acquire data
@@ -143,40 +143,65 @@ train_gobai('FFNN',param_props,base_grid,file_date,float_file_ext,...
 
 %% estimate parameter on grid to create GOBAI product
 % feed-forward neural networks
-predict_gobai('FFNN',param_props,fpaths,base_grid,file_date,float_file_ext,...
+predict_gobai('FFNN',param_props,fpaths,base_grid,rfrom_ver,file_date,float_file_ext,...
     num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
     end_year,snap_date,flt,gld,osd,ctd,'train_ratio',train_ratio,'val_ratio',val_ratio,...
     'test_ratio',test_ratio,'reduce_data',data_per);
-% plot gobai animations
+plot gobai animations
 plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,'FFNN',...
-    file_date,float_file_ext,numWorkers_predict,flt,gld,osd,ctd,'train_ratio',train_ratio,...
-    'val_ratio',val_ratio,'test_ratio',test_ratio);
-% plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,'FFNN',...
-%     file_date,float_file_ext,numWorkers_predict,flt,gld,ctd,'train_ratio',train_ratio,...
-%     'val_ratio',val_ratio,'test_ratio',test_ratio,'anom',1);
+    file_date,float_file_ext,numWorkers_predict,flt,gld,osd,ctd,snap_date,...
+    'train_ratio',train_ratio,'val_ratio',val_ratio,'test_ratio',test_ratio);
+plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,'FFNN',...
+    file_date,float_file_ext,numWorkers_predict,flt,gld,osd,ctd,snap_date,...
+    'train_ratio',train_ratio,'val_ratio',val_ratio,'test_ratio',test_ratio,'anom',1);
 
-% % plot gobai timeseries
-% gobai_global_timeseries(base_grid,param_props,fpaths,num_clusters,file_date,...
-%     float_file_ext,train_ratio,val_ratio,test_ratio,flt,gld,ctd,start_year,end_year)
+% % % plot gobai timeseries
+% % gobai_global_timeseries(base_grid,param_props,fpaths,num_clusters,file_date,...
+% %     float_file_ext,train_ratio,val_ratio,test_ratio,flt,gld,ctd,start_year,end_year)
 
 %% determine ideal number of clusters
 num_clusters = [10;12;14;16;18;20;22;24;26;28;30];
-RMSE = nan(size(num_clusters));
-MAE = nan(size(num_clusters));
-R2 = nan(size(num_clusters));
-kfold_table = table(num_clusters,RMSE,MAE,R2);
+regions = {'global' 'atlantic' 'pacific' 'indian' 'med' 'southern'};
+[C, M] = ndgrid(num_clusters, model_types);
+rmsdTable = table(C(:),M(:),nan(length(C(:)),length(regions)), ...
+    'VariableNames', {'NumClusters', 'ModelType', 'regions'});
+corrTable = table(C(:),M(:),nan(length(C(:)),length(regions)), ...
+    'VariableNames', {'NumClusters', 'ModelType', 'regions'});
+maeTable = table(C(:),M(:),nan(length(C(:)),length(regions)), ...
+    'VariableNames', {'NumClusters', 'ModelType', 'regions'});
+
 for clust_n = 1:length(num_clusters)
 
-%% run OSSEs
-run_osse(fpaths,model_types,model_folders,realizations,grid_labels,...
-    grid_types,param_props,base_grid,file_date,snap_date,glodap_vrs,...
-    float_file_ext,start_year,end_year,num_clusters(clust_n),variables,...
-    clust_vars,train_ratio,val_ratio,test_ratio,thresh,data_per_osse,...
-    numWorkers_train,numWorkers_predict,flt,gld,osd,ctd);
+    %% run OSSEs
+    run_osse(fpaths,model_types,model_folders,realizations,grid_labels,...
+        grid_types,param_props,base_grid,file_date,snap_date,glodap_vrs,...
+        float_file_ext,start_year,end_year,num_clusters(clust_n),variables,...
+        clust_vars,train_ratio,val_ratio,test_ratio,thresh,data_per_osse,...
+        numWorkers_train,numWorkers_predict,flt,gld,osd,ctd);
+        
+    % assemble table of K-fold error statistics
+    if flt == 1; float_ext = 'f'; else float_ext = ''; end
+    if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
+    if osd == 1; osd_ext = 'o'; else osd_ext = ''; end
+    if ctd == 1; ctd_ext = 'c'; else ctd_ext = ''; end
+    for m = 1:length(model_types)
+        kfold_dir = [param_props.dir_name '/Data/' model_types{m} '/' realizations{m} '_gr/'];
+        kfold_name = ['statistics_' float_ext glodap_ext osd_ext ctd_ext '_c' ...
+            num2str(num_clusters(clust_n)) '_' num2str(data_per_osse) 'per.mat'];
+        % load error stats
+        load([kfold_dir '/' kfold_name],'stats');
+        % 
+        rmsdTable((clust_n-1)*length(model_types)+m,:).regions = stats.inv_rmsd.all;
 
-% compare_two_osse_ensembles(param_props,fpaths,model_types,realizations,...
-%     num_clusters,file_date,float_file_ext,train_ratio,val_ratio,test_ratio,...
-%     start_year,snap_date,'g','fg');
+        kfold_table(clust_n,'MAE') = {alg_med_abs_err};
+        kfold_table(clust_n,'R2') = {alg_r2};
+        save([param_props.dir_name '/KFold/k_fold_stats_' ...
+            datetime('today','Format','dd-MMM-uuuu')],'kfold_table');
+    end
+
+    % compare_two_osse_ensembles(param_props,fpaths,model_types,realizations,...
+    %     num_clusters,file_date,float_file_ext,train_ratio,val_ratio,test_ratio,...
+    %     start_year,snap_date,'g','fg');
 
 end
 

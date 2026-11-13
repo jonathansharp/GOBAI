@@ -161,7 +161,7 @@ if include_glodap == 1
     end
 end
 
-%% Add ctd to combined dataset
+%% Add ctd and osd to combined dataset
 if include_ctd == 1 || include_osd == 1
     all_data.type = [all_data.type;wod_data.TYPE(wod_idx)+2];
     all_data.platform = [all_data.platform;wod_data.CRU(wod_idx)];

@@ -17,6 +17,8 @@ function compare_osse(param_props,fpaths,base_grid,file_date,...
 date_str = num2str(snap_date);
 % regions
 regions = {'global' 'atlantic' 'pacific' 'indian' 'med' 'southern'};
+% components of error stats
+components = {'all' 'seas' 'tr' 'resid'};
 
 %% process optional input arguments
 % pre-allocate
@@ -118,7 +120,6 @@ for m = 1:length(time)
             reg_idx = ncread('RECCAP2_region_masks_all_v20221025.nc','atlantic');
             idx_gobai = ~isnan(gobai) & reg_idx >= 1 & reg_idx <= 5;
             idx_cmip = ~isnan(cmip) & reg_idx >= 1 & reg_idx <= 5;
-
         elseif strcmp(regions{r},'med')
             reg_idx = ncread('RECCAP2_region_masks_all_v20221025.nc','atlantic');
             idx_gobai = ~isnan(gobai) & reg_idx == 6;
@@ -129,8 +130,7 @@ for m = 1:length(time)
             idx_cmip = ~isnan(cmip) & reg_idx > 0;
         end
         idx_both = idx_gobai & idx_cmip;
-        % % Eliminate bottom depth for MPI-ESM1-2-LR
-        % if strcmp(base_grid,'MPI-ESM1-2-LR'); idx_gobai(:,:,end) = false; end
+        % calculate means
         gobai_mean.(regions{r})(m) = ... % umol/kg
             sum(gobai(idx_gobai).*vol(idx_gobai))./sum(vol(idx_gobai));
         cmip_mean.(regions{r})(m) = ... % umol/kg
@@ -139,7 +139,7 @@ for m = 1:length(time)
             sum(gobai(idx_both).*vol(idx_both))./sum(vol(idx_both));
         cmip_mean_both.(regions{r})(m) = ... % umol/kg
             sum(cmip(idx_both).*vol(idx_both))./sum(vol(idx_both));
-        
+        % calculate inventories
         gobai_inv.(regions{r})(m) = ... % Pmol
             sum(gobai(idx_gobai).*kg(idx_gobai))./(10^21);
         cmip_inv.(regions{r})(m) = ... % Pmol
@@ -148,21 +148,17 @@ for m = 1:length(time)
             sum(gobai(idx_both).*kg(idx_both))./(10^21);
         cmip_inv_both.(regions{r})(m) = ... % Pmol
             sum(cmip(idx_both).*kg(idx_both))./(10^21);
-
     end
 
-    %% calculate column means
-    % gobai (mol/m2)
-    
+    %% calculate column means    
     % replicate depth bin heights
     dpth_bins_3d = repmat(permute(diff(dpth_bnds),[3 2 1]),length(lon),length(lat),1);
-    % Eliminate bottom depth for MPI-ESM1-2-LR
-    % if strcmp(base_grid,'MPI-ESM1-2-LR'); idx_gobai(:,:,end) = false; end
-    gobai_col_mean_temp = sum(((gobai./10^6).*1026).*dpth_bins_3d,3,'omitnan'); % density estimate for now...
+    % gobai (mol/m2)
+    gobai_col_mean_temp = sum(((gobai./10^6).*(kg./vol)).*dpth_bins_3d,3,'omitnan');
     gobai_col_mean_temp(gobai_col_mean_temp==0) = NaN;
     gobai_col_mean(:,:,m) = gobai_col_mean_temp;
     % cmip (mol/m2)
-    cmip_col_mean_temp = sum(((cmip./10^6).*1026).*dpth_bins_3d,3,'omitnan'); % density estimate for now...
+    cmip_col_mean_temp = sum(((cmip./10^6).*(kg./vol)).*dpth_bins_3d,3,'omitnan'); % density estimate for now...
     cmip_col_mean_temp(cmip_col_mean_temp==0) = NaN;
     cmip_col_mean(:,:,m) = cmip_col_mean_temp;
 
@@ -343,40 +339,48 @@ end
 % delete(gcp('nocreate'));
 % keyboard
 
-%% plot timeseries
+%% plot timeseries and save statistics
+for c = 1:length(components)
+    stats.inv_corr.(components{c}) = nan(size(regions));
+    stats.inv_rmsd.(components{c}) = nan(size(regions));
+    stats.inv_mae.(components{c}) = nan(size(regions));
+    stats.inv_std_gobai.(components{c}) = nan(size(regions));
+    stats.inv_std_cmip.(components{c}) = nan(size(regions));
+end
 for r = 1:length(regions)
     % gobai inventory decomposition
     periods = [365.2425 365.2425/2]; % annual and semi-annual
     [yf_gobai,yr_gobai,coeff_gobai] = ... % fit model
         leastsq2(time,gobai_inv_both.(regions{r}),time(1),2,periods);
-    gobai_mean = mean(yf_gobai);
-    gobai_tr = coeff_gobai(2).*(time-time(1))-mean(coeff_gobai(2).*(time-time(1)));
-    gobai_seas = ...
+    gobai_inv_mean = mean(yf_gobai);
+    gobai_inv_tr = coeff_gobai(2).*(time-time(1))-mean(coeff_gobai(2).*(time-time(1)));
+    gobai_inv_seas = ...
         coeff_gobai(3).*cos((2*pi/periods(1))*(time-time(1))) + ...
         coeff_gobai(4).*sin((2*pi/periods(1))*(time-time(1))) + ...
         coeff_gobai(5).*cos((2*pi/periods(2))*(time-time(1))) + ...
         coeff_gobai(6).*sin((2*pi/periods(2))*(time-time(1)));
-    gobai_resid = yr_gobai;
+    gobai_inv_resid = yr_gobai;
     % cmip inventory decomposition
     periods = [365.2425 365.2425/2]; % annual and semi-annual
     [yf_cmip,yr_cmip,coeff_cmip] = ... % fit model
         leastsq2(time,cmip_inv_both.(regions{r}),time(1),2,periods);
-    cmip_mean = mean(yf_cmip);
-    cmip_tr = coeff_cmip(2).*(time-time(1))-mean(coeff_cmip(2).*(time-time(1)));
-    cmip_seas = ...
+    cmip_inv_mean = mean(yf_cmip);
+    cmip_inv_tr = coeff_cmip(2).*(time-time(1))-mean(coeff_cmip(2).*(time-time(1)));
+    cmip_inv_seas = ...
         coeff_cmip(3).*cos((2*pi/periods(1))*(time-time(1))) + ...
         coeff_cmip(4).*sin((2*pi/periods(1))*(time-time(1))) + ...
         coeff_cmip(5).*cos((2*pi/periods(2))*(time-time(1))) + ...
         coeff_cmip(6).*sin((2*pi/periods(2))*(time-time(1)));
-    cmip_resid = yr_cmip;
+    cmip_inv_resid = yr_cmip;
     % for everything
-    corr_all = corr(gobai_inv_both.(regions{r}),cmip_inv_both.(regions{r}));
-    rmsd_all = sqrt(mean((gobai_inv_both.(regions{r})-cmip_inv_both.(regions{r})).^2));
-    std_gobai_all = std(gobai_inv_both.(regions{r}));
-    std_cmip_all = std(cmip_inv_both.(regions{r}));
+    stats.inv_corr.all(r) = corr(gobai_inv_both.(regions{r}),cmip_inv_both.(regions{r}));
+    stats.inv_rmsd.all(r) = sqrt(mean((gobai_inv_both.(regions{r})-cmip_inv_both.(regions{r})).^2));
+    stats.inv_mae.all(r) = mean(abs(gobai_inv_both.(regions{r})-cmip_inv_both.(regions{r})));
+    stats.inv_std_gobai.all(r) = std(gobai_inv_both.(regions{r}));
+    stats.inv_std_cmip.all(r) = std(cmip_inv_both.(regions{r}));
     figure('Position',[100 100 800 400]); hold on;
-    title([regions{r} ', corr. coeff. = ' num2str(round(corr_all,3)) ', '...
-        'RMSD = ' num2str(round(rmsd_all,3)) ' Pmol']);
+    title([regions{r} ', corr. coeff. = ' num2str(round(stats.inv_corr.all(r),3)) ', '...
+        'RMSD = ' num2str(round(stats.inv_rmsd.all(r),3)) ' Pmol']);
     plot(datenum(1950,1,1)+time,cmip_inv_both.(regions{r}),...
         datenum(1950,1,1)+time,gobai_inv_both.(regions{r}),'LineWidth',2);
     ylabel([param_props.fig_name ' inventory (Pmol)']);
@@ -387,14 +391,15 @@ for r = 1:length(regions)
             '_c' num2str(num_clusters) '_' ...
             num2str(data_per_osse) 'per.png']); close;
     % for seasonal
-    corr_seas = corr(gobai_seas,cmip_seas);
-    rmsd_seas = sqrt(mean((gobai_seas-cmip_seas).^2));
-    std_gobai_seas = std(gobai_seas);
-    std_cmip_seas = std(cmip_seas);
+    stats.inv_corr.seas(r) = corr(gobai_inv_seas,cmip_inv_seas);
+    stats.inv_rmsd.seas(r) = sqrt(mean((gobai_inv_seas-cmip_inv_seas).^2));
+    stats.inv_mae.seas(r) = mean(abs(gobai_inv_seas-cmip_inv_seas));
+    stats.inv_std_gobai.seas(r) = std(gobai_inv_seas);
+    stats.inv_std_cmip.seas(r) = std(cmip_inv_seas);
     figure('Position',[100 100 800 400]); hold on;
-    title([regions{r} ', corr. coeff. = ' num2str(round(corr_seas,3)) ', '...
-        'RMSD = ' num2str(round(rmsd_seas,3)) ' Pmol']);
-    plot(datenum(1950,1,1)+time,cmip_seas,datenum(1950,1,1)+time,gobai_seas,'LineWidth',2);
+    title([regions{r} ', corr. coeff. = ' num2str(round(stats.inv_corr.seas(r),3)) ', '...
+        'RMSD = ' num2str(round(stats.inv_rmsd.seas(r),3)) ' Pmol']);
+    plot(datenum(1950,1,1)+time,cmip_inv_seas,datenum(1950,1,1)+time,gobai_inv_seas,'LineWidth',2);
     ylabel([param_props.fig_name ' inventory (Pmol)']);
     datetick('x');
     legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']});
@@ -403,14 +408,15 @@ for r = 1:length(regions)
             '_c' num2str(num_clusters) '_' ...
             num2str(data_per_osse) 'per.png']); close;
     % for trend
-    corr_tr = corr(gobai_tr,cmip_tr);
-    rmsd_tr = sqrt(mean((gobai_tr-cmip_tr).^2));
-    std_gobai_tr = std(gobai_tr);
-    std_cmip_tr = std(cmip_tr);
+    stats.inv_corr.tr(r) = corr(gobai_inv_tr,cmip_inv_tr);
+    stats.inv_rmsd.tr(r) = sqrt(mean((gobai_inv_tr-cmip_inv_tr).^2));
+    stats.inv_mae.tr(r) = mean(abs(gobai_inv_tr-cmip_inv_tr));
+    stats.inv_std_gobai.tr(r) = std(gobai_inv_tr);
+    stats.inv_std_cmip.tr(r) = std(cmip_inv_tr);
     figure('Position',[100 100 800 400]); hold on;
-    title([regions{r} ', corr. coeff. = ' num2str(round(corr_tr,3)) ', '...
-        'RMSD = ' num2str(round(rmsd_tr,3)) ' Pmol']);
-    plot(datenum(1950,1,1)+time,cmip_tr,datenum(1950,1,1)+time,gobai_tr,'LineWidth',2);
+    title([regions{r} ', corr. coeff. = ' num2str(round(stats.inv_corr.tr(r),3)) ', '...
+        'RMSD = ' num2str(round(stats.inv_rmsd.tr(r),3)) ' Pmol']);
+    plot(datenum(1950,1,1)+time,cmip_inv_tr,datenum(1950,1,1)+time,gobai_inv_tr,'LineWidth',2);
     ylabel([param_props.fig_name ' inventory (Pmol)']);
     datetick('x');
     legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']});
@@ -419,14 +425,15 @@ for r = 1:length(regions)
             '_c' num2str(num_clusters) '_' ...
             num2str(data_per_osse) 'per.png']); close;
     % for residual
-    corr_resid = corr(gobai_resid,cmip_resid);
-    rmsd_resid = sqrt(mean((gobai_resid-cmip_resid).^2));
-    std_gobai_resid = std(gobai_resid);
-    std_cmip_resid = std(cmip_resid);
+    stats.inv_corr.resid(r) = corr(gobai_inv_resid,cmip_inv_resid);
+    stats.inv_rmsd.resid(r) = sqrt(mean((gobai_inv_resid-cmip_inv_resid).^2));
+    stats.inv_mae.resid(r) = mean(abs(gobai_inv_resid-cmip_inv_resid));
+    stats.inv_std_gobai.resid(r) = std(gobai_inv_resid);
+    stats.inv_std_cmip.resid(r) = std(cmip_inv_resid);
     figure('Position',[100 100 800 400]); hold on;
-    title([regions{r} ', corr. coeff. = ' num2str(round(corr_resid,3)) ', '...
-        'RMSD = ' num2str(round(rmsd_resid,3)) ' Pmol']);
-    plot(datenum(1950,1,1)+time,cmip_resid,datenum(1950,1,1)+time,gobai_resid,'LineWidth',2);
+    title([regions{r} ', corr. coeff. = ' num2str(round(stats.inv_corr.resid(r),3)) ', '...
+        'RMSD = ' num2str(round(stats.inv_rmsd.resid(r),3)) ' Pmol']);
+    plot(datenum(1950,1,1)+time,cmip_inv_resid,datenum(1950,1,1)+time,gobai_inv_resid,'LineWidth',2);
     ylabel([param_props.fig_name ' inventory (Pmol)']);
     datetick('x');
     legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']});
@@ -518,7 +525,7 @@ if ~isfolder([param_props.dir_name '/Data/' base_grid]); mkdir([param_props.dir_
 save([param_props.dir_name '/Data/' base_grid '/' rlz '_gr/statistics_' ...
     float_ext glodap_ext osd_ext ctd_ext '_c' num2str(num_clusters) '_' ...
     num2str(data_per_osse) 'per.mat'],...
-    'gobai_mean','gobai_inv','gobai_depth_mean','cmip_mean','cmip_inv','cmip_depth_mean');
+    'gobai_mean','gobai_inv','gobai_depth_mean','cmip_mean','cmip_inv','cmip_depth_mean','stats');
 
 %% plot global mean timeseries
 % figure('visible','on');

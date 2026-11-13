@@ -17,15 +17,22 @@ function [TS,months,weeks,timesteps] = load_RFROM_dim(fpath,ver,y1,y2)
 % end
 
 % load RFROM climatological temp and salinity
-TS.Longitude = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'longitude');
-TS.Latitude = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'latitude');
-TS.Pressure = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'mean_pressure');
+try % try most up-to-date year first
+    TS.Longitude = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'longitude');
+    TS.Latitude = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'latitude');
+    TS.Pressure = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2) '.nc'],'mean_pressure');
+catch % then try previous year
+    TS.Longitude = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2-1) '.nc'],'longitude');
+    TS.Latitude = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2-1) '.nc'],'latitude');
+    TS.Pressure = ncread([fpath 'RFROMV' ver(2) ver(4) '_TEMP_STABLE_CLIM_' num2str(y1) '_' num2str(y2-1) '.nc'],'mean_pressure');
+    y2 = y2 -1;
+end
 % compute dimensions
 TS.xdim = length(TS.Longitude);
 TS.ydim = length(TS.Latitude);
 TS.zdim = length(TS.Pressure);
 % determine number of monthly timesteps
-files = dir([fpath '/RFROM_TEMP_v2.2_2025/*_STABLE_*.nc']);
+files = dir([fpath 'RFROM_TEMP_' ver '/*_STABLE_*.nc']);
 for t = 1:length(files)
     file_date = char(extractBetween(files(t).name,'STABLE_','.nc'));
     file_year(t) = str2num(file_date(1:4));

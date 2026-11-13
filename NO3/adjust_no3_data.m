@@ -31,6 +31,16 @@ if include_glodap; load(['NO3/Data/processed_glodap_no3_data_' ...
 if include_osd || include_ctd; load(['NO3/Data/processed_wod_no3_data_' ...
         num2str(end_year) '.mat'],'wod_data'); end
 
+%% adjust float O2 data
+load(['O2/Data/float_corr_' file_date '_D_A']);
+% apply linear correction to float O2 (with pressure)
+corr_fac = nan(size(float_data.OXY));
+idx_deep = float_data.PRES >= max_delta_pressure;
+corr_fac(idx_deep) = float_data.PRES(idx_deep).*slp_deep + int_deep;
+idx_shal = float_data.PRES < max_delta_pressure;
+corr_fac(idx_shal) = float_data.PRES(idx_shal).*slp_shal + int_shal;
+float_data.OXY_ADJUSTED = float_data.OXY - corr_fac;
+
 %% remove data points based on global range test
 % 100 umol/kg used as max for WOD range checks
 if include_float
@@ -87,7 +97,7 @@ clear m temp_path sal_path nit_path
 if include_float
 
     % index to valid data points
-    idx = find(~isnan(float_data.OXY) & ~isnan(float_data.NIT) & ...
+    idx = find(~isnan(float_data.OXY_ADJUSTED) & ~isnan(float_data.NIT) & ...
         ~isnan(float_data.LAT) & ~isnan(float_data.LON) & ...
         ~isnan(float_data.PRES) & ~isnan(float_data.TIME));
     % obtain month from date
@@ -96,7 +106,7 @@ if include_float
     clear date
     % pre-allocate matches
     WOA_NIT_match = nan(size(float_data.NIT));
-    WOA_OXY_match = nan(size(float_data.OXY));
+    WOA_OXY_match = nan(size(float_data.OXY_ADJUSTED));
     % match float data with WOA
     for i=1:length(idx)
         idx_lon = find(min(abs(WOA.LON - float_data.LON(idx(i)))) == ...
@@ -111,8 +121,8 @@ if include_float
         WOA_NIT_match(idx(i)) = WOA.NIT(idx_lon(1),idx_lat(1),idx_pres(1),idx_mnth(1));
     end
     % calculate differences for oxygen
-    WOA_oxy_delta = float_data.OXY-WOA_OXY_match;
-    WOA_oxy_delta_per = WOA_oxy_delta./float_data.OXY;
+    WOA_oxy_delta = float_data.OXY_ADJUSTED-WOA_OXY_match;
+    WOA_oxy_delta_per = WOA_oxy_delta./float_data.OXY_ADJUSTED;
     WOA_oxy_delta_per(isinf(WOA_oxy_delta_per))=NaN;
     st_dev_oxy_delta = std(WOA_oxy_delta,[],'omitnan');
     mean_oxy_delta = mean(WOA_oxy_delta,'omitnan');
@@ -451,8 +461,6 @@ for p = 1:length(float_profile_IDs)
     end
 end
 
-% index to below 300 dbars
-idx = crossover.pres > 300 & ~isnan(crossover.nit_float) & ~isnan(crossover.nit_ship);
 % clean up
 clear pres_levels float_profile_IDs lon lat time nit_float pres_float
 clear idx_lon idx_lat idx_time nit_temp pres_temp idx_pres nit_ship
@@ -594,7 +602,7 @@ vars = fieldnames(float_data);
 for v = 1:length(vars)
     if strcmp(vars{v},'NIT')
 
-        % apply linear correction to float O2 (with pressure)
+        % apply linear correction to float nitrate (with pressure)
         corr_fac = nan(size(float_data.NIT));
         idx_deep = float_data.PRES >= min_delta_pressure;
         corr_fac(idx_deep) = float_data.PRES(idx_deep).*slp_deep + int_deep;
@@ -603,6 +611,9 @@ for v = 1:length(vars)
         float_data_adjusted.NIT = float_data.NIT - corr_fac;
         disp(['Average adjustment = ' ...
             num2str(round(mean(corr_fac,'omitnan'),2)) ' umol/kg']);
+
+    elseif strcmp(vars{v},'OXY')
+        float_data_adjusted.OXY = float_data.OXY_ADJUSTED;
     else
         float_data_adjusted.(vars{v}) = float_data.(vars{v});
     end

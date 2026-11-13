@@ -19,7 +19,7 @@ end
 if length(unique(lat_delta)) > 1
     disp('Latitude spacing must be consistent');
 else
-    lat_delta = lat_delta(1);
+    lat_delta = abs(lat_delta(1));
 end
 L = (((lon3d + lon_delta/2) - (lon3d - lon_delta/2)) .* 111.320 .* cosd(lat3d)); % longitude distance (km)
 W = (((lat3d + lat_delta/2) - (lat3d - lat_delta/2)) .* 110.574); % latitude distance (km)

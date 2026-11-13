@@ -409,7 +409,7 @@ end
 num_obs = length(obs_index_train);
 % unique random numbers (same for each cluster) equal to observational index
 rng(f); numbers = randperm(num_obs);
-% adjust observation index to fraction (i.e., 'data_per') its current sum
+% adjust observation index to a fraction (i.e., 'data_per') of its current sum
 obs_index_train(numbers > (data_per.*num_obs)) = false;
 
 % exclude Mediterranean cluster data before 2000
