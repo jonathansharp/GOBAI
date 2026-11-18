@@ -10,7 +10,7 @@
 %
 % DATE: 07/02/2025
 
-function acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download)
+function acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download,snap_dir)
 
 %% Download BGC Argo snapshot
 if snap_download == 1
@@ -108,8 +108,8 @@ if snap_download == 1
     end
     
     % Download snapshot from online DOI if needed
-    if ~exist('BGC_Argo_Snapshots','dir'); mkdir('BGC_Argo_Snapshots'); end
-    if exist(['BGC_Argo_Snapshots/' num2str(snap_date) '-BgcArgoSprof/'],'dir') ~= 7
+    if ~exist([snap_dir 'BGC_Argo_Snapshots'],'dir'); mkdir([snap_dir 'BGC_Argo_Snapshots']); end
+    if exist([snap_dir 'BGC_Argo_Snapshots/' num2str(snap_date) '-BgcArgoSprof/'],'dir') ~= 7
         url = 'https://www.seanoe.org/data/00311/42182/data/';
         try
             websave(filename,[url filename]); % download zipped file
@@ -117,17 +117,17 @@ if snap_download == 1
             disp('There may be no snapshot file available for the specified month.');
             return
         end
-        gunzip(filename,'BGC_Argo_Snapshots'); % unzip file
+        gunzip(filename,[snap_dir 'BGC_Argo_Snapshots']); % unzip file
         % define tarball name
         tarname = regexp(filename, '\d+\.tar', 'match', 'once');
         if isempty(filename) % alternate file name format
             filename = regexp(snap_url{isnap}, '\d+\.tgz', 'match', 'once');
         end
         % untar tarball
-        untar(['BGC_Argo_Snapshots/' tarname],'BGC_Argo_Snapshots');
+        untar([snap_dir 'BGC_Argo_Snapshots/' tarname],[snap_dir 'BGC_Argo_Snapshots']);
         % clean up
         delete(filename);
-        delete(['BGC_Argo_Snapshots/' tarname]);
+        delete([snap_dir 'BGC_Argo_Snapshots/' tarname]);
         disp('Float snapshot acquired.')
     else
         disp('Float snapshot already downloaded.')
@@ -143,7 +143,7 @@ file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy
 if exist([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'file') ~= 2
 
 %% Define file structure
-snapshot_path = ['BGC_Argo_Snapshots/' num2str(snap_date) '-BgcArgoSprof/dac']; % define file path
+snapshot_path = [snap_dir 'BGC_Argo_Snapshots/' num2str(snap_date) '-BgcArgoSprof/dac']; % define file path
 folderinfo = dir(snapshot_path); % extract info about folders and files
 foldernames = {folderinfo.name}'; % define folder and file names
 idx_folders = find(~contains(foldernames,'.')); % index to folders only

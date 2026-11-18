@@ -12,6 +12,7 @@ numWorkers_cluster = 20;
 % float snapshot configuration
 snap_download = 1;
 snap_date = 202610;
+snap_dir = '/med2/';
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_vrs = 'v3';
@@ -55,7 +56,8 @@ ctd = 0;
 
 %% load and process data
 % acquire data
-acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
+acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,...
+    snap_download,snap_dir);
 acquire_glodap_data(param_props,glodap_vrs,start_year);
 if osd == 1 | ctd == 1; acquire_wod_data(param_props,...
     glodap_vrs,start_year,osd,ctd,numWorkers_predict); end

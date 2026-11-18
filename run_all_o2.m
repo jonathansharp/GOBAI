@@ -12,9 +12,11 @@ numWorkers_cluster = 20;
 % float snapshot configuration
 snap_download = 1;
 snap_date = 202610;
+snap_dir = '/med2/';
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_vrs = 'v3';
+glodap_dir = '/fast1/GLODAP/';
 data_modes = {'D' 'A'};
 float_file_ext = '_D_A';
 % cluster configuration
@@ -66,10 +68,12 @@ RFROM_climatology_sal(rfrom_ver,start_year,end_year);
 
 %% load and process data
 % acquire data
-acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,snap_download);
-acquire_glodap_data(param_props,glodap_vrs,start_year);
-if osd == 1 | ctd == 1; acquire_wod_data(param_props,...
-    glodap_vrs,start_year,osd,ctd,numWorkers_predict); end
+acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,...
+    snap_download,snap_dir);
+acquire_glodap_data(param_props,glodap_vrs,glodap_dir,start_year);
+if osd == 1 | ctd == 1
+    acquire_wod_data(param_props,glodap_vrs,start_year,...
+        osd,ctd,numWorkers_predict); end
 % adjust data
 adjust_o2_data(float_file_ext,glodap_vrs,snap_date,flt,gld,osd,ctd);
 % display data

@@ -9,7 +9,7 @@
 %
 % DATE: 2/5/2025
 
-function acquire_glodap_data(param_props,glodap_vrs,start_year)
+function acquire_glodap_data(param_props,glodap_vrs,glodap_dir,start_year)
 
 %% change temporary param name for DIC
 if strcmp(param_props.temp_name,'PH')
@@ -20,7 +20,7 @@ end
 if exist([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' glodap_vrs '.mat'],'file') ~= 2
 
 %% load GLODAP data
-glodap_data = load(['GLODAP/GLODAP' glodap_vrs '/GLODAP' glodap_vrs '_Merged_Master_File.mat']);
+glodap_data = load([glodap_dir 'GLODAP' glodap_vrs '/GLODAP' glodap_vrs '_Merged_Master_File.mat']);
 glodap_data.time = datenum([glodap_data.year glodap_data.month ...
                        glodap_data.day]);
 glodap_data.date = datevec(glodap_data.time);

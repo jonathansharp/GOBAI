@@ -3,7 +3,7 @@
 function param_props = param_config(p)
 
 if strcmp(p,'o2')
-    param_props.dir_name = 'O2'; % directory name
+    param_props.dir_name = '/data2/o2/GOBAI/'; % directory for files and figures
     param_props.file_name = 'o2'; % file name
     param_props.fig_name = 'oxygen'; % for saving figures
     param_props.label = '[O_{2}]'; % axis labels
@@ -18,7 +18,7 @@ if strcmp(p,'o2')
     param_props.dec_points = 2;
     param_props.cmap = cmocean('ice');
 elseif strcmp(p,'no3')
-    param_props.dir_name = 'NO3'; % directory name
+    param_props.dir_name = '/data2/no3/GOBAI/'; % directory for files and figures
     param_props.file_name = 'no3'; % file name
     param_props.fig_name = 'nitrate'; % for saving figures
     param_props.label = '[NO_{3}]'; % axis labels
@@ -33,7 +33,7 @@ elseif strcmp(p,'no3')
     param_props.dec_points = 2;
     param_props.cmap = flipud(cmocean('speed'));
 elseif strcmp(p,'dic')
-    param_props.dir_name = 'DIC'; % directory name
+    param_props.dir_name = '/data2/dic/GOBAI/'; % directory for files and figures
     param_props.file_name = 'dic'; % file name
     param_props.fig_name = 'dic'; % for saving figures
     param_props.label = '{\itC}_{T}'; % axis labels
