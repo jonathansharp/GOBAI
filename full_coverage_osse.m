@@ -37,7 +37,7 @@ param = 'o2';
 param_props = param_config(param);
 % base grid
 base_grid = 'RFROM';
-fpaths = path_config(base_grid,param);
+[fpaths,param_props] = path_config(base_grid,param,param_props);
 % osse parameters
 model_types = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
 model_folders = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
@@ -56,7 +56,7 @@ if gld == 1; glodap_ext = 'g'; else glodap_ext = ''; end
 if ctd == 1; ctd_ext = 'w'; else ctd_ext = ''; end
 
 %% load combined data
-load([param_props.dir_name '/Data/processed_all_' param_props.file_name ...
+load([param_props.data_path 'Data/processed_all_' param_props.file_name ...
     '_data_' float_ext glodap_ext ctd_ext '_' file_date float_file_ext ...
     '.mat'],'all_data','file_date');
 

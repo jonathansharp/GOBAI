@@ -53,7 +53,7 @@ param = 'dic';
 param_props = param_config(param);
 % base grid
 base_grid = 'RFROM';
-fpaths = path_config(base_grid,param);
+[fpaths,param_props] = path_config(base_grid,param,param_props);
 % osse parameters
 model_types = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
 model_folders = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};

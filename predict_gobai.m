@@ -94,9 +94,9 @@ end
 
 %% create directory and file names
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    alg_dir = [param_props.dir_name '/Models/' dir_base];
+    alg_dir = [param_props.param_path 'Models/' dir_base];
 else
-    alg_dir = [param_props.dir_name '/Models/' base_grid '/' dir_base];
+    alg_dir = [param_props.param_path 'Models/' base_grid '/' dir_base];
 end
 alg_fnames = cell(num_clusters,1);
 for c = 1:num_clusters
@@ -321,14 +321,14 @@ end
 if strcmp(base_grid,'RFROM')
     % define gobai monthly mean file name
     filename_monthly_mean = [gobai_alg_dir 'GOBAI-Monthly-Mean-1x1-' ...
-        param_props.dir_name '-HR-v' date_str '.nc'];
+        param_props.output_name '-HR-v' date_str '.nc'];
     if isfile(filename_monthly_mean); delete(filename_monthly_mean); end
     % new lat/lon
     lon_new = (0.5:359.5)'; lon_bins_new = (0:365)';
     lat_new = (-89.5:89.5)'; lat_bins_new = (-90:90)';
-    pres = ncread([gobai_alg_dir 'GOBAI-' param_props.dir_name '-HR-v' ...
+    pres = ncread([gobai_alg_dir 'GOBAI-' param_props.output_name '-HR-v' ...
         num2str(snap_date) '.nc'],'pres');
-    prs_bnds = ncread([gobai_alg_dir 'GOBAI-' param_props.dir_name '-HR-v' ...
+    prs_bnds = ncread([gobai_alg_dir 'GOBAI-' param_props.output_name '-HR-v' ...
         num2str(snap_date) '.nc'],'prs_bnds');
     % read rfrom schema
     rfrom_info = ncinfo([fpaths.temp_path 'RFROM_TEMP_' rfrom_ver...
@@ -358,7 +358,7 @@ if strcmp(base_grid,'RFROM')
     rfrom_info.Attributes(3).Value = 'NOAA PMEL, UW CICOES';
     rfrom_info.Attributes(4).Value = ['Argo float data, GLODAP ship data, ' ...
         rfrom_info.Attributes(2).Value];
-    rfrom_info.Attributes(2).Value = ['GOBAI-' param_props.dir_name ...
+    rfrom_info.Attributes(2).Value = ['GOBAI-' param_props.output_name ...
         '-HR-Monthly-Mean-1x1-v' num2str(snap_date)];
     rfrom_info.Attributes(5).Value = 'Sharp, et al. GOBAI High Resolution Data Products, in prep.';
     rfrom_info.Attributes(6).Value = ['Created: ' char(datetime('today'))];
@@ -379,7 +379,7 @@ if strcmp(base_grid,'RFROM')
     cnt = 1; % set counter
     for m = 1:length(TS.months)
         % define gobai monthly file name
-        filename = [gobai_alg_dir 'monthly/GOBAI-' param_props.dir_name '-HR-v' ...
+        filename = [gobai_alg_dir 'monthly/GOBAI-' param_props.output_name '-HR-v' ...
             date_str '-' num2str(TS.years(m)) '-' sprintf('%02d',TS.months(m)) '.nc'];
         if isfile(filename); delete(filename); end
         % read rfrom schema
@@ -401,7 +401,7 @@ if strcmp(base_grid,'RFROM')
         rfrom_info.Attributes(3).Value = 'NOAA PMEL, UW CICOES';
         rfrom_info.Attributes(4).Value = ['Argo float data, GLODAP ship data, ' ...
             rfrom_info.Attributes(2).Value];
-        rfrom_info.Attributes(2).Value = ['GOBAI-' param_props.dir_name ...
+        rfrom_info.Attributes(2).Value = ['GOBAI-' param_props.output_name ...
             '-HR-v' num2str(snap_date)];
         rfrom_info.Attributes(5).Value = 'Sharp, et al. GOBAI High Resolution Data Products, in prep.';
         rfrom_info.Attributes(6).Value = ['Created: ' char(datetime('today'))];
@@ -424,16 +424,16 @@ if strcmp(base_grid,'RFROM')
             clear gobai_3d
         end
         % write dimensions to monthly file
-        lon = ncread([gobai_alg_dir 'GOBAI-' param_props.dir_name '-HR-v' ...
+        lon = ncread([gobai_alg_dir 'GOBAI-' param_props.output_name '-HR-v' ...
             num2str(snap_date) '.nc'],'lon');
         ncwrite(filename,'longitude',lon);
-        lat = ncread([gobai_alg_dir 'GOBAI-' param_props.dir_name '-HR-v' ...
+        lat = ncread([gobai_alg_dir 'GOBAI-' param_props.output_name '-HR-v' ...
             num2str(snap_date) '.nc'],'lat');
         ncwrite(filename,'latitude',lat);
-        pres = ncread([gobai_alg_dir 'GOBAI-' param_props.dir_name '-HR-v' ...
+        pres = ncread([gobai_alg_dir 'GOBAI-' param_props.output_name '-HR-v' ...
             num2str(snap_date) '.nc'],'pres');
         ncwrite(filename,'mean_pressure',pres);
-        prs_bnds = ncread([gobai_alg_dir 'GOBAI-' param_props.dir_name '-HR-v' ...
+        prs_bnds = ncread([gobai_alg_dir 'GOBAI-' param_props.output_name '-HR-v' ...
             num2str(snap_date) '.nc'],'prs_bnds');
         ncwrite(filename,'mean_pressure_bnds',prs_bnds');
         % write monthly mean 1x1 degree file
@@ -468,7 +468,7 @@ for fln = 1:length(files)
     end
 end
 files(idx_rem) = [];
-filename = [gobai_alg_dir 'GOBAI-' param_props.dir_name '-HR-v' date_str '.nc'];
+filename = [gobai_alg_dir 'GOBAI-' param_props.output_name '-HR-v' date_str '.nc'];
 for cnt = 1:length(files)
     % define file name
     filename_temp = [gobai_alg_dir_temp 'gobai-' ...
@@ -529,13 +529,13 @@ function apply_model(alg_type,TS,num_clusters,alg_dir,alg_fnames,...
 
     % define GMM model name
     if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-        gmm_folder_name = [param_props.dir_name '/Models/GMM/c' ...
+        gmm_folder_name = [param_props.param_path 'Models/GMM/c' ...
             num2str(num_clusters) '_' file_date float_file_ext];
         if ~isfolder(gmm_folder_name); mkdir(gmm_folder_name); end
         gmm_model_name = [gmm_folder_name '/model_' float_ext ...
             glodap_ext osd_ext ctd_ext];
     else % for models
-        gmm_folder_name = [param_props.dir_name '/Models/GMM/' ...
+        gmm_folder_name = [param_props.param_path 'Models/GMM/' ...
             base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
         if ~isfolder(gmm_folder_name); mkdir(gmm_folder_name); end
         gmm_model_name = [gmm_folder_name '/model_' float_ext ...
@@ -636,7 +636,7 @@ function create_nc_file(TS,base_grid,xdim,ydim,zdim,gobai_alg_dir,...
     param_props,date_str)
 
 % define file name
-filename = [gobai_alg_dir 'GOBAI-' param_props.dir_name '-HR-v' date_str '.nc'];
+filename = [gobai_alg_dir 'GOBAI-' param_props.output_name '-HR-v' date_str '.nc'];
 
 % create folder and file
 if ~isfolder(gobai_alg_dir); mkdir(gobai_alg_dir); end

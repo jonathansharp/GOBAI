@@ -173,11 +173,11 @@ for m = 1:240
     % c.Label.String = ['\Delta[O_{2}]_{(GOBAI - ' base_grid ')}'];
     % mlabel off;
     % plabel off;
-    % if ~isfolder([param_props.dir_name '/Figures/' base_grid '/' rlz '_gr'])
-    %     mkdir([param_props.dir_name '/Figures/' base_grid '/' rlz '_gr']);
+    % if ~isfolder([param_props.data_path 'Figures/' base_grid '/' rlz '_gr'])
+    %     mkdir([param_props.data_path 'Figures/' base_grid '/' rlz '_gr']);
     % end
     % date = datevec(time(m));
-    % export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
+    % export_fig(gcf,[param_props.data_path 'Figures/' base_grid '/' rlz '_gr' ...
     %     '/' num2str(date(1)) '_' num2str(date(2)) '.png'],'-transparent');
     % close
 
@@ -248,21 +248,21 @@ for m = 1:240
 end
 
 %% save global means
-if ~isfolder([param_props.dir_name '/Data/' base_grid]); mkdir([param_props.dir_name '/Data/' base_grid '/' rlz '_gr']); end
-% save([param_props.dir_name '/Data/' base_grid '/' rlz '_gr/statistics.mat'],'rfr_mean',...
+if ~isfolder([param_props.data_path 'Data/' base_grid]); mkdir([param_props.data_path 'Data/' base_grid '/' rlz '_gr']); end
+% save([param_props.data_path 'Data/' base_grid '/' rlz '_gr/statistics.mat'],'rfr_mean',...
 %     'ffnn_mean','gbm_mean','gobai_mean','gobai_depth_mean','cmip_mean','cmip_depth_mean');
-save([param_props.dir_name '/Data/' base_grid '/' rlz '_gr/statistics.mat'],'ffnn_mean_1',...
+save([param_props.data_path 'Data/' base_grid '/' rlz '_gr/statistics.mat'],'ffnn_mean_1',...
     'ffnn_mean_2','ffnn_mean_3','gobai_mean','gobai_depth_mean','cmip_mean','cmip_depth_mean');
 
 %% plot timeseries
 figure;
 plot(time,cmip_mean,time,gobai_mean,'LineWidth',2);
-legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']});
+legend({base_grid ['GOBAI-' param_props.output_name '_{(' base_grid ')}']});
 datetick('x','keeplimits');
-if ~isfolder([param_props.dir_name '/Figures/' base_grid '/' rlz '_gr'])
-    mkdir([param_props.dir_name '/Figures/' base_grid '/' rlz '_gr']);
+if ~isfolder([param_props.data_path 'Figures/' base_grid '/' rlz '_gr'])
+    mkdir([param_props.data_path 'Figures/' base_grid '/' rlz '_gr']);
 end
-export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
+export_fig(gcf,[param_props.data_path 'Figures/' base_grid '/' rlz '_gr' ...
         '/timeseries.png'],'-transparent'); close;
 
 %% plot average profile
@@ -273,8 +273,8 @@ set(gca,'YDir','reverse','XAxisLocation','top');
 ylim([0 max(depth)]);
 xlabel('[O_{2}] (\mumol kg^{-1})');
 ylabel('Depth (m)');
-legend({base_grid ['GOBAI-' param_props.dir_name '_{(' base_grid ')}']},'Location','southeast');
-export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
+legend({base_grid ['GOBAI-' param_props.output_name '_{(' base_grid ')}']},'Location','southeast');
+export_fig(gcf,[param_props.data_path 'Figures/' base_grid '/' rlz '_gr' ...
         '/profile.png'],'-transparent'); close;
 
 %% plot average profile difference
@@ -287,7 +287,7 @@ ylim([0 max(depth)]);
 xlim([-3 3]);
 xlabel('\Delta[O_{2}] (\mumol kg^{-1})');
 ylabel('Depth (m)');
-export_fig(gcf,[param_props.dir_name '/Figures/' base_grid '/' rlz '_gr' ...
+export_fig(gcf,[param_props.data_path 'Figures/' base_grid '/' rlz '_gr' ...
         '/profile_delta.png'],'-transparent'); close;
 
 end

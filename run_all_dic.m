@@ -11,7 +11,6 @@ numWorkers_cluster = 60;
 % float snapshot configuration
 snap_download = 1;
 snap_date = 202610;
-snap_dir = '/med2/';
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_vrs = 'v3';
@@ -40,7 +39,8 @@ param_props = param_config(param);
 % base grid
 base_grid = 'RFROM';
 rfrom_ver = 'v2.2_2025';
-fpaths = path_config(base_grid,param);
+[fpaths,param_props] = path_config(base_grid,param,param_props);
+snap_dir = fpaths.snapshot_dir;
 % osse parameters
 model_types = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
 model_folders = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
@@ -60,7 +60,7 @@ acquire_snapshot_data(param_props,data_modes,float_file_ext,snap_date,...
 acquire_glodap_data(param_props,glodap_vrs,start_year);
 % adjust data
 if flt ==1 | ctd == 1
-    adjust_dic_data(float_file_ext,glodap_vrs,snap_date,flt,gld,osd,ctd);
+    adjust_dic_data(param_props,fpaths,float_file_ext,glodap_vrs,snap_date,flt,gld,osd,ctd);
 end
 % display data
 display_data(param_props,float_file_ext,glodap_vrs,...

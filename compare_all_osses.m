@@ -62,7 +62,7 @@ for m = 1:length(model_types)
         num2str(num_clusters) '_' file_date float_file_ext '/train' ...
         num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' ...
         num2str(100*test_ratio) '/' float_ext glodap_ext osd_ext ctd_ext ...
-        '/GOBAI-' param_props.dir_name '-HR-v' num2str(snap_date) '.nc'];
+        '/GOBAI-' param_props.output_name '-HR-v' num2str(snap_date) '.nc'];
     delta_filepath = [fpath.param_path 'GOBAI/' model_types{m} '/DELTA/c' ...
         num2str(num_clusters) '_' file_date float_file_ext '/' ...
         float_ext glodap_ext osd_ext ctd_ext];
@@ -72,7 +72,7 @@ for m = 1:length(model_types)
     depth = ncread(gobai_filepath,'depth');
 
     % load global means
-    load([param_props.dir_name '/Data/' model_types{m} '/' realizations{m} ...
+    load([param_props.data_path 'Data/' model_types{m} '/' realizations{m} ...
         '_gr/statistics_' float_ext glodap_ext osd_ext ctd_ext '.mat']);
 
     % plot timeseries of residuals
@@ -88,7 +88,7 @@ for m = 1:length(model_types)
     p1=plot(time,cmip_inv.global,':','color',clrs(m,:),'linewidth',3);
     p2=plot(time,gobai_inv.global,'color',clrs(m,:),'linewidth',3);
     legend([p1 p2 ],{model_types{m} ['GOBAI-O_{2(' model_types{m} ')}']});
-    export_fig(gcf,[param_props.dir_name '/Figures/osse_global_mean_timeseries_' ...
+    export_fig(gcf,[param_props.data_path 'Figures/osse_global_mean_timeseries_' ...
         float_ext glodap_ext osd_ext ctd_ext '_' model_types{m} '.png'],'-transparent');
     figure(2); cla;
     hold off;
@@ -143,10 +143,10 @@ for m = 1:length(model_types)
     c.Label.String = ['Avg. \Delta' param_props.label '_{(GOBAI - ' model_types{m} ')}'];
     mlabel off;
     plabel off;
-    if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
-        mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+    if ~isfolder([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr'])
+        mkdir([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr']);
     end
-    export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+    export_fig(gcf,[param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr' ...
         '/delta_' float_ext glodap_ext osd_ext ctd_ext '.png'],'-transparent');
     close;
 
@@ -165,10 +165,10 @@ for m = 1:length(model_types)
         c.Label.String = ['Avg. \Delta' param_props.label '_{(GOBAI - ' model_types{m} ')}'];
         mlabel off;
         plabel off;
-        if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
-            mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+        if ~isfolder([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr'])
+            mkdir([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr']);
         end
-        export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+        export_fig(gcf,[param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr' ...
             '/delta_' float_ext glodap_ext osd_ext ctd_ext '_' num2str(depth(dd)) 'm.png'],'-transparent');
         close;
         figure; hold on;
@@ -183,10 +183,10 @@ for m = 1:length(model_types)
         c.Label.String = ['RMSD \Delta' param_props.label '_{(GOBAI - ' model_types{m} ')}'];
         mlabel off;
         plabel off;
-        if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
-            mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+        if ~isfolder([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr'])
+            mkdir([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr']);
         end
-        export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+        export_fig(gcf,[param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr' ...
             '/rmsd_' float_ext glodap_ext osd_ext ctd_ext '_' num2str(depth(dd)) 'm.png'],'-transparent');
         close;
     end
@@ -206,10 +206,10 @@ for m = 1:length(model_types)
     c.Label.String = ['Avg. ' param_props.label ' (0-500m, \mumol kg^{-1})'];
     mlabel off;
     plabel off;
-    if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
-        mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+    if ~isfolder([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr'])
+        mkdir([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr']);
     end
-    export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+    export_fig(gcf,[param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr' ...
         '/' param_props.fig_name '_' float_ext glodap_ext osd_ext ctd_ext '.png'],'-transparent');
     close;
 
@@ -251,14 +251,14 @@ end
 
 figure(1); hold on;
 %legend(ts_plot,model_types,'location','northoutside','numcolumns',5,'FontSize',12);
-export_fig(gcf,[param_props.dir_name '/Figures/osse_timeseries_residuals_' ...
+export_fig(gcf,[param_props.data_path 'Figures/osse_timeseries_residuals_' ...
     float_ext glodap_ext osd_ext ctd_ext '.png'],'-transparent'); close;
 
 figure(2); hold on; close;
 
 figure(3); hold on;
 legend(prof_plot,model_types,'location','northoutside','FontSize',12);
-export_fig(gcf,[param_props.dir_name '/Figures/osse_profile_delta_' ...
+export_fig(gcf,[param_props.data_path 'Figures/osse_profile_delta_' ...
     float_ext glodap_ext osd_ext ctd_ext '.png'],'-transparent'); close;
 
 % plot ensemble mean differences
@@ -274,7 +274,7 @@ colormap(cmocean('balance'));
 c.Label.String = ['Avg. \Delta' param_props.label '_{(GOBAI - ESM)}'];
 mlabel off;
 plabel off;
-export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_delta_' ...
+export_fig(gcf,[param_props.data_path 'Figures/ensemble_mean_delta_' ...
     float_ext glodap_ext osd_ext ctd_ext '.png'],'-transparent');
 close
 
@@ -292,7 +292,7 @@ colormap(cmocean('tempo'));
 c.Label.String = ['\Delta' param_props.label '_{(GOBAI - ESM)} Var.'];
 mlabel off;
 plabel off;
-export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_variability_' ...
+export_fig(gcf,[param_props.data_path 'Figures/ensemble_mean_variability_' ...
     float_ext glodap_ext osd_ext ctd_ext '.png'],'-transparent');
 close
 
@@ -310,6 +310,6 @@ colormap(cmocean('tempo'));
 c.Label.String = ['\Delta' param_props.label '_{(GOBAI - ESM)} RMSD'];
 mlabel off;
 plabel off;
-export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_rmsd_' ...
+export_fig(gcf,[param_props.data_path 'Figures/ensemble_mean_rmsd_' ...
     float_ext glodap_ext osd_ext ctd_ext '.png'],'-transparent');
 close

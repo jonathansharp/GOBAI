@@ -60,7 +60,7 @@ end
 %% plot frames
 for l = 1:length(latitudes)
     % create folder for figures
-    dname = [param_props.dir_name '/Figures/GOBAI/transects/' base_grid '_' alg_type '_c' num2str(num_clusters)];
+    dname = [param_props.data_path 'Figures/GOBAI/transects/' base_grid '_' alg_type '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
     % define directory for file
     if strcmp(alg_type,'FFNN')
@@ -83,7 +83,7 @@ for l = 1:length(latitudes)
     fname = ['gobai_transect_animation_' num2str(latitudes(l)) 'deg.gif'];
     % determine number of timesteps
     %gobai_fname = [dir_base '/gobai-' param_props.file_name '.nc'];
-    gobai_fname = [param_path '/GOBAI-' param_props.dir_name '-v1.0-HR.nc'];
+    gobai_fname = [param_path '/GOBAI-' param_props.output_name '-v1.0-HR.nc'];
     gobai_inf = ncinfo(gobai_fname);
     for dims = 1:length(gobai_inf.Dimensions)
         if strcmp(gobai_inf.Dimensions(dims).Name,'time')
@@ -149,7 +149,7 @@ for l = 1:length(latitudes)
     end
     close
     % display information
-    disp(['GOBAI-' param_props.dir_name ' (' alg_type ') animation at ' num2str(latitudes(l)) ' deg plotted'])
+    disp(['GOBAI-' param_props.output_name ' (' alg_type ') animation at ' num2str(latitudes(l)) ' deg plotted'])
 end
 
 % end parallel session

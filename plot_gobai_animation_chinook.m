@@ -7,10 +7,10 @@ vrs = 'v1.1-HR';
 pressure = 100;
 
 
-folder = ['/raid/Data/GOBAI-' param_props.dir_name '/' vrs '/'];
-file = ['GOBAI-' param_props.dir_name '-' vrs '.nc'];
-fig_folder = [param_props.dir_name '/Figures/GOBAI/animations/'];
-fig_file = ['GOBAI-' param_props.dir_name '-' vrs '.gif'];
+folder = ['/raid/Data/GOBAI-' param_props.output_name '/' vrs '/'];
+file = ['GOBAI-' param_props.output_name '-' vrs '.nc'];
+fig_folder = [param_props.data_path 'Figures/GOBAI/animations/'];
+fig_file = ['GOBAI-' param_props.output_name '-' vrs '.gif'];
 if ~exist(fig_folder,"dir"); mkdir(fig_folder); end
 
 % load dimensions

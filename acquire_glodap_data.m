@@ -17,7 +17,7 @@ if strcmp(param_props.temp_name,'PH')
 end
 
 %% Only do all this if downloaded glodap matlab file does not exist
-if exist([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' glodap_vrs '.mat'],'file') ~= 2
+if exist([param_props.data_path '/Data/processed_glodap_' param_props.file_name '_data_' glodap_vrs '.mat'],'file') ~= 2
 
 %% load GLODAP data
 glodap_data = load([glodap_dir 'GLODAP' glodap_vrs '/GLODAP' glodap_vrs '_Merged_Master_File.mat']);
@@ -208,8 +208,8 @@ figure(1); hold on;
 lon_temp = convert_lon(convert_lon(glodap_data.LON));
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,glodap_data.LAT,'.g'); hold off;
-if ~exist([param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
-export_fig(gcf,[param_props.dir_name '/Figures/Data/processed_glodap_' glodap_vrs '.png'],'-transparent');
+if ~exist([param_props.data_path '/Figures/Data'],'dir'); mkdir([param_props.data_path '/Figures/Data']); end
+export_fig(gcf,[param_props.data_path '/Figures/Data/processed_glodap_' glodap_vrs '.png'],'-transparent');
 clear lon_temp
 
 %% clean up
@@ -222,8 +222,8 @@ glodap_data = rmfield(glodap_data,vars(idx));
 clear idx vars
 
 %% save glodap data
-if ~exist([param_props.dir_name '/Data'],'dir'); mkdir([param_props.dir_name '/Data']); end
-save([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' glodap_vrs '.mat'],'glodap_data');
+if ~exist([param_props.data_path '/Data'],'dir'); mkdir([param_props.data_path '/Data']); end
+save([param_props.data_path '/Data/processed_glodap_' param_props.file_name '_data_' glodap_vrs '.mat'],'glodap_data');
 
 %% clean up
 clear glodap_data
@@ -238,7 +238,7 @@ else
 disp('GLODAP data already processed.')
 
 %% load glodap data
-load([param_props.dir_name '/Data/processed_glodap_' ...
+load([param_props.data_path '/Data/processed_glodap_' ...
     param_props.file_name '_data_' glodap_vrs '.mat'],'glodap_data');
 
 %% display the number of matching cruises and profiles

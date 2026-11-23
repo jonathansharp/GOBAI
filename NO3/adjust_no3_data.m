@@ -9,7 +9,7 @@
 %
 % DATE: 07/15/2026
 
-function adjust_no3_data(float_file_ext,glodap_vrs,snap_date,...
+function adjust_no3_data(param_props,fpaths,float_file_ext,glodap_vrs,snap_date,...
     include_float,include_glodap,include_osd,include_ctd)
 
 %% define dataset extensions
@@ -24,15 +24,15 @@ end_year = todays_date(1);
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-if include_float; load(['NO3/Data/processed_float_no3_data_' ...
+if include_float; load([param_props.data_path 'Data/processed_float_no3_data_' ...
         file_date float_file_ext '.mat'],'float_data','file_date'); end
-if include_glodap; load(['NO3/Data/processed_glodap_no3_data_' ...
+if include_glodap; load([param_props.data_path 'Data/processed_glodap_no3_data_' ...
         glodap_vrs '.mat'],'glodap_data'); end
-if include_osd || include_ctd; load(['NO3/Data/processed_wod_no3_data_' ...
+if include_osd || include_ctd; load([param_props.data_path 'Data/processed_wod_no3_data_' ...
         num2str(end_year) '.mat'],'wod_data'); end
 
 %% adjust float O2 data
-load(['O2/Data/float_corr_' file_date '_D_A']);
+load([fpaths.param_path_o2 'Data/float_corr_' file_date '_D_A']);
 % apply linear correction to float O2 (with pressure)
 corr_fac = nan(size(float_data.OXY));
 idx_deep = float_data.PRES >= max_delta_pressure;
@@ -144,8 +144,8 @@ if include_float
     plot([mean_nit_delta+3*st_dev_nit_delta mean_nit_delta+3*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
     plot([mean_nit_delta-3*st_dev_nit_delta mean_nit_delta-3*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
     xlabel('Float [NO_{3}] - WOA [NO_{3}]');
-    if ~exist([pwd '/NO3/Figures/Data'],'dir'); mkdir('NO3/Figures/Data'); end
-    exportgraphics(gcf,[pwd '/NO3/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
+    if ~exist([param_props.data_path 'Figures/Data'],'dir'); mkdir([param_props.data_path 'Figures/Data']); end
+    exportgraphics(gcf,[param_props.data_path 'Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
     close
     % scatter of delta values
     figure; hold on
@@ -166,8 +166,8 @@ if include_float
     caxis([1e0 1e5]);
     c=colorbar;
     c.Label.String = 'log10(Bin Counts)';
-    if ~exist([pwd '/NO3/Figures/Data'],'dir'); mkdir('NO3/Figures/Data'); end
-    exportgraphics(gcf,[pwd '/NO3/Figures/Data/WOA_comp_scatter_' file_date float_file_ext '.png']);
+    if ~exist([param_props.data_path 'Figures/Data'],'dir'); mkdir([param_props.data_path 'Figures/Data']); end
+    exportgraphics(gcf,[param_props.data_path 'Figures/Data/WOA_comp_scatter_' file_date float_file_ext '.png']);
     close
     % clean up
     clear counts bin_centers c h myColorMap
@@ -267,8 +267,8 @@ if include_osd || include_ctd
     plot([mean_nit_delta+3*st_dev_nit_delta mean_nit_delta+3*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
     plot([mean_nit_delta-3*st_dev_nit_delta mean_nit_delta-3*st_dev_nit_delta],ax.YLim,'r','linewidth',2);
     xlabel('Float [NO_{3}] - WOA [NO_{3}]');
-    if ~exist([pwd '/NO3/Figures/Data'],'dir'); mkdir('NO3/Figures/Data'); end
-    exportgraphics(gcf,[pwd '/NO3/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
+    if ~exist([param_props.data_path 'Figures/Data'],'dir'); mkdir([param_props.data_path 'Figures/Data']); end
+    exportgraphics(gcf,[param_props.data_path 'Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
     close
     % scatter of delta values
     figure; hold on
@@ -289,8 +289,8 @@ if include_osd || include_ctd
     caxis([1e0 1e5]);
     c=colorbar;
     c.Label.String = 'log10(Bin Counts)';
-    if ~exist([pwd '/NO3/Figures/Data'],'dir'); mkdir('NO3/Figures/Data'); end
-    exportgraphics(gcf,[pwd '/NO3/Figures/Data/WOA_comp_scatter_' file_date float_file_ext '.png']);
+    if ~exist([param_props.data_path 'Figures/Data'],'dir'); mkdir([param_props.data_path 'Figures/Data']); end
+    exportgraphics(gcf,[param_props.data_path 'Figures/Data/WOA_comp_scatter_' file_date float_file_ext '.png']);
     close
     % clean up
     clear counts bin_centers c h myColorMap
@@ -529,7 +529,7 @@ crossover.slope = crossover.slope(1);
 text(30,12,['Med. Err. = ' num2str(round(crossover.err_md,2))],'fontsize',12);
 text(30,9,['RMSE = ' num2str(round(crossover.rmse,1))],'fontsize',12);
 text(30,6,['R^{2} = ' num2str(round(crossover.r2,2))],'fontsize',12);
-exportgraphics(gcf,['NO3/Figures/Data/delta_vs_float_300_uncorr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/delta_vs_float_300_uncorr_' file_date float_file_ext '.png']);
 close
 % histogram
 figure; hold on
@@ -549,7 +549,7 @@ text(0.9*xL(1),0.9*yL(2),['Mean \Delta[NO_{3}] = ' ...
 text(0.9*xL(1),0.8*yL(2),['Std. \Delta[NO_{3}] = ' ...
     num2str(round(std(crossover.nit_delta(idx)),2))],...
     'HorizontalAlignment','left','VerticalAlignment','top');
-exportgraphics(gcf,[pwd '/NO3/Figures/Data/GLODAP_comp_histogram_uncorr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/GLODAP_comp_histogram_uncorr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear crossover
@@ -571,7 +571,7 @@ crossover.slope_corr = crossover.slope_corr(1);
 text(30,12,['Med. Err. = ' num2str(round(crossover.err_md_corr,2))],'fontsize',12);
 text(30,9,['RMSE = ' num2str(round(crossover.rmse_corr,1))],'fontsize',12);
 text(30,6,['R^{2} = ' num2str(round(crossover.r2_corr,2))],'fontsize',12);
-exportgraphics(gcf,['NO3/Figures/Data/delta_vs_float_300_corr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/delta_vs_float_300_corr_' file_date float_file_ext '.png']);
 close
 % histogram
 figure; hold on
@@ -591,7 +591,7 @@ text(0.9*xL(1),0.9*yL(2),['Mean \Delta[NO_{3}] = ' ...
 text(0.9*xL(1),0.8*yL(2),['Std. \Delta[NO_{3}] = ' ...
     num2str(round(std(crossover.nit_delta_corr(idx)),2))],...
     'HorizontalAlignment','left','VerticalAlignment','top');
-exportgraphics(gcf,[pwd '/NO3/Figures/Data/GLODAP_comp_histogram_corr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/GLODAP_comp_histogram_corr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear crossover

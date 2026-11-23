@@ -9,18 +9,18 @@
 %
 % DATE: 07/23/2026
 
-function adjust_dic_data(float_file_ext,glodap_vrs,snap_date,...
+function adjust_dic_data(param_props,fpaths,float_file_ext,glodap_vrs,snap_date,...
     include_float,include_glodap,include_osd,include_ctd)
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-load(['DIC/Data/processed_float_dic_data_' file_date float_file_ext '.mat'],...
+load([param_props.data_path 'Data/processed_float_dic_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date');
-load(['DIC/Data/processed_glodap_dic_data_' glodap_vrs '.mat'],...
+load([param_props.data_path 'Data/processed_glodap_dic_data_' glodap_vrs '.mat'],...
     'glodap_data');
 
 %% adjust float oxygen based on previously developed crossover correction
-load(['O2/Data/float_corr_' file_date '_D_A']);
+load([fpaths.param_path_o2 'Data/float_corr_' file_date '_D_A']);
 % apply linear correction to float O2 (with pressure)
 corr_fac = nan(size(float_data.OXY));
 idx_deep = float_data.PRES >= max_delta_pressure;
@@ -98,7 +98,7 @@ text(7.5,8.2,['Average Diff. = ' ...
         ' +/- ' num2str(round(std(glodap_data.PH(idx_temp)-glodap_data.pH_calc(idx_temp)),4))],...
     'FontSize',12);
 xlabel('GLODAP measured pH'); ylabel('Calculated pH (w/ TA/DIC)');
-export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_calc_glodap_' glodap_vrs '.png'],'-transparent'); close;
+export_fig(gcf,[param_props.data_path 'Figures/Data/pH_meas_vs_calc_glodap_' glodap_vrs '.png'],'-transparent'); close;
 
 %% plot measured vs. estimated glodap pH
 figure('visible','on','position',[100 100 1000 400]);
@@ -118,7 +118,7 @@ text(7.5,8.2,['Average Diff. = ' ...
         ' +/- ' num2str(round(std(glodap_data.PH(idx)-glodap_data.pH_est(idx)),4))],...
     'FontSize',12);
 xlabel('GLODAP measured pH'); ylabel('Estimated pH (ESPER w/ T/S/O2)');
-export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_glodap_' glodap_vrs '.png'],'-transparent'); close;
+export_fig(gcf,[param_props.data_path 'Figures/Data/pH_meas_vs_esper_glodap_' glodap_vrs '.png'],'-transparent'); close;
 
 %% adjust glodap pH via comparison with ESPER estimates (profile by profile) (as a test)
 % unique_profs = unique(glodap_data.ID);
@@ -181,7 +181,7 @@ text(7.5,8.2,['Average Diff. = ' ...
     ' +/- ' num2str(round(std(float_data.PH(idx)-float_data.pH_est(idx)),4))],...
     'FontSize',12);
 xlabel('Float measured pH'); ylabel('Estimated pH (ESPER w/ T/S/O2)');
-export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_uncorr_' ...
+export_fig(gcf,[param_props.data_path 'Figures/Data/pH_meas_vs_esper_uncorr_' ...
     file_date float_file_ext '.png'],'-transparent'); close;
 
 %% adjust float pH via comparison with ESPER estimates (profile by profile)
@@ -248,7 +248,7 @@ colorbar;
 ylabel('Latitude');
 title('Average ESPER-based pH Adjustment');
 text(xEdges(2),yEdges(end-1),['Avg. pH adj. = ' num2str(round(mean(adjustment,'omitnan'),3))]);
-export_fig(gcf,['DIC/Figures/Data/adjustment_histogram_' ...
+export_fig(gcf,[param_props.data_path 'Figures/Data/adjustment_histogram_' ...
     file_date float_file_ext '.png']); close;
 
 %% determine average profiles
@@ -293,7 +293,7 @@ plot([0 0],[0 2000],'--k');
 xlim([-0.015 0.015]);
 legend({'Measured pH - ESPER pH' 'Adjusted pH - ESPER pH' ''},'location','southwest');
 ylabel(ax1,'Depth (dbar)'); xlabel('\DeltapH');
-export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_profile_' ...
+export_fig(gcf,[param_props.data_path 'Figures/Data/pH_meas_vs_esper_profile_' ...
     file_date float_file_ext '.png'],'-transparent'); close;
 
 %%  calculate DIC from ADJUSTED float data
@@ -323,7 +323,7 @@ text(7.5,8.2,['Average Diff. = ' ...
     ' +/- ' num2str(round(std(float_data.PH_ESPER_ADJUSTED(idx)-float_data.pH_est(idx)),4))],...
     'FontSize',12);
 xlabel('Float measured pH (Adjusted to ESPER)'); ylabel('Estimated pH (ESPER w/ T/S/O2)');
-export_fig(gcf,['DIC/Figures/Data/pH_meas_vs_esper_corr_' ...
+export_fig(gcf,[param_props.data_path 'Figures/Data/pH_meas_vs_esper_corr_' ...
     file_date float_file_ext '.png'],'-transparent'); close;
 
 %% Co-locate and compare float and glodap data (via profile crossovers)
@@ -509,7 +509,7 @@ crossover.slope = crossover.slope(1);
 text(1950,2350,['Med. Err. = ' num2str(round(crossover.err_md,2))],'fontsize',12);
 text(1950,2325,['RMSE = ' num2str(round(crossover.rmse,1))],'fontsize',12);
 text(1950,2300,['R^{2} = ' num2str(round(crossover.r2,2))],'fontsize',12);
-exportgraphics(gcf,['DIC/Figures/Data/delta_vs_float_300_uncorr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/delta_vs_float_300_uncorr_' file_date float_file_ext '.png']);
 close
 % histogram
 figure; hold on
@@ -529,7 +529,7 @@ text(0.9*xL(1),0.9*yL(2),['Mean \DeltaDIC = ' ...
 text(0.9*xL(1),0.8*yL(2),['Std. \DeltaDIC = ' ...
     num2str(round(std(crossover.dic_delta(idx)),2))],...
     'HorizontalAlignment','left','VerticalAlignment','top');
-exportgraphics(gcf,[pwd '/DIC/Figures/Data/GLODAP_comp_histogram_uncorr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/GLODAP_comp_histogram_uncorr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear crossover
@@ -559,7 +559,7 @@ crossover.slope_corr = crossover.slope_corr(1);
 text(2050,2350,['Med. Err. = ' num2str(round(crossover.err_md_corr,2))],'fontsize',12);
 text(2050,2325,['RMSE = ' num2str(round(crossover.rmse_corr,1))],'fontsize',12);
 text(2050,2300,['R^{2} = ' num2str(round(crossover.r2_corr,2))],'fontsize',12);
-exportgraphics(gcf,['DIC/Figures/Data/delta_vs_float_300_corr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/delta_vs_float_300_corr_' file_date float_file_ext '.png']);
 close
 % histogram
 figure; hold on
@@ -579,7 +579,7 @@ text(0.9*xL(1),0.9*yL(2),['Mean \DeltaDIC = ' ...
 text(0.9*xL(1),0.8*yL(2),['Std. \DeltaDIC = ' ...
     num2str(round(std(crossover.dic_delta_corr(idx)),2))],...
     'HorizontalAlignment','left','VerticalAlignment','top');
-exportgraphics(gcf,[pwd '/DIC/Figures/Data/GLODAP_comp_histogram_corr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/GLODAP_comp_histogram_corr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear crossover
@@ -606,8 +606,8 @@ for p = 1:length(float_profs)
         'markeredgecolor','k');
 end
 colorbar;
-if ~exist('DIC/Figures/Data','dir'); mkdir('pH/Figures/Data'); end
-export_fig(gcf,'DIC/Figures/Data/mapped_comparison_uncorr.png','-transparent');
+if ~exist([param_props.data_path 'Figures/Data'],'dir'); mkdir([param_props.data_path 'Figures/Data']); end
+export_fig(gcf,[param_props.data_path 'Figures/Data/mapped_comparison_uncorr.png'],'-transparent');
 close
 % set up figure for corrected data
 figure(1); hold on;
@@ -627,8 +627,8 @@ for p = 1:length(float_profs)
         'markeredgecolor','k');
 end
 colorbar;
-if ~exist('DIC/Figures/Data','dir'); mkdir('pH/Figures/Data'); end
-export_fig(gcf,'DIC/Figures/Data/mapped_comparison_corr.png','-transparent');
+if ~exist([param_props.data_path 'Figures/Data'],'dir'); mkdir([param_props.data_path 'Figures/Data']); end
+export_fig(gcf,[param_props.data_path 'Figures/Data/mapped_comparison_corr.png'],'-transparent');
 close
 % clean up
 clear crossover lon_temp

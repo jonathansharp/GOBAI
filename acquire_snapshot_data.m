@@ -140,7 +140,7 @@ end
 
 %% Only do all this if downloaded float matlab file does not exist
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-if exist([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'file') ~= 2
+if exist([param_props.data_path '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],'file') ~= 2
 
 %% Define file structure
 snapshot_path = [snap_dir 'BGC_Argo_Snapshots/' num2str(snap_date) '-BgcArgoSprof/dac']; % define file path
@@ -409,9 +409,9 @@ for n = 1:length(idx_folders) % for each DAC
                         pressure(:,prof_to_plot),'filled');
                     legend({'Interpolation' 'Measurements'},'Location',...
                         'northoutside','NumColumns',2);
-                    if ~exist([param_props.dir_name '/Figures/Data/Profiles'],'dir')
-                        mkdir([param_props.dir_name '/Figures/Data/Profiles']); end
-                    export_fig(gcf,[param_props.dir_name '/Figures/Data/Profiles/float_' ...
+                    if ~exist([param_props.data_path '/Figures/Data/Profiles'],'dir')
+                        mkdir([param_props.data_path '/Figures/Data/Profiles']); end
+                    export_fig(gcf,[param_props.data_path '/Figures/Data/Profiles/float_' ...
                         num2str(floatnum) '_prof' num2str(prof_to_plot) '.png'],'-transparent');
                     close
                 end
@@ -504,9 +504,9 @@ figure(1); hold on;
 lon_temp = convert_lon(convert_lon(float_data.LON));
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,float_data.LAT,'.g');
-if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir')
-    mkdir([param_props.dir_name '/Figures/Data']); end
-export_fig(gcf,[param_props.dir_name '/Figures/Data/processed_float_'  ...
+if ~exist([param_props.data_path '/Figures/Data'],'dir')
+    mkdir([param_props.data_path '/Figures/Data']); end
+export_fig(gcf,[param_props.data_path '/Figures/Data/processed_float_'  ...
     file_date float_file_ext '.png'],'-transparent');
 close
 clear lon_temp
@@ -533,9 +533,9 @@ disp(['# of matching Argo profiles (' param_props.argo_name '): ' num2str(length
 disp(['# of matching Argo floats (' param_props.argo_name '): ' num2str(length(unique(float_data.FLOAT)))]);
 
 %% save processed float data
-if ~exist([pwd '/' param_props.dir_name '/Data'],'dir')
-    mkdir([param_props.dir_name '/Data']); end
-save([param_props.dir_name '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
+if ~exist([param_props.data_path '/Data'],'dir')
+    mkdir([param_props.data_path '/Data']); end
+save([param_props.data_path '/Data/processed_float_' param_props.file_name '_data_' file_date float_file_ext '.mat'],...
     'float_data','file_date','-v7.3');
 
 %% clean up
@@ -551,7 +551,7 @@ else
 disp('Float data already processed.')
 
 %% save processed float data
-load([param_props.dir_name '/Data/processed_float_' ...
+load([param_props.data_path '/Data/processed_float_' ...
     param_props.file_name '_data_' file_date float_file_ext '.mat'],'float_data');
 
 %% display the number of matching floats and profiles

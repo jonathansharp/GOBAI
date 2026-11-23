@@ -12,7 +12,7 @@ if include_osd == 1; osd_ext = 'o'; else osd_ext = ''; end
 if include_ctd == 1; ctd_ext = 'c'; else ctd_ext = ''; end
 
 % load data
-load([param_props.dir_name '/Data/processed_all_' param_props.file_name '_data_' ...
+load([param_props.data_path 'Data/processed_all_' param_props.file_name '_data_' ...
     float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext '.mat'],'all_data');
 
 % establish figure
@@ -58,6 +58,6 @@ end
 ylabel('Number of Profiles');
 
 % save figure
-export_fig([param_props.dir_name '/Figures/dataset_histogram_' num2str(y1) '_' ...
+export_fig([param_props.data_path 'Figures/dataset_histogram_' num2str(y1) '_' ...
     num2str(y2) '.png'],'-transparent','-silent');
 close;

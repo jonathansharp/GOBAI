@@ -87,7 +87,7 @@ for m = 1:length(model_types)
     depth = ncread(gobai_filepath,'depth');
 
     % load global means
-    load([param_props.dir_name '/Data/' model_types{m} '/' realizations{m} ...
+    load([param_props.data_path 'Data/' model_types{m} '/' realizations{m} ...
         '_gr/statistics.mat']);
 
     % plot timeseries of residuals
@@ -119,7 +119,7 @@ for m = 1:length(model_types)
     % p3=plot(time,ffnn_mean_3-cmip_mean,'-.','color',clrs(m,:),'linewidth',1);
     % legend([p1 p2 p3],{'RFR' 'FFNN' 'GBM'});
     legend([p1 p2 p3],{'FFNN-15' 'FFNN-20' 'FFNN-25'});
-    export_fig(gcf,[param_props.dir_name '/Figures/osse_detailed_timeseries_' ...
+    export_fig(gcf,[param_props.data_path 'Figures/osse_detailed_timeseries_' ...
         model_types{m} '.png'],'-transparent');
     figure(2); cla;
     hold off;
@@ -137,7 +137,7 @@ for m = 1:length(model_types)
     % p5=plot(time,ffnn_mean_3,'-.','color',clrs(m,:),'linewidth',1);
     legend([p1 p2 p3],{model_types{m} ['GOBAI-O_{2(' model_types{m} ')}'] ...
         ['GOBAI-FFNN-O_{2(' model_types{m} ')}']});
-    export_fig(gcf,[param_props.dir_name '/Figures/osse_global_mean_timeseries_' ...
+    export_fig(gcf,[param_props.data_path 'Figures/osse_global_mean_timeseries_' ...
         model_types{m} '.png'],'-transparent');
     figure(3); cla;
     hold off;
@@ -199,10 +199,10 @@ for m = 1:length(model_types)
     c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - ' model_types{m} ')}'];
     mlabel off;
     plabel off;
-    if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
-        mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+    if ~isfolder([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr'])
+        mkdir([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr']);
     end
-    export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+    export_fig(gcf,[param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr' ...
         '/delta.png'],'-transparent');
     close;
 
@@ -219,10 +219,10 @@ for m = 1:length(model_types)
     % c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - RFR - ' model_types{m} ')}'];
     % mlabel off;
     % plabel off;
-    % if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
-    %     mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+    % if ~isfolder([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr'])
+    %     mkdir([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr']);
     % end
-    % export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+    % export_fig(gcf,[param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr' ...
     %     '/delta-rfr.png'],'-transparent');
     % close;
     % 
@@ -239,10 +239,10 @@ for m = 1:length(model_types)
     % c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - FFNN - ' model_types{m} ')}'];
     % mlabel off;
     % plabel off;
-    % if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
-    %     mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+    % if ~isfolder([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr'])
+    %     mkdir([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr']);
     % end
-    % export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+    % export_fig(gcf,[param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr' ...
     %     '/delta-ffnn.png'],'-transparent');
     % close;
     % 
@@ -259,10 +259,10 @@ for m = 1:length(model_types)
     % c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - GBM - ' model_types{m} ')}'];
     % mlabel off;
     % plabel off;
-    % if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
-    %     mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+    % if ~isfolder([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr'])
+    %     mkdir([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr']);
     % end
-    % export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+    % export_fig(gcf,[param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr' ...
     %     '/delta-gbm.png'],'-transparent');
     % close;
 
@@ -279,10 +279,10 @@ for m = 1:length(model_types)
     c.Label.String = 'Avg. [O_{2}] (0-500m, \mumol kg^{-1})';
     mlabel off;
     plabel off;
-    if ~isfolder([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr'])
-        mkdir([param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr']);
+    if ~isfolder([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr'])
+        mkdir([param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr']);
     end
-    export_fig(gcf,[param_props.dir_name '/Figures/' model_types{m} '/' realizations{m} '_gr' ...
+    export_fig(gcf,[param_props.data_path 'Figures/' model_types{m} '/' realizations{m} '_gr' ...
         '/' param_props.fig_name '.png'],'-transparent');
     close;
 
@@ -347,7 +347,7 @@ end
 
 figure(1); hold on;
 %legend(ts_plot,model_types,'location','northoutside','numcolumns',5,'FontSize',12);
-export_fig(gcf,[param_props.dir_name '/Figures/osse_timeseries_residuals.png'],'-transparent'); close;
+export_fig(gcf,[param_props.data_path 'Figures/osse_timeseries_residuals.png'],'-transparent'); close;
 
 figure(2); hold on; close;
 
@@ -355,7 +355,7 @@ figure(3); hold on; close;
 
 figure(4); hold on;
 legend(prof_plot,model_types,'location','northoutside','FontSize',12);
-export_fig(gcf,[param_props.dir_name '/Figures/osse_profile_delta.png'],'-transparent'); close;
+export_fig(gcf,[param_props.data_path 'Figures/osse_profile_delta.png'],'-transparent'); close;
 
 % plot ensemble mean differences
 figure('visible','on');
@@ -370,7 +370,7 @@ colormap(cmocean('balance'));
 c.Label.String = ['Avg. \Delta[O_{2}]_{(GOBAI - ' model_types{m} ')}'];
 mlabel off;
 plabel off;
-export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_delta.png'],'-transparent');
+export_fig(gcf,[param_props.data_path 'Figures/ensemble_mean_delta.png'],'-transparent');
 close
 
 % plot ensemble variability
@@ -386,5 +386,5 @@ colormap(cmocean('tempo'));
 c.Label.String = ['\Delta[O_{2}]_{(GOBAI - ESM)} Var.'];
 mlabel off;
 plabel off;
-export_fig(gcf,[param_props.dir_name '/Figures/ensemble_mean_variability.png'],'-transparent');
+export_fig(gcf,[param_props.data_path 'Figures/ensemble_mean_variability.png'],'-transparent');
 close

@@ -12,7 +12,6 @@ numWorkers_cluster = 20;
 % float snapshot configuration
 snap_download = 1;
 snap_date = 202610;
-snap_dir = '/med2/';
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_vrs = 'v3';
@@ -41,7 +40,8 @@ param_props = param_config(param);
 % base grid
 base_grid = 'RFROM';
 rfrom_ver = 'V2.3';
-fpaths = path_config(base_grid,param);
+[fpaths,param_props] = path_config(base_grid,param,param_props);
+snap_dir = fpaths.snapshot_dir;
 % osse parameters
 model_types = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
 model_folders = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
@@ -63,7 +63,7 @@ if osd == 1 | ctd == 1; acquire_wod_data(param_props,...
     glodap_vrs,start_year,osd,ctd,numWorkers_predict); end
 % acquire_croco_lake_data(param_props,202609,1)
 % adjust data
-adjust_no3_data(float_file_ext,glodap_vrs,snap_date,flt,gld,osd,ctd);
+adjust_no3_data(param_props,fpaths,float_file_ext,glodap_vrs,snap_date,flt,gld,osd,ctd);
 % display data
 display_data(param_props,float_file_ext,glodap_vrs,...
     start_year,snap_date,flt,gld,osd,ctd);
@@ -113,7 +113,7 @@ train_gobai('FFNN',param_props,base_grid,file_date,float_file_ext,...
     'val_ratio',val_ratio,'test_ratio',test_ratio,'num_folds',num_folds);
 
 %% assemble table of K-fold error statistics
-% kfold_dir = [param_props.dir_name '/KFold/FFNN/c' ...
+% kfold_dir = [param_props.param_path 'KFold/FFNN/c' ...
 %     num2str(num_clusters(clust_n)) '_' file_date float_file_ext];
 % kfold_name = ['FFNN_output_train' num2str(100*train_ratio) '_val' ...
 %     num2str(100*val_ratio) '_test' num2str(100*val_ratio)];
@@ -126,7 +126,7 @@ train_gobai('FFNN',param_props,base_grid,file_date,float_file_ext,...
 % end
 
 % save k-fold table
-% save([param_props.dir_name '/KFold/k_fold_stats_' ...
+% save([param_props.param_path 'KFold/k_fold_stats_' ...
 %     char(datetime('today','Format','dd-MMM-uuuu'))],'kfold_table');
 % clear kfold_table
 
@@ -177,7 +177,7 @@ run_osse(fpaths,model_types,model_folders,realizations,grid_labels,...
 % end
 
 %% assemble table of K-fold error statistics
-% kfold_dir = [param_props.dir_name '/KFold/FFNN/c' ...
+% kfold_dir = [param_props.param_path 'KFold/FFNN/c' ...
 %     num2str(num_clusters(clust_n)) '_' file_date float_file_ext];
 % kfold_name = ['FFNN_output_train' num2str(100*train_ratio) '_val' ...
 %     num2str(100*val_ratio) '_test' num2str(100*val_ratio)];

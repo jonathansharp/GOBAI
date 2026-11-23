@@ -9,7 +9,7 @@ elseif strcmp(param_props.file_name,'no3')
 end
 
 %% load glodap data
-load([param_props.dir_name '/Data/processed_glodap_' param_props.file_name '_data_' glodap_vrs '.mat'],...
+load([param_props.data_path '/Data/processed_glodap_' param_props.file_name '_data_' glodap_vrs '.mat'],...
     'glodap_data');
 
 %% define year
@@ -18,10 +18,10 @@ end_year = todays_date(1);
 year = num2str(end_year);
 
 %% Only do all this if downloaded wod matlab file does not exist
-if exist([param_props.dir_name '/Data/processed_wod_' param_props.file_name '_data_' year '.mat'],'file') ~= 2
+if exist([param_props.data_path '/Data/processed_wod_' param_props.file_name '_data_' year '.mat'],'file') ~= 2
 
 %% load WOD OSD profile data
-folder = 'Data/WOD_Profiles_data';
+folder = '/med2/WOD_Profiles_data';
 if osd_opt == 1 && ctd_opt == 1
     types = {'osd' 'ctd'};
 elseif osd_opt == 1 && ctd_opt == 0
@@ -368,9 +368,9 @@ figure(1); hold on;
 lon_temp = convert_lon(convert_lon(wod_data.LON),'0-360');
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 m_scatter(lon_temp,wod_data.LAT,'.g');
-if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir')
-    mkdir([param_props.dir_name '/Figures/Data']); end
-exportgraphics(gcf,[param_props.dir_name '/Figures/Data/processed_wod_filtered_' year '.png']);
+if ~exist([param_props.data_path '/Figures/Data'],'dir')
+    mkdir([param_props.data_path '/Figures/Data']); end
+exportgraphics(gcf,[param_props.data_path '/Figures/Data/processed_wod_filtered_' year '.png']);
 close
 clear lon_temp
 
@@ -408,8 +408,8 @@ disp(['# of matching CTD Casts (' param_props.temp_name '): ' num2str(length(uni
 disp(['# of matching CTD Cruises (' param_props.temp_name '): ' num2str(length(unique(wod_data.CRU(wod_data.TYPE==2,:),'rows')))]);
 
 %% save processed osd data
-if ~exist([pwd '/' param_props.dir_name '/Data'],'dir'); mkdir([param_props.dir_name '/Data']); end
-save([param_props.dir_name '/Data/processed_wod_' param_props.file_name ...
+if ~exist([param_props.data_path '/Data'],'dir'); mkdir([param_props.data_path '/Data']); end
+save([param_props.data_path '/Data/processed_wod_' param_props.file_name ...
     '_data_' year '.mat'],'wod_data','-v7.3');
 
 else
@@ -418,7 +418,7 @@ else
 disp('WOD data already processed.')
 
 %% load processed osd data
-load([param_props.dir_name '/Data/processed_wod_' param_props.file_name ...
+load([param_props.data_path '/Data/processed_wod_' param_props.file_name ...
     '_data_' year '.mat'],'wod_data');
 
 %% display the number of casts and profiles

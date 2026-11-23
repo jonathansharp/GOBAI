@@ -37,17 +37,17 @@ kfold_ens_name = ['AVG_output' ...
     'FFNN_train' num2str(100*train_ratio) '_val' num2str(100*val_ratio) '_test' num2str(100*val_ratio) ...
     'GBM_tr' num2str(numstumps) 'RFR_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
 % Figures
-fig_dir = [param_props.dir_name '/Figures/KFold/AVG/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
+fig_dir = [param_props.data_path 'Figures/KFold/AVG/' base_grid '_c' num2str(num_clusters) '_' file_date float_file_ext];
 fig_name = 'k_fold_comparison.png';
 fig_name_2 = 'k_fold_spatial_comparison.png';
 
 %% load k-fold data
 % FFNN
-ffnn_output = load([param_props.dir_name '/' kfold_ffnn_dir '/' kfold_ffnn_name '.mat']);
+ffnn_output = load([param_props.output_name '/' kfold_ffnn_dir '/' kfold_ffnn_name '.mat']);
 % GBM
-gbm_output = load([param_props.dir_name '/' kfold_gbm_dir '/' kfold_gbm_name '.mat']);
+gbm_output = load([param_props.output_name '/' kfold_gbm_dir '/' kfold_gbm_name '.mat']);
 % RFR
-rfr_output = load([param_props.dir_name '/' kfold_rfr_dir '/' kfold_rfr_name '.mat']);
+rfr_output = load([param_props.output_name '/' kfold_rfr_dir '/' kfold_rfr_name '.mat']);
 
 %% average across models
 ens_output.(['k_fold_test_' param_props.file_name]) = ...

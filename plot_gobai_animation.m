@@ -81,7 +81,7 @@ end
 %% plot frames
 for d = 1:length(pressures)
     % create folder for figures
-    dname = [param_props.dir_name '/Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
+    dname = [param_props.data_path 'Figures/GOBAI/' base_grid '_' alg_type '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
     % define directory for file
     if strcmp(alg_type,'FFNN')
@@ -106,19 +106,19 @@ for d = 1:length(pressures)
             float_ext glodap_ext osd_ext ctd_ext '_' num2str(pressures(d)) 'dbar.gif'];
         v_fname = ['gobai_' param_props.file_name '_animation_' num2str(pressures(d)) 'dbar.avi'];
         gobai_fname = [dir_base '/' float_ext glodap_ext osd_ext ctd_ext ...
-            '/GOBAI-' param_props.dir_name '-HR-v' num2str(snap_date) '.nc'];
+            '/GOBAI-' param_props.output_name '-HR-v' num2str(snap_date) '.nc'];
     elseif uncer == 1
         fname = ['gobai_' param_props.file_name '_uncer_animation_' ...
             float_ext glodap_ext osd_ext ctd_ext '_' num2str(pressures(d)) 'dbar.gif'];
         v_fname = ['gobai_' param_props.file_name '_uncer_animation_' num2str(pressures(d)) 'dbar.avi'];
         gobai_fname = [dir_base '/' float_ext glodap_ext osd_ext ctd_ext ...
-            '/GOBAI-' param_props.dir_name '-HR-v' num2str(snap_date) '-uncer.nc'];
+            '/GOBAI-' param_props.output_name '-HR-v' num2str(snap_date) '-uncer.nc'];
     elseif anom == 1
         fname = ['gobai_' param_props.file_name '_anom_animation_' ...
             float_ext glodap_ext osd_ext ctd_ext '_' num2str(pressures(d)) 'dbar.gif'];
         v_fname = ['gobai_' param_props.file_name '_anom_animation_' num2str(pressures(d)) 'dbar.avi'];
         gobai_fname = [dir_base '/' float_ext glodap_ext osd_ext ctd_ext ...
-            '/GOBAI-' param_props.dir_name '-HR-v' num2str(snap_date) '.nc'];
+            '/GOBAI-' param_props.output_name '-HR-v' num2str(snap_date) '.nc'];
     end
     % determine number of timesteps
     gobai_inf = ncinfo(gobai_fname);
@@ -210,7 +210,7 @@ for d = 1:length(pressures)
     end
     close
     % display information
-    disp(['GOBAI-' param_props.dir_name ' (' alg_type ') animation at ' num2str(pressures(d)) ' dbar plotted'])
+    disp(['GOBAI-' param_props.output_name ' (' alg_type ') animation at ' num2str(pressures(d)) ' dbar plotted'])
 end
 
 % end parallel session

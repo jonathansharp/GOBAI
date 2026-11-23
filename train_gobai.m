@@ -91,23 +91,23 @@ end
 
 %% load data
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    load([param_props.dir_name '/Data/processed_all_' ...
+    load([param_props.data_path 'Data/processed_all_' ...
         param_props.file_name '_data_' float_ext glodap_ext osd_ext ctd_ext ...
         '_' file_date float_file_ext '.mat'],'all_data');
 else % for cmip models
-    load([param_props.dir_name '/Data/' base_grid '_' ...
+    load([param_props.data_path 'Data/' base_grid '_' ...
         param_props.file_name '_data_' float_ext glodap_ext osd_ext ctd_ext ...
         '_' file_date float_file_ext coverage '.mat'],'all_data');
 end
 
 %% load data clusters
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    load([param_props.dir_name '/Data/GMM/' ...
+    load([param_props.data_path 'Data/GMM/' ...
         'all_data_clusters_' num2str(num_clusters) '_' ...
         float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext ...
         '.mat'],'all_data_clusters');
 else
-    load([param_props.dir_name '/Data/GMM_' base_grid '/' ...
+    load([param_props.data_path 'Data/GMM_' base_grid '/' ...
         'all_data_clusters_' num2str(num_clusters) '_' ...
         float_ext glodap_ext osd_ext ctd_ext '_' ...
         file_date float_file_ext coverage '.mat'],'all_data_clusters');
@@ -115,7 +115,7 @@ end
 
 %% load data cluster indices (for k-fold testing)
 if num_folds > 1
-    load([param_props.dir_name '/Data/k_fold_data_indices_' num2str(num_clusters) ...
+    load([param_props.data_path 'Data/k_fold_data_indices_' num2str(num_clusters) ...
         '_' num2str(num_folds) '_' float_ext glodap_ext osd_ext ctd_ext '_' ...
         file_date float_file_ext '.mat'],'num_folds','train_idx','test_idx');
 else
@@ -134,9 +134,9 @@ end
 
 %% create directory and file names
 if strcmp(base_grid,'RG') || strcmp(base_grid,'RFROM')
-    alg_dir = [param_props.dir_name '/Models/' dir_base];
+    alg_dir = [param_props.param_path 'Models/' dir_base];
 else
-    alg_dir = [param_props.dir_name '/Models/' base_grid '/' dir_base];
+    alg_dir = [param_props.param_path 'Models/' base_grid '/' dir_base];
 end
 alg_fnames = cell(num_folds,num_clusters);
 for f = 1:num_folds
@@ -154,8 +154,8 @@ end
 
 %% variables for k-fold test
 if num_folds > 1
-    kfold_dir = [param_props.dir_name '/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
-    fig_dir = [param_props.dir_name '/Figures/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
+    kfold_dir = [param_props.param_path 'KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
+    fig_dir = [param_props.data_path 'Figures/KFold/' alg_type '/c' num2str(num_clusters) '_' file_date float_file_ext];
     if strcmp(alg_type,'RFR')
         kfold_name = ['RFR_output_tr' num2str(numtrees) '_lf' num2str(minLeafSize)];
         fig_name_1 = ['k_fold_comparison_tr' num2str(numtrees) '_lf' ...

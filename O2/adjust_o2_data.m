@@ -9,7 +9,7 @@
 %
 % DATE: 07/24/2026
 
-function adjust_o2_data(float_file_ext,glodap_vrs,snap_date,...
+function adjust_o2_data(param_props,float_file_ext,glodap_vrs,snap_date,...
     include_float,include_glodap,include_osd,include_ctd)
 
 %% define dataset extensions
@@ -24,15 +24,15 @@ end_year = todays_date(1);
 
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),mod(snap_date,1e2),1),'mmm-yyyy');
-if include_float; load(['O2/Data/processed_float_o2_data_' ...
+if include_float; load([param_props.data_path 'Data/processed_float_o2_data_' ...
         file_date float_file_ext '.mat'],'float_data','file_date'); end
-if include_glodap; load(['O2/Data/processed_glodap_o2_data_' ...
+if include_glodap; load([param_props.data_path 'Data/processed_glodap_o2_data_' ...
         glodap_vrs '.mat'],'glodap_data'); end
-if include_osd || include_ctd; load(['O2/Data/processed_wod_o2_data_' ...
+if include_osd || include_ctd; load([param_props.data_path 'Data/processed_wod_o2_data_' ...
         num2str(end_year) '.mat'],'wod_data'); end
 
 %% only do if file doesn't exist
-if exist(['O2/Data/crossover_data_' file_date float_file_ext '.mat'],'file') ~= 2
+if exist([param_props.data_path 'Data/crossover_data_' file_date float_file_ext '.mat'],'file') ~= 2
 
 %% remove data points based on global range test
 % 480 umol/kg used as max for WOD range checks
@@ -84,9 +84,9 @@ end
 % end
 
 %% import WOA climatologies
-temp_path = [pwd '/Data/WOA/TEMPERATURE/'];
-sal_path = [pwd '/Data/WOA/SALINITY/'];
-oxy_path = [pwd '/Data/WOA/OXYGEN/'];
+temp_path = [param_props.ancillary_data_path 'WOA/TEMPERATURE/'];
+sal_path = [param_props.ancillary_data_path 'WOA/SALINITY/'];
+oxy_path = [param_props.ancillary_data_path 'WOA/OXYGEN/'];
 for m = 1:12
     WOA.TMP(:,:,:,m) = ncread([temp_path 'woa18_decav_t' sprintf('%02d',m) '_01.nc'],'t_an');
     WOA.SAL(:,:,:,m) = ncread([sal_path 'woa18_decav_s' sprintf('%02d',m) '_01.nc'],'s_an');
@@ -144,7 +144,7 @@ if include_float
     plot([mean_delta+3*st_dev_delta mean_delta+3*st_dev_delta],ax.YLim,'r','linewidth',2);
     plot([mean_delta-3*st_dev_delta mean_delta-3*st_dev_delta],ax.YLim,'r','linewidth',2);
     xlabel('Float [O_{2}] - WOA [O_{2}]');
-    exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
+    exportgraphics(gcf,[param_props.data_path 'Figures/Data/WOA_comp_histogram_' file_date float_file_ext '.png']);
     close
     % scatter of delta values
     figure; hold on
@@ -165,7 +165,7 @@ if include_float
     clim([1e0 1e5]);
     c=colorbar;
     c.Label.String = 'log10(Bin Counts)';
-    exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_Float_comp_scatter_' file_date float_file_ext '.png']);
+    exportgraphics(gcf,[param_props.data_path 'Figures/Data/WOA_Float_comp_scatter_' file_date float_file_ext '.png']);
     close
     % clean up
     clear counts bin_centers c h myColorMap
@@ -201,7 +201,7 @@ if include_float
     plot([mean_delta+3*st_dev_delta mean_delta+3*st_dev_delta],ax.YLim,'r','linewidth',2);
     plot([mean_delta-3*st_dev_delta mean_delta-3*st_dev_delta],ax.YLim,'r','linewidth',2);
     xlabel('Float [O_{2}] - WOA [O_{2}]');
-    exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_Float_comp_histogram_' file_date float_file_ext '.png']);
+    exportgraphics(gcf,[param_props.data_path 'Figures/Data/WOA_Float_comp_histogram_' file_date float_file_ext '.png']);
     close
     % clean up
     clear WOA_match WOA_delta WOA_delta_per mean_delta st_dev_delta idx_rem v vars
@@ -260,7 +260,7 @@ ax = gca;
 plot([mean_delta+3*st_dev_delta mean_delta+3*st_dev_delta],ax.YLim,'r','linewidth',2);
 plot([mean_delta-3*st_dev_delta mean_delta-3*st_dev_delta],ax.YLim,'r','linewidth',2);
 xlabel('WOD [O_{2}] - WOA [O_{2}]');
-exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_vs_WOD_comp_histogram_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/WOA_vs_WOD_comp_histogram_' file_date float_file_ext '.png']);
 close
 % scatter of delta values
 figure; hold on
@@ -281,7 +281,7 @@ set(gca,'ColorScale','log')
 clim([1e0 1e5]);
 c=colorbar;
 c.Label.String = 'log10(Bin Counts)';
-exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_vs_WOD_comp_scatter_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/WOA_vs_WOD_comp_scatter_' file_date float_file_ext '.png']);
 close
 % clean up
 clear counts bin_centers c h myColorMap
@@ -317,7 +317,7 @@ ax = gca;
 plot([mean_delta+3*st_dev_delta mean_delta+3*st_dev_delta],ax.YLim,'r','linewidth',2);
 plot([mean_delta-3*st_dev_delta mean_delta-3*st_dev_delta],ax.YLim,'r','linewidth',2);
 xlabel('WOD [O_{2}] - WOA [O_{2}]');
-exportgraphics(gcf,[pwd '/O2/Figures/Data/WOA_WOD_comp_histogram_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/WOA_WOD_comp_histogram_' file_date float_file_ext '.png']);
 close
 % clean up
 clear WOA_match WOA_delta WOA_delta_per mean_delta st_dev_delta idx_rem v vars
@@ -479,8 +479,8 @@ clear pres_levels float_profile_IDs lon lat time oxy_float pres_float
 clear idx_lon idx_lat idx_time oxy_temp pres_temp idx_pres oxy_ship
 
 % save crossover data
-if ~exist([pwd '/O2/Data'],'dir'); mkdir('Data'); end
-save(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx','-v7.3')
+if ~exist([param_props.data_path 'Data'],'dir'); mkdir([param_props.data_path 'Data']); end
+save([param_props.data_path 'Data/crossover_data_' file_date float_file_ext],'crossover','idx','-v7.3')
 
 
 else
@@ -491,7 +491,7 @@ end
 
 %% develop O2 correction
 % load crossover data
-load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx')
+load([param_props.data_path 'Data/crossover_data_' file_date float_file_ext],'crossover','idx')
 
 % % plot deltas spatially
 % pressures = unique(crossover.pres);
@@ -524,7 +524,7 @@ load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx')
 %     slp = 0;
 %     int = -1.69;
 % elseif strcmp(float_file_ext,'_D_A')
-%     % load(['O2/Data/processed_float_o2_data_' ...
+%     % load([param_props.data_path 'Data/processed_float_o2_data_' ...
 %     %     file_date float_file_ext '.mat'],'float_data','file_date');
 %     slp = 0;
 %     int_d = -1.69;
@@ -605,7 +605,11 @@ xlabel('Pressure (dbar)');
 ylabel('Number of crossovers');
 title('Sample count by pressure');
 
-%% develop a depth-dependent correction (using two depths)
+% save figure
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/corr_summary_' file_date float_file_ext '.png']);
+close
+
+%% develop a depth-dependent correction (using unified equation with a delta maximum)
 % index
 idx = ~isnan(crossover.oxy_float) & ~isnan(crossover.oxy_ship);
 % determine average delta by pressure level
@@ -617,38 +621,32 @@ for p = 1:length(pressures)
     avg_delta_by_p(p) = mean(crossover.oxy_delta(idx_p),'omitnan');
     avg_by_p(p) = mean(crossover.oxy_ship(idx_p),'omitnan');
 end
-[~,idx_max_delta] = max(abs(avg_delta_by_p)); % find maximum crossover offset
-max_delta_pressure = pressures(idx_max_delta);
+% find maximum crossover offset
+valid_delta = isfinite(pressures) & isfinite(avg_delta_by_p);
+if ~any(valid_delta)
+    error('adjust_o2_data:NoValidPressureDeltas', ...
+        'Cannot fit a pressure correction without finite oxygen deltas.');
+end
+candidate_pressures = pressures(valid_delta);
+candidate_deltas = avg_delta_by_p(valid_delta);
+[~,idx_max_delta] = max(abs(candidate_deltas));
+max_delta_pressure = candidate_pressures(idx_max_delta);
 disp(['Maximum crossover offset at ' num2str(max_delta_pressure) ' dbar.'])
-% deep adjustment equation
-mdl = fitlm(pressures(idx_max_delta:end),...
-    avg_delta_by_p(idx_max_delta:end),'Intercept',true);
-slp_deep = mdl.Coefficients.Estimate(2);
-int_deep = mdl.Coefficients.Estimate(1);
-% shallow adjustment equation
-mdl = fitlm(pressures(1:idx_max_delta-1),...
-    avg_delta_by_p(1:idx_max_delta-1),'Intercept',true);
-slp_shal = mdl.Coefficients.Estimate(2);
-int_shal = mdl.Coefficients.Estimate(1);
-% apply linear correction to float O2 (with pressure)
-corr_fac = nan(size(crossover.oxy_float));
-idx_deep = crossover.pres >= pressures(idx_max_delta);
-corr_fac(idx_deep) = slp_deep .* crossover.pres(idx_deep) + int_deep;
-idx_shal = crossover.pres < pressures(idx_max_delta);
-corr_fac(idx_shal) = slp_shal .* crossover.pres(idx_shal) + int_shal;
-crossover.oxy_float_corr = crossover.oxy_float - corr_fac;
+correction_model = fit_pressure_correction(pressures, avg_delta_by_p, ...
+    max_delta_pressure);
+fit_est = apply_pressure_correction(correction_model, pressures);
+crossover.corr_fac = apply_pressure_correction(correction_model, crossover.pres);
+crossover.oxy_float_corr = crossover.oxy_float - crossover.corr_fac;
 % plot offset as a function of pressure
 figure; hold on;
 plot(avg_delta_by_p,pressures,'k','linewidth',2);
-plot(slp_deep.*pressures(idx_max_delta:end)+int_deep,pressures(idx_max_delta:end),'r--','linewidth',2);
-plot(slp_shal.*pressures(1:idx_max_delta-1)+int_shal,pressures(1:idx_max_delta-1),'b--','linewidth',2);
+plot(fit_est,pressures,'g-','linewidth',2);
 set(gca,'ydir','reverse');
 xlabel('Float [O_{2}] - Ship [O_{2}]');
 ylabel('Pressure (dbar)');
-legend('Average \Delta[O_{2}]','Deep Adjustment','Shallow Adjustment');
-exportgraphics(gcf,['O2/Figures/Data/delta_vs_pressure_' file_date float_file_ext '.png']);
+legend('Average \Delta[O_{2}]','Breakpoint fit');
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/delta_vs_pressure_' file_date float_file_ext '.png']);
 close
-
 
 %% fit delta against [O2] solubility
 % mdl = fitlm(crossover.oxy_sat_float(idx),crossover.oxy_delta_sat_per(idx),'Intercept',true);
@@ -665,15 +663,20 @@ crossover.oxy_delta_corr = crossover.oxy_float_corr-crossover.oxy_ship;
 crossover.oxy_delta_per_corr = (crossover.oxy_float_corr-crossover.oxy_ship)./crossover.oxy_float_corr;
 
 %% save crossover data and correction factors
-if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
+if ~exist([param_props.data_path 'Data'],'dir'); mkdir([param_props.data_path 'Data']); end
 % save(['O2/Data/float_corr_' file_date float_file_ext],'slp','int');
 % clear slp int
-save(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx','-v7.3')
-save(['O2/Data/float_corr_' file_date float_file_ext],'slp_deep','int_deep','slp_shal','int_shal','max_delta_pressure');
-clear slp_deep int_deep slp_shal int_shal
+save([param_props.data_path 'Data/crossover_data_' file_date float_file_ext],'crossover','idx','-v7.3')
+slp_shal = correction_model.coefficients(2);
+slp_deep = correction_model.coefficients(3);
+int_shal = correction_model.coefficients(1) - slp_shal*max_delta_pressure;
+int_deep = correction_model.coefficients(1) - slp_deep*max_delta_pressure;
+save([param_props.data_path 'Data/float_corr_' file_date float_file_ext], ...
+    'correction_model','slp_deep','int_deep','slp_shal','int_shal', ...
+    'max_delta_pressure');
 
 %% plot uncorrected float vs. ship residuals
-load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx');
+load([param_props.data_path 'Data/crossover_data_' file_date float_file_ext],'crossover','idx');
 % scatter
 figure; hold on;
 ylabel('Binned BGC Argo Oxygen Data (\mumol kg^{-1})');
@@ -701,7 +704,7 @@ crossover.slope = crossover.slope(1);
 text(20,420,['Med. Err. = ' num2str(round(crossover.err_md,2))],'fontsize',12);
 text(20,390,['RMSE = ' num2str(round(crossover.rmse,1))],'fontsize',12);
 text(20,360,['R^{2} = ' num2str(round(crossover.r2,2))],'fontsize',12);
-exportgraphics(gcf,['O2/Figures/Data/delta_vs_float_300_uncorr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/delta_vs_float_300_uncorr_' file_date float_file_ext '.png']);
 close
 % histogram
 figure; hold on
@@ -721,13 +724,13 @@ text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
 text(0.9*xL(1),0.8*yL(2),['Std. \Delta[O_{2}] = ' ...
     num2str(round(std(crossover.oxy_delta(idx)),2))],...
     'HorizontalAlignment','left','VerticalAlignment','top');
-exportgraphics(gcf,[pwd '/O2/Figures/Data/Ship_comp_histogram_uncorr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/Ship_comp_histogram_uncorr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear crossover
 
 %% plot corrected float vs. ship residuals
-load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx');
+load([param_props.data_path 'Data/crossover_data_' file_date float_file_ext],'crossover','idx');
 % scattered 2D histogram
 figure; hold on;
 ylabel('Adjusted, Binned BGC Argo Oxygen Data (\mumol kg^{-1})');
@@ -755,7 +758,7 @@ crossover.slope_corr = crossover.slope_corr(1);
 text(20,420,['Med. Err. = ' num2str(round(crossover.err_md_corr,2))],'fontsize',12);
 text(20,390,['RMSE = ' num2str(round(crossover.rmse_corr,1))],'fontsize',12);
 text(20,360,['R^{2} = ' num2str(round(crossover.r2_corr,2))],'fontsize',12);
-exportgraphics(gcf,['O2/Figures/Data/delta_vs_float_300_corr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/delta_vs_float_300_corr_' file_date float_file_ext '.png']);
 close
 % histogram
 figure; hold on
@@ -775,13 +778,13 @@ text(0.9*xL(1),0.9*yL(2),['Mean \Delta[O_{2}] = ' ...
 text(0.9*xL(1),0.8*yL(2),['Std. \Delta[O_{2}] = ' ...
     num2str(round(std(crossover.oxy_delta_corr(idx)),2))],...
     'HorizontalAlignment','left','VerticalAlignment','top');
-exportgraphics(gcf,[pwd '/O2/Figures/Data/Ship_comp_histogram_corr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/Ship_comp_histogram_corr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear crossover
 
 %% plot float vs. ship residual profiles
-load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx');
+load([param_props.data_path 'Data/crossover_data_' file_date float_file_ext],'crossover','idx');
 % uncorrected
 figure; hold on;
 pressures = unique(crossover.pres);
@@ -803,7 +806,7 @@ crossover.slope = crossover.slope(1);
 text(300,120,['Med. Err. = ' num2str(round(crossover.err_md,2))],'fontsize',12);
 text(300,90,['RMSE = ' num2str(round(crossover.rmse,1))],'fontsize',12);
 text(300,60,['R^{2} = ' num2str(round(crossover.r2,2))],'fontsize',12);
-exportgraphics(gcf,['O2/Figures/Data/delta_vs_float_by_pressure_uncorr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/delta_vs_float_by_pressure_uncorr_' file_date float_file_ext '.png']);
 close
 % corrected
 figure; hold on;
@@ -826,13 +829,13 @@ crossover.slope = crossover.slope(1);
 text(300,120,['Med. Err. = ' num2str(round(crossover.err_md,2))],'fontsize',12);
 text(300,90,['RMSE = ' num2str(round(crossover.rmse,1))],'fontsize',12);
 text(300,60,['R^{2} = ' num2str(round(crossover.r2,2))],'fontsize',12);
-exportgraphics(gcf,['O2/Figures/Data/delta_vs_float_by_pressure_corr_' file_date float_file_ext '.png']);
+exportgraphics(gcf,[param_props.data_path 'Figures/Data/delta_vs_float_by_pressure_corr_' file_date float_file_ext '.png']);
 close
 % clean up
 clear crossover
 
 %% plot mapped crossover data by profile mean delta
-load(['O2/Data/crossover_data_' file_date float_file_ext],'crossover','idx');
+load([param_props.data_path 'Data/crossover_data_' file_date float_file_ext],'crossover','idx');
 lon_temp = convert_lon(crossover.lon,'0-360');
 lon_temp(lon_temp < 20) = lon_temp(lon_temp < 20) + 360;
 % set up figure for uncorrected data
@@ -853,8 +856,8 @@ for p = 1:length(float_profs)
         'markeredgecolor','k');
 end
 colorbar;
-if ~exist('O2/Figures/Data','dir'); mkdir('pH/Figures/Data'); end
-export_fig(gcf,'O2/Figures/Data/mapped_comparison_uncorr.png','-transparent');
+if ~exist([param_props.data_path 'Figures/Data'],'dir'); mkdir([param_props.data_path 'Figures/Data']); end
+export_fig(gcf,[param_props.data_path 'Figures/Data/mapped_comparison_uncorr.png'],'-transparent');
 close
 % set up figure for corrected data
 figure(1); hold on;
@@ -874,14 +877,15 @@ for p = 1:length(float_profs)
         'markeredgecolor','k');
 end
 colorbar;
-if ~exist('O2/Figures/Data','dir'); mkdir('pH/Figures/Data'); end
-export_fig(gcf,'O2/Figures/Data/mapped_comparison_corr.png','-transparent');
+if ~exist([param_props.data_path 'Figures/Data'],'dir'); mkdir([param_props.data_path 'Figures/Data']); end
+export_fig(gcf,[param_props.data_path 'Figures/Data/mapped_comparison_corr.png'],'-transparent');
 close
 % clean up
 clear crossover lon_temp
 
 %% adjust and save float data
-load(['O2/Data/float_corr_' file_date float_file_ext]);
+load([param_props.data_path 'Data/float_corr_' file_date float_file_ext], ...
+    'correction_model');
 vars = fieldnames(float_data);
 for v = 1:length(vars)
     if strcmp(vars{v},'OXY')
@@ -912,12 +916,8 @@ for v = 1:length(vars)
         % corr_fac = slp .* float_data.OXY + int; % modelled [O2] delta
         % float_data_adjusted.OXY = float_data.OXY - corr_fac;
 
-        % apply linear correction to float O2 (with pressure)
-        corr_fac = nan(size(float_data.OXY));
-        idx_deep = float_data.PRES >= max_delta_pressure;
-        corr_fac(idx_deep) = float_data.PRES(idx_deep).*slp_deep + int_deep;
-        idx_shal = float_data.PRES < max_delta_pressure;
-        corr_fac(idx_shal) = float_data.PRES(idx_shal).*slp_shal + int_shal;
+        % apply the fitted pressure-dependent correction
+        corr_fac = apply_pressure_correction(correction_model, float_data.PRES);
         float_data_adjusted.OXY = float_data.OXY - corr_fac;
 
     else
@@ -927,8 +927,8 @@ end
 
 if include_float
     % save adjusted float data
-    if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-    save(['O2/Data/processed_float_o2_data_adjusted_' ...
+    if ~exist([param_props.data_path 'Data'],'dir'); mkdir([param_props.data_path 'Data']); end
+    save([param_props.data_path 'Data/processed_float_o2_data_adjusted_' ...
         file_date float_file_ext '.mat'],...
         'float_data_adjusted','file_date','-v7.3');
     clear slp int float_data float_data_adjusted v vars
@@ -936,15 +936,65 @@ end
 
 if include_osd || include_ctd
     % save adjusted WOD data
-    if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-    save(['O2/Data/processed_wod_o2_data_adjusted_' ...
+    if ~exist([param_props.data_path 'Data'],'dir'); mkdir([param_props.data_path 'Data']); end
+    save([param_props.data_path 'Data/processed_wod_o2_data_adjusted_' ...
         num2str(end_year) '.mat'],...
         'wod_data','file_date','-v7.3');
 end
 
 if include_glodap
     % save adjusted GLODAP data
-    if ~exist([pwd '/O2/Data'],'dir'); mkdir('O2/Data'); end
-    save(['O2/Data/processed_glodap_o2_data_adjusted_' ...
+    if ~exist([param_props.data_path 'Data'],'dir'); mkdir([param_props.data_path 'Data']); end
+    save([param_props.data_path 'Data/processed_glodap_o2_data_adjusted_' ...
         glodap_vrs '.mat'],'glodap_data','file_date','-v7.3');
+end
+
+end
+
+function model = fit_pressure_correction(pressures, oxy_deltas, breakpoint)
+if ~isvector(pressures) || ~isvector(oxy_deltas) || ...
+        numel(pressures) ~= numel(oxy_deltas)
+    error('adjust_o2_data:InvalidFitData', ...
+        'Pressures and oxygen deltas must be vectors of equal length.');
+end
+if ~isscalar(breakpoint) || ~isfinite(breakpoint)
+    error('adjust_o2_data:InvalidBreakpoint', ...
+        'The pressure breakpoint must be a finite scalar.');
+end
+
+pressures = pressures(:);
+oxy_deltas = oxy_deltas(:);
+valid = isfinite(pressures) & isfinite(oxy_deltas);
+pressures = pressures(valid);
+oxy_deltas = oxy_deltas(valid);
+if ~any(pressures < breakpoint) || ~any(pressures > breakpoint)
+    error('adjust_o2_data:BreakpointNeedsBothSides', ...
+        'The breakpoint must have valid pressure data on both sides.');
+end
+
+d = pressures - breakpoint;
+design = [ones(size(d)), min(d,0), max(d,0)];
+if rank(design) < 3
+    error('adjust_o2_data:InsufficientFitData', ...
+        'The pressure data do not support fitting both segment slopes.');
+end
+
+% Constrain the profile to have a minimum at the breakpoint.
+constraints = [0 1 0; 0 0 -1];
+coefficients = lsqlin(design, oxy_deltas, constraints, [0; 0]);
+model = struct('breakpoint', breakpoint, ...
+    'coefficients', coefficients(:));
+end
+
+function correction = apply_pressure_correction(model, input_pressures)
+if ~isstruct(model) || ~isfield(model,'breakpoint') || ...
+        ~isfield(model,'coefficients') || numel(model.coefficients) ~= 3
+    error('adjust_o2_data:InvalidCorrectionModel', ...
+        'Expected a model returned by fit_pressure_correction.');
+end
+
+d = input_pressures - model.breakpoint;
+coefficients = model.coefficients(:);
+correction = coefficients(1) + coefficients(2).*min(d,0) + ...
+    coefficients(3).*max(d,0);
 end

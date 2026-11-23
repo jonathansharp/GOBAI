@@ -17,12 +17,12 @@ if osd == 1; osd_ext = 'o'; else osd_ext = ''; end
 if ctd == 1; ctd_ext = 'c'; else ctd_ext = ''; end
 
 %% load combined data
-load([param_props.dir_name '/Data/processed_all_' param_props.file_name ...
+load([param_props.data_path 'Data/processed_all_' param_props.file_name ...
     '_data_' float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext '.mat'],...
      'all_data','file_date');
 
 %% load data clusters
-load([param_props.dir_name '/Data/GMM/all_data_clusters_' num2str(num_clusters) '_' ...
+load([param_props.data_path 'Data/GMM/all_data_clusters_' num2str(num_clusters) '_' ...
     float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext '.mat'],'all_data_clusters');
 
 %% split data into testing and training sets equal to k
@@ -70,15 +70,15 @@ training_data_points_table = array2table(training_data_points,...
     'RowNames',sprintfc('%d',1:num_folds),'VariableNames',clusters);
 test_data_points_table = array2table(test_data_points,...
     'RowNames',sprintfc('%d',1:num_folds),'VariableNames',clusters);
-if ~isfolder([param_props.dir_name '/Data']); mkdir([param_props.dir_name '/Data']); end
-writetable(training_data_points_table,[param_props.dir_name '/Data/training_data_points_' datestr(date) '.csv']);
-writetable(test_data_points_table,[param_props.dir_name '/Data/test_data_points_' datestr(date) '.csv']);
+if ~isfolder([param_props.data_path 'Data']); mkdir([param_props.data_path 'Data']); end
+writetable(training_data_points_table,[param_props.data_path 'Data/training_data_points_' datestr(date) '.csv']);
+writetable(test_data_points_table,[param_props.data_path 'Data/test_data_points_' datestr(date) '.csv']);
 clear training_data_points training_data_points_table idx_train
 clear test_data_points test_data_points_table idx_test
 
 %% save k-fold evaluation indices
-if ~isfolder([param_props.dir_name '/Data']); mkdir([param_props.dir_name '/Data']); end
-save([param_props.dir_name '/Data/k_fold_data_indices_' num2str(num_clusters) ...
+if ~isfolder([param_props.data_path 'Data']); mkdir([param_props.data_path 'Data']); end
+save([param_props.data_path 'Data/k_fold_data_indices_' num2str(num_clusters) ...
     '_' num2str(num_folds) '_' float_ext glodap_ext osd_ext ctd_ext '_' ...
     file_date float_file_ext '.mat'],'num_folds','train_idx','test_idx','-v7.3');
 

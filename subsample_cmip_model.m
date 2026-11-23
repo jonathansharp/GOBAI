@@ -16,7 +16,7 @@ for i = 1:2:length(varargin)-1
 end
 
 %% check if processed file already exists
-if ~isfile([param_props.dir_name '/Data/' model '_' param_props.file_name '_data_' ...
+if ~isfile([param_props.data_path 'Data/' model '_' param_props.file_name '_data_' ...
         float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext '.mat'])
 
 %% load variables
@@ -180,12 +180,12 @@ for d = 1:length(depth)
 end
 
 %% save data
-save([param_props.dir_name '/Data/' model '_' param_props.file_name ...
+save([param_props.data_path 'Data/' model '_' param_props.file_name ...
     '_data_' float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext coverage '.mat'],...
     'all_data','file_date','-v7.3');
 
 %% save data as NetCDF
-nc_fname = [param_props.dir_name '/Data/' model '_' param_props.file_name ...
+nc_fname = [param_props.data_path 'Data/' model '_' param_props.file_name ...
         '_data_' float_ext glodap_ext osd_ext ctd_ext '_' file_date float_file_ext coverage '.nc'];
 if isfile(nc_fname); delete(nc_fname); end
 vars = fieldnames(all_data);

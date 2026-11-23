@@ -30,7 +30,7 @@ tic; parpool(numWorkers_train); fprintf('Pool initiation: '); toc;
 
 parfor d = 1:length(pressures)
     % create folder
-    dname = [param_props.dir_name '/Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
+    dname = [param_props.data_path 'Figures/Clusters/' base_grid '_c' num2str(num_clusters)];
     if ~isfolder([pwd '/' dname]); mkdir(dname); end
     % establish file name
     fname = ['cluster_animation_' float_ext glodap_ext ctd_ext '_' ...

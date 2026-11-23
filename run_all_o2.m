@@ -11,8 +11,7 @@ numWorkers_predict = 20;
 numWorkers_cluster = 20;
 % float snapshot configuration
 snap_download = 1;
-snap_date = 202610;
-snap_dir = '/med2/';
+snap_date = 202611;
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
 glodap_vrs = 'v3';
@@ -42,7 +41,8 @@ param_props = param_config(param);
 % base grid
 base_grid = 'RFROM';
 rfrom_ver = 'V2.3';
-fpaths = path_config(base_grid,param);
+[fpaths,param_props] = path_config(base_grid,param,param_props);
+snap_dir = fpaths.snapshot_dir;
 % osse parameters
 model_types = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
 model_folders = {'GFDL-ESM4' 'CanESM5' 'IPSL-CM6A-LR' 'ACCESS-ESM1-5' 'MPI-ESM1-2-LR'};
@@ -75,7 +75,7 @@ if osd == 1 | ctd == 1
     acquire_wod_data(param_props,glodap_vrs,start_year,...
         osd,ctd,numWorkers_predict); end
 % adjust data
-adjust_o2_data(float_file_ext,glodap_vrs,snap_date,flt,gld,osd,ctd);
+adjust_o2_data(param_props,float_file_ext,glodap_vrs,snap_date,flt,gld,osd,ctd);
 % display data
 display_data(param_props,float_file_ext,glodap_vrs,...
     start_year,snap_date,flt,gld,osd,ctd);
@@ -125,7 +125,7 @@ train_gobai('FFNN',param_props,base_grid,file_date,float_file_ext,...
     'val_ratio',val_ratio,'test_ratio',test_ratio,'num_folds',num_folds);
 
 %% assemble table of K-fold error statistics
-% kfold_dir = [param_props.dir_name '/KFold/FFNN/c' ...
+% kfold_dir = [param_props.param_path 'KFold/FFNN/c' ...
 %     num2str(num_clusters(clust_n)) '_' file_date float_file_ext];
 % kfold_name = ['FFNN_output_train' num2str(100*train_ratio) '_val' ...
 %     num2str(100*val_ratio) '_test' num2str(100*val_ratio)];
@@ -133,7 +133,7 @@ train_gobai('FFNN',param_props,base_grid,file_date,float_file_ext,...
 % kfold_table(clust_n,'RMSE') = {alg_rmse};
 % kfold_table(clust_n,'MAE') = {alg_med_abs_err};
 % kfold_table(clust_n,'R2') = {alg_r2};
-% save([param_props.dir_name '/KFold/k_fold_stats_' ...
+% save([param_props.param_path 'KFold/k_fold_stats_' ...
 %     datetime('today','Format','dd-MMM-uuuu')],'kfold_table');
 
 % end
@@ -151,13 +151,13 @@ predict_gobai('FFNN',param_props,fpaths,base_grid,rfrom_ver,file_date,float_file
     num_clusters,variables,thresh,numWorkers_predict,clust_vars,start_year,...
     end_year,snap_date,flt,gld,osd,ctd,'train_ratio',train_ratio,'val_ratio',val_ratio,...
     'test_ratio',test_ratio,'reduce_data',data_per);
-plot gobai animations
+% plot gobai animations
 plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,'FFNN',...
     file_date,float_file_ext,numWorkers_predict,flt,gld,osd,ctd,snap_date,...
     'train_ratio',train_ratio,'val_ratio',val_ratio,'test_ratio',test_ratio);
-plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,'FFNN',...
-    file_date,float_file_ext,numWorkers_predict,flt,gld,osd,ctd,snap_date,...
-    'train_ratio',train_ratio,'val_ratio',val_ratio,'test_ratio',test_ratio,'anom',1);
+% plot_gobai_animation(param_props,fpaths,base_grid,num_clusters,'FFNN',...
+%     file_date,float_file_ext,numWorkers_predict,flt,gld,osd,ctd,snap_date,...
+%     'train_ratio',train_ratio,'val_ratio',val_ratio,'test_ratio',test_ratio,'anom',1);
 
 % % % plot gobai timeseries
 % % gobai_global_timeseries(base_grid,param_props,fpaths,num_clusters,file_date,...
@@ -189,7 +189,7 @@ for clust_n = 1:length(num_clusters)
     if osd == 1; osd_ext = 'o'; else osd_ext = ''; end
     if ctd == 1; ctd_ext = 'c'; else ctd_ext = ''; end
     for m = 1:length(model_types)
-        kfold_dir = [param_props.dir_name '/Data/' model_types{m} '/' realizations{m} '_gr/'];
+        kfold_dir = [param_props.data_path 'Data/' model_types{m} '/' realizations{m} '_gr/'];
         kfold_name = ['statistics_' float_ext glodap_ext osd_ext ctd_ext '_c' ...
             num2str(num_clusters(clust_n)) '_' num2str(data_per_osse) 'per.mat'];
         % load error stats
@@ -199,7 +199,7 @@ for clust_n = 1:length(num_clusters)
 
         kfold_table(clust_n,'MAE') = {alg_med_abs_err};
         kfold_table(clust_n,'R2') = {alg_r2};
-        save([param_props.dir_name '/KFold/k_fold_stats_' ...
+        save([param_props.param_path 'KFold/k_fold_stats_' ...
             datetime('today','Format','dd-MMM-uuuu')],'kfold_table');
     end
 
@@ -210,7 +210,7 @@ for clust_n = 1:length(num_clusters)
 end
 
 %% assemble table of K-fold error statistics
-% kfold_dir = [param_props.dir_name '/KFold/FFNN/c' ...
+% kfold_dir = [param_props.param_path 'KFold/FFNN/c' ...
 %     num2str(num_clusters(clust_n)) '_' file_date float_file_ext];
 % kfold_name = ['FFNN_output_train' num2str(100*train_ratio) '_val' ...
 %     num2str(100*val_ratio) '_test' num2str(100*val_ratio)];

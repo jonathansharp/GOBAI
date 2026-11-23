@@ -18,13 +18,13 @@ end_year = todays_date(1);
 %% load interpolated float and glodap data
 file_date = datestr(datenum(floor(snap_date/1e2),...
     mod(snap_date,1e2),1),'mmm-yyyy');
-if flt == 1; load([param_props.dir_name '/Data/processed_float_' ...
+if flt == 1; load([param_props.data_path 'Data/processed_float_' ...
     param_props.file_name '_data_adjusted_' file_date float_file_ext '.mat'],...
     'float_data_adjusted','file_date'); end
-if gld == 1; load([param_props.dir_name '/Data/processed_glodap_' ...
+if gld == 1; load([param_props.data_path 'Data/processed_glodap_' ...
     param_props.file_name '_data_adjusted_' num2str(glodap_year) '.mat'],...
     'glodap_data'); end
-if ctd == 1 || osd == 1; load([param_props.dir_name '/Data/processed_wod_' ...
+if ctd == 1 || osd == 1; load([param_props.data_path 'Data/processed_wod_' ...
     param_props.file_name '_data_adjusted_' num2str(end_year) '.mat'],...
     'wod_data'); end
 
@@ -49,9 +49,9 @@ if ctd == 1 || osd == 1; load([param_props.dir_name '/Data/processed_wod_' ...
 % ylabel('Depth (dbar)');
 % xlabel('[O_{2}] (\mumol kg^{-1})');
 % hold off;
-% if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir')
-%     mkdir([param_props.dir_name '/Figures/Data']); end
-% export_fig(gcf,[param_props.dir_name '/Figures/Data/mean_float_profile_' ...
+% if ~exist([param_props.data_path 'Figures/Data'],'dir')
+%     mkdir([param_props.data_path 'Figures/Data']); end
+% export_fig(gcf,[param_props.data_path 'Figures/Data/mean_float_profile_' ...
 %     file_date float_file_ext '.png'],'-transparent');
 % close
 % % floats (individual profiles)
@@ -66,9 +66,9 @@ if ctd == 1 || osd == 1; load([param_props.dir_name '/Data/processed_wod_' ...
 % ylabel('Depth (dbar)');
 % xlabel('[O_{2}] (\mumol kg^{-1})');
 % hold off;
-% if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir')
-%     mkdir([param_props.dir_name '/Figures/Data']); end
-% export_fig(gcf,[param_props.dir_name '/Figures/Data/all_float_profiles_' ...
+% if ~exist([param_props.data_path 'Figures/Data'],'dir')
+%     mkdir([param_props.data_path 'Figures/Data']); end
+% export_fig(gcf,[param_props.data_path 'Figures/Data/all_float_profiles_' ...
 %     file_date float_file_ext '.png'],'-transparent');
 % close
 % % clean up
@@ -89,9 +89,9 @@ if ctd == 1 || osd == 1; load([param_props.dir_name '/Data/processed_wod_' ...
 %     [zi;flipud(zi)],clrs(1,:),'FaceAlpha',0.25,'LineStyle','none');
 % set(gca,'YDir','reverse');
 % hold off;
-% if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir')
-%     mkdir([param_props.dir_name '/Figures/Data']); end
-% export_fig(gcf,[param_props.dir_name '/Figures/Data/mean_glodap_profile_' ...
+% if ~exist([param_props.data_path 'Figures/Data'],'dir')
+%     mkdir([param_props.data_path 'Figures/Data']); end
+% export_fig(gcf,[param_props.data_path 'Figures/Data/mean_glodap_profile_' ...
 %     num2str(glodap_year) '.png'],'-transparent');
 % close
 % % glodap (individual profiles)
@@ -103,9 +103,9 @@ if ctd == 1 || osd == 1; load([param_props.dir_name '/Data/processed_wod_' ...
 % end
 % set(gca,'YDir','reverse');
 % hold off;
-% if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir')
-%     mkdir([param_props.dir_name '/Figures/Data']); end
-% export_fig(gcf,[param_props.dir_name '/Figures/Data/all_glodap_profiles_' ...
+% if ~exist([param_props.data_path 'Figures/Data'],'dir')
+%     mkdir([param_props.data_path 'Figures/Data']); end
+% export_fig(gcf,[param_props.data_path 'Figures/Data/all_glodap_profiles_' ...
 %     num2str(glodap_year) '.png'],'-transparent');
 % close
 % % clean up
@@ -113,9 +113,9 @@ if ctd == 1 || osd == 1; load([param_props.dir_name '/Data/processed_wod_' ...
 % 
 % %% Display data distribution
 % 
-% if ~isfile([param_props.dir_name '/Figures/Data/data_by_year_' file_date float_file_ext '.png']) && ...
-%    ~isfile([param_props.dir_name '/Figures/Data/data_by_latitude_' file_date float_file_ext '.png']) && ...
-%    ~isfile([param_props.dir_name '/Figures/Data/data_by_longitude_' file_date float_file_ext '.png'])
+% if ~isfile([param_props.data_path 'Figures/Data/data_by_year_' file_date float_file_ext '.png']) && ...
+%    ~isfile([param_props.data_path 'Figures/Data/data_by_latitude_' file_date float_file_ext '.png']) && ...
+%    ~isfile([param_props.data_path 'Figures/Data/data_by_longitude_' file_date float_file_ext '.png'])
 
 % float
 if flt == 1; [~,f_idx] = unique(float_data_adjusted.PROF_ID); end
@@ -149,9 +149,9 @@ if ctd == 1; id_temp = wod_data.ID; id_temp(wod_data.TYPE==1) = NaN;
 % legend({'GLODAP' 'CTD' 'Floats'},'location','northwest');
 % datetick('x'); xlim([datenum([start_year-1 1 1]) max(edges)]);
 % ylabel('Profiles within each year');
-% if ~exist([pwd '/' param_props.dir_name '/Figures'],'dir'); mkdir([param_props.dir_name '/Figures']); end
-% if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
-% export_fig(gcf,[param_props.dir_name '/Figures/Data/data_by_year_' file_date ...
+% if ~exist([param_props.data_path 'Figures'],'dir'); mkdir([param_props.data_path 'Figures']); end
+% if ~exist([param_props.data_path 'Figures/Data'],'dir'); mkdir([param_props.data_path 'Figures/Data']); end
+% export_fig(gcf,[param_props.data_path 'Figures/Data/data_by_year_' file_date ...
 %     float_file_ext '.png'],'-transparent');
 % clear edges year_temp
 % close
@@ -167,8 +167,8 @@ if ctd == 1; id_temp = wod_data.ID; id_temp(wod_data.TYPE==1) = NaN;
 % bar(edges(1:end-1),[g_counts',w_counts',f_counts'],'stacked');
 % legend({'CTD' 'Floats' 'GLODAP'});
 % ylabel('Profiles within each latitude range');
-% if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
-% export_fig(gcf,[param_props.dir_name '/Figures/Data/data_by_latitude_' ...
+% if ~exist([param_props.data_path 'Figures/Data'],'dir'); mkdir([param_props.data_path 'Figures/Data']); end
+% export_fig(gcf,[param_props.data_path 'Figures/Data/data_by_latitude_' ...
 %     file_date float_file_ext '.png'],'-transparent');
 % clear edges
 % close
@@ -184,8 +184,8 @@ if ctd == 1; id_temp = wod_data.ID; id_temp(wod_data.TYPE==1) = NaN;
 % bar(edges(1:end-1),[g_counts',w_counts',f_counts'],'stacked');
 % legend({'CTD' 'Floats' 'GLODAP'});
 % ylabel('Profiles within each longitude range');
-% if ~exist([pwd '/' param_props.dir_name '/Figures/Data'],'dir'); mkdir([param_props.dir_name '/Figures/Data']); end
-% export_fig(gcf,[param_props.dir_name '/Figures/Data/data_by_longitude_' ...
+% if ~exist([param_props.data_path 'Figures/Data'],'dir'); mkdir([param_props.data_path 'Figures/Data']); end
+% export_fig(gcf,[param_props.data_path 'Figures/Data/data_by_longitude_' ...
 %     file_date float_file_ext '.png'],'-transparent');
 % clear edges
 % close
@@ -262,8 +262,8 @@ if flt == 0 && gld == 1 && osd == 0 && ctd == 0
 hl = legend(map_legend,'Location','northwest','FontSize',20);
 hl.Units = 'normalized';
 hl.Position = [0.4 0.4 0.2 0.2];
-export_fig(gcf,[param_props.dir_name '/Figures/Data/Mapped_' ...
-    param_props.dir_name '_' file_date float_file_ext '.png'],'-transparent');
+export_fig(gcf,[param_props.data_path 'Figures/Data/Mapped_' ...
+    param_props.output_name '_' file_date float_file_ext '.png'],'-transparent');
 close
 
 %% Map for full period
@@ -308,8 +308,8 @@ if flt == 0 && gld == 1 && osd == 0 && ctd == 0
     map_legend = {'' 'GLODAP Ship Profiles'}; end
 legend(map_legend,'Location','northwest');
 set(gca,'FontSize',24);
-export_fig(gcf,[param_props.dir_name '/Figures/Data/All_Mapped_' ...
-    param_props.dir_name '_' file_date float_file_ext '.png'],'-transparent');
+export_fig(gcf,[param_props.data_path 'Figures/Data/All_Mapped_' ...
+    param_props.output_name '_' file_date float_file_ext '.png'],'-transparent');
 close
 
 end
